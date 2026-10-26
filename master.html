@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1e3a8a">
+<link rel="icon" href="/icon-192.png">
+<title>Owner Panel — ZainMed</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f1f5f9;color:#0f172a;font-size:14px}
+button{font-family:inherit;cursor:pointer}
+.inp{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;font-family:inherit;background:#fff}
+.inp:focus{outline:2px solid #3b82f6;border-color:#3b82f6}
+.btn{border:none;border-radius:8px;padding:9px 14px;font-weight:700;font-size:13px;color:#fff;background:#2563eb}
+.btn.g{background:#059669}.btn.r{background:#e11d48}.btn.n{background:#64748b}.btn.a{background:#d97706}.btn.sm{padding:6px 10px;font-size:12px}
+.top{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top h1{font-size:18px;flex:1}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:16px;margin-bottom:16px}
+.card h2{font-size:16px;margin-bottom:12px;color:#1e3a8a}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:4px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.stat b{display:block;font-size:24px;color:#1e3a8a}
+.clinic{border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:10px}
+.clinic.off{background:#fff1f2;border-color:#fecdd3}
+.ch{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.ch h3{font-size:16px}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700}
+.b-on{background:#ecfdf5;color:#047857}.b-off{background:#fff1f2;color:#be123c}.b-exp{background:#fffbeb;color:#b45309}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px 14px;margin:10px 0;font-size:13px}
+.kv span{color:#64748b;font-size:11px;display:block}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#1e3a8a,#0f172a);padding:16px}
+.lbox{background:#fff;border-radius:16px;padding:28px;max-width:380px;width:100%}
+.lbox h1{font-size:22px;color:#1e3a8a;margin-bottom:4px}
+.err{color:#be123c;font-size:13px;margin-top:10px;min-height:18px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:8px;z-index:99;font-size:13px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:16px;z-index:50;overflow:auto}
+.mbox{background:#fff;border-radius:14px;padding:20px;max-width:560px;width:100%}
+</style></head>
+<body>
+<div id="app"></div>
+<script>
+var U="",K="",CL=[];
+var $=function(s,r){return (r||document).querySelector(s)};
+function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function toast(m){var d=document.createElement("div");d.className="toast";d.textContent=m;document.body.appendChild(d);setTimeout(function(){d.remove()},2800)}
+async function api(method,path,body){
+  var r=await fetch(path,{method:method,headers:{"Content-Type":"application/json","x-master-user":U,"x-master-key":K},body:body?JSON.stringify(body):undefined});
+  var j={};try{j=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(j.error||("Error "+r.status));return j;
+}
+function showLogin(msg){
+  $("#app").innerHTML='<div class="login"><div class="lbox"><h1>🏥 Owner Panel</h1><p style="color:#64748b;margin-bottom:18px">ZainMed — Multi-Clinic Management System</p>'+
+  '<label>Owner Name</label><input class="inp" id="lu" autocomplete="username" style="margin-bottom:10px">'+
+  '<label>Password</label><input class="inp" id="lp" type="password" autocomplete="current-password">'+
+  '<button class="btn" id="lb" style="width:100%;margin-top:14px;padding:12px">Login</button><div class="err" id="le">'+esc(msg||"")+'</div></div></div>';
+  var go=async function(){U=$("#lu").value.trim();K=$("#lp").value;
+    try{CL=await api("GET","/api/master/clinics");sessionStorage.setItem("mo",JSON.stringify([U,K]));draw()}
+    catch(e){$("#le").textContent=e.message}};
+  $("#lb").onclick=go;$("#lp").onkeydown=function(e){if(e.key==="Enter")go()};
+}
+function status(c){
+  var today=new Date().toISOString().slice(0,10);
+  if(!c.active)return '<span class="badge b-off">BAND</span>';
+  if(c.expiry&&c.expiry<today)return '<span class="badge b-exp">EXPIRED</span>';
+  return '<span class="badge b-on">ACTIVE</span>';
+}
+function draw(){
+  var tp=0,tv=0,act=0;CL.forEach(function(c){tp+=c.patients;tv+=c.visits;if(c.active)act++});
+  var h='<div class="top"><h1>🏥 Owner Panel — '+esc(U)+'</h1><button class="btn n sm" id="rf">⟳ Refresh</button><button class="btn r sm" id="lo">Logout</button></div><div class="wrap">'+
+  '<div class="stats"><div class="stat"><b>'+CL.length+'</b>Total Clinics</div><div class="stat"><b>'+act+'</b>Active</div><div class="stat"><b>'+tp+'</b>Patients</div><div class="stat"><b>'+tv+'</b>Visits</div></div>'+
+  '<div class="card"><h2>➕ Naya Clinic Banayein</h2><div class="grid">'+
+  '<div><label>Clinic ID (english, e.g. cityclinic)</label><input class="inp" id="n-code"></div>'+
+  '<div><label>Clinic Name</label><input class="inp" id="n-name"></div>'+
+  '<div><label>Address</label><input class="inp" id="n-addr"></div>'+
+  '<div><label>Phone</label><input class="inp" id="n-phone"></div>'+
+  '<div><label>Admin Username</label><input class="inp" id="n-au"></div>'+
+  '<div><label>Admin Password</label><input class="inp" id="n-ap"></div>'+
+  '<div><label>License Expiry (optional)</label><input class="inp" type="date" id="n-exp"></div>'+
+  '<div><label>Note</label><input class="inp" id="n-note"></div></div>'+
+  '<button class="btn g" id="n-add" style="margin-top:12px">Clinic Banayein</button></div>'+
+  '<div class="card"><h2>Clinics ('+CL.length+')</h2>'+
+  (CL.map(function(c){return '<div class="clinic '+(c.active?"":"off")+'"><div class="ch"><div><h3>'+esc(c.name)+' '+status(c)+'</h3><div style="color:#64748b;font-size:12px">'+esc(c.address||"")+' '+esc(c.phone||"")+'</div></div>'+
+   '<div class="acts"><button class="btn sm" title="Owner access ke saath clinic kholo" data-open="'+esc(c.code)+'">Open Clinic</button><button class="btn n sm" data-link="'+esc(c.code)+'">🔗 Link</button><button class="btn a sm" data-edit="'+esc(c.code)+'">Edit</button><button class="btn sm '+(c.active?"r":"g")+'" data-tog="'+esc(c.code)+'">'+(c.active?"Band karo":"Active karo")+'</button></div></div>'+
+   '<div class="kv"><div><span>Clinic ID</span><b>'+esc(c.code)+'</b></div><div><span>Admin Username</span><b>'+esc(c.admin_user)+'</b></div><div><span>Admin Password</span><b>'+esc(c.admin_pass)+'</b></div><div><span>Patients / Visits</span><b>'+c.patients+' / '+c.visits+'</b></div><div><span>Expiry</span><b>'+esc(c.expiry||"Unlimited")+'</b></div><div><span>Created</span><b>'+esc(c.created)+'</b></div></div>'+
+   (c.note?'<div style="font-size:12px;color:#64748b">Note: '+esc(c.note)+'</div>':'')+'</div>'}).join("")||'<p>Abhi koi clinic nahi.</p>')+
+  '</div><p style="text-align:center;color:#94a3b8;font-size:12px">Software developed by Zain Ali — 03702906075</p></div>';
+  $("#app").innerHTML=h;
+  $("#rf").onclick=reload;$("#lo").onclick=function(){sessionStorage.removeItem("mo");U=K="";showLogin()};
+  $("#n-add").onclick=async function(){
+    try{await api("POST","/api/master/clinics",{code:$("#n-code").value,name:$("#n-name").value,address:$("#n-addr").value,phone:$("#n-phone").value,adminUser:$("#n-au").value,adminPass:$("#n-ap").value,expiry:$("#n-exp").value||null,note:$("#n-note").value});toast("Clinic ban gaya ✔");reload()}
+    catch(e){toast(e.message)}};
+  document.querySelectorAll("[data-open]").forEach(function(b){b.onclick=function(){try{localStorage.setItem("mcms_owner_handoff",JSON.stringify({u:U,k:K,code:b.dataset.open,t:Date.now()}))}catch(e){}window.open("/","_blank")}});
+  document.querySelectorAll("[data-link]").forEach(function(b){b.onclick=function(){var l=location.origin+"/?c="+b.dataset.link;
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(l).then(function(){toast("Link copy ho gaya: "+l)},function(){prompt("Clinic ka link copy karein:",l)})}else prompt("Clinic ka link copy karein:",l)}});
+  document.querySelectorAll("[data-tog]").forEach(function(b){b.onclick=async function(){var c=CL.find(function(x){return x.code===b.dataset.tog});
+    if(c.active&&!confirm(c.name+" ko band kar dein? Is ke users login nahi kar sakenge."))return;
+    try{await api("PUT","/api/master/clinics/"+c.code,{active:!c.active});toast("Update ho gaya");reload()}catch(e){toast(e.message)}}});
+  document.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){edit(CL.find(function(x){return x.code===b.dataset.edit}))}});
+}
+async function reload(){try{CL=await api("GET","/api/master/clinics");draw()}catch(e){toast(e.message)}}
+function edit(c){
+  var m=document.createElement("div");m.className="modal";
+  m.innerHTML='<div class="mbox"><h2 style="margin-bottom:12px;color:#1e3a8a">Edit — '+esc(c.code)+'</h2><div class="grid">'+
+  '<div><label>Clinic Name</label><input class="inp" id="e-name" value="'+esc(c.name)+'"></div>'+
+  '<div><label>Address</label><input class="inp" id="e-addr" value="'+esc(c.address)+'"></div>'+
+  '<div><label>Phone</label><input class="inp" id="e-phone" value="'+esc(c.phone)+'"></div>'+
+  '<div><label>Admin Username</label><input class="inp" id="e-au" value="'+esc(c.admin_user)+'"></div>'+
+  '<div><label>Admin Password</label><input class="inp" id="e-ap" value="'+esc(c.admin_pass)+'"></div>'+
+  '<div><label>License Expiry</label><input class="inp" type="date" id="e-exp" value="'+esc(c.expiry||"")+'"></div></div>'+
+  '<label style="margin-top:10px">Note</label><input class="inp" id="e-note" value="'+esc(c.note||"")+'">'+
+  '<div class="acts" style="margin-top:14px"><button class="btn g" id="e-save">Save</button><button class="btn n" id="e-cancel">Cancel</button></div></div>';
+  document.body.appendChild(m);
+  $("#e-cancel",m).onclick=function(){m.remove()};
+  $("#e-save",m).onclick=async function(){
+    try{await api("PUT","/api/master/clinics/"+c.code,{name:$("#e-name",m).value,address:$("#e-addr",m).value,phone:$("#e-phone",m).value,adminUser:$("#e-au",m).value,adminPass:$("#e-ap",m).value,expiry:$("#e-exp",m).value||null,note:$("#e-note",m).value});m.remove();toast("Save ho gaya ✔");reload()}
+    catch(e){toast(e.message)}};
+}
+(function(){var s=null;try{s=JSON.parse(sessionStorage.getItem("mo"))}catch(e){}
+  if(s){U=s[0];K=s[1];api("GET","/api/master/clinics").then(function(r){CL=r;draw()}).catch(function(){showLogin()})}else showLogin();})();
+</script></body></html>

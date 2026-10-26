@@ -1,0 +1,13 @@
+{
+  "port": 4000,
+  "dbHost": "127.0.0.1",
+  "dbUser": "root",
+  "dbPass": "Abraj123",
+  "dbName": "abraj_medical_center",
+  "masterUser": "zainali",
+  "masterKey": "zain786",
+  "webhookKey": "",
+  "geminiKey": "",
+  "anthropicKey": "",
+  "timezone": "Asia/Karachi"
+}
