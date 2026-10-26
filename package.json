@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": { "start": "node server.js" },
-  "engines": { "node": "20.x" },
+  "engines": { "node": "22.x" },
   "dependencies": { "cors": "^2.8.5", "express": "^4.21.2", "mysql2": "^3.11.0" }
 }
