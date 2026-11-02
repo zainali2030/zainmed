@@ -37,7 +37,7 @@ const DEV_CONTACT = "Zain Ali — 03702906075";
 
 const STORES = ["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters",
                 "appointments","leads","inventory","staff"];
-const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports",
+const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","billing","expenses","reports",
                    "appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const DEFAULT_CLINIC = "abraj";
 const ADMIN_ID = "usr_faheem_admin";
@@ -494,13 +494,6 @@ app.post("/api/seq/:key", async (req, res) => {
   try {
     const start = parseInt((req.body && req.body.start) || "1", 10) || 1;
     const k = ckey(req, req.params.key);
-    /* OFFLINE SYNC: device ne offline rehte hue "last" tak number diye — server counter ko kam az kam wahan tak le jao (number issue nahi hota) */
-    if (req.body && req.body.last !== undefined) {
-      const last = parseInt(req.body.last, 10) || 0;
-      await pool.query("INSERT INTO counters (ckey,cval) VALUES (?,?) ON DUPLICATE KEY UPDATE cval=GREATEST(cval,VALUES(cval))", [k, last]);
-      const [r2] = await pool.query("SELECT cval FROM counters WHERE ckey=?", [k]);
-      return res.json({ value: r2[0].cval });
-    }
     await pool.query("INSERT INTO counters (ckey,cval) VALUES (?,?) ON DUPLICATE KEY UPDATE cval=cval+1", [k, start]);
     const [rows] = await pool.query("SELECT cval FROM counters WHERE ckey=?", [k]);
     res.json({ value: rows[0].cval });
