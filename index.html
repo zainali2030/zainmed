@@ -138,6 +138,8 @@ table.tbl{width:100%;min-width:640px;border-collapse:collapse;font-size:13px}
 .test-chip:hover{background:var(--blue-50)}
 .test-chip.us{border-color:#a5f3fc;background:var(--cyan-bg)}
 .test-chip.us:hover{background:#cffafe}
+.test-chip.inj{border-color:#fbcfe8;background:#fdf2f8}
+.test-chip.inj:hover{background:#fce7f3}
 .test-chip .price{display:block;font-size:11px;font-weight:700;color:#047857}
 .test-list{max-height:210px;overflow-y:auto;background:var(--slate-50);border:1px solid var(--slate-200);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:8px}
 .bill-inp{width:64px;border:1px solid var(--slate-300);border-radius:6px;padding:3px 6px;font-size:12px}
@@ -190,6 +192,67 @@ table.tbl{width:100%;min-width:640px;border-collapse:collapse;font-size:13px}
 .login-left{display:none}
 .content{padding:12px}
 }
+
+/* ===== MOBILE + LAPTOP FRIENDLY (v2) ===== */
+table.tbl.tbl-bill{min-width:0}
+html{max-width:100%;-webkit-text-size-adjust:100%}body{max-width:100%;overflow-x:hidden}
+.grid>*{min-width:0}
+.content,.main-wrap{min-width:0}
+@media(max-width:1023px){
+.grid[style*="grid-template-columns:2fr 1fr"],.grid[style*="grid-template-columns:3fr 1fr"],.grid[style*="grid-template-columns:1fr 3fr"],.grid[style*="grid-template-columns:1fr 2fr"]{grid-template-columns:1fr !important}
+.grid[style*="grid-template-columns:2fr 1fr 1fr"]{grid-template-columns:repeat(2,1fr) !important}
+.grid[style*="repeat(6,1fr)"]{grid-template-columns:repeat(3,1fr) !important}
+.sticky-top{position:static}
+}
+@media(max-width:768px){
+.tbl-bill th,.tbl-bill td{padding:6px 5px !important}.tbl-bill .bill-inp{width:54px}
+.g2{grid-template-columns:1fr}
+.g3,.g4{grid-template-columns:repeat(2,1fr)}
+[style*="grid-column:span 2"]{grid-column:1/-1 !important}
+body{font-size:15px}
+.inp,input,select,textarea{font-size:16px !important}
+.topbar{padding:8px 10px;gap:8px}
+.topbar h1{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .sub{display:none}
+.clock{display:none}
+.user-chip{padding-left:8px;font-size:11px;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-chip small{font-size:9px}
+#ai-top{padding:6px 8px;font-size:11px}
+.content{padding:10px}
+.card{margin-bottom:12px}
+.card-h{padding:10px 12px}
+.card-b{padding:12px}
+.btn{min-height:42px}
+.btn.sm{min-height:36px}
+.btn.lg{padding:13px 14px}
+.icon-btn,.hamburger{min-height:40px;min-width:40px}
+.modal{max-width:96vw !important;margin-top:10px}
+.backup-banner{padding:8px 10px;font-size:12px}
+.stat{padding:12px;gap:10px}
+.stat .ico{width:40px;height:40px;font-size:17px}
+.stat .val{font-size:17px}
+.preview-box{padding:6px}
+.test-list{max-height:260px}
+.ag-wrap{height:calc(100vh - 130px)}
+footer.app-foot{font-size:10px;padding:10px}
+.toast{font-size:12px}
+}
+@media(max-width:520px){
+.user-chip{display:none}
+#ai-top{display:none}
+}
+@media(max-width:420px){
+.g3,.g4{grid-template-columns:repeat(2,1fr);gap:8px}
+.mr-big .val{font-size:16px}
+.tok-big input{font-size:16px !important}
+.card-h h2{font-size:12px}
+}
+
+.net-pill{border:1px solid #bbf7d0;background:#ecfdf5;color:#047857;font-family:inherit;font-weight:700;font-size:11px;line-height:1;padding:7px 11px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.net-pill.off{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.net-pill.sync{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+.net-pill.fail{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+@media(max-width:768px){.net-pill{padding:6px 8px;font-size:10px}}
 /* ================= PRINT ================= */
 #print-root{display:none}
 
@@ -264,8 +327,8 @@ fetch() API calls ke zariye. Saara design/features wohi hain.
 const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff"];
 let CLINIC=(function(){try{return localStorage.getItem("mcms_clinic")||""}catch(e){return ""}})();let CLINIC_INFO=null;
 const ADMIN_ID="usr_faheem_admin",ADMIN_USER="Faheem",ADMIN_PASS="Faheem786";
-const ALL_PERMS=["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
-const RECEPTION_PERMS=["dashboard","newvisit","patients","emr","billing","lab","ultrasound"];
+const ALL_PERMS=["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
+const RECEPTION_PERMS=["dashboard","newvisit","patients","emr","billing","lab","ultrasound","injection"];
 const DOCTOR_PERMS=["dashboard","patients","emr","reports"];
 const NAV=[
 {key:"dashboard",label:"Dashboard",icon:"📊",perm:"dashboard"},
@@ -275,6 +338,7 @@ const NAV=[
 {key:"doctors",label:"Doctors",icon:"⚕️",perm:"doctors"},
 {key:"lab",label:"Lab / Tests",icon:"🧪",perm:"lab"},
 {key:"ultrasound",label:"Ultrasound",icon:"📡",perm:"ultrasound"},
+{key:"injection",label:"Injections / Drips",icon:"💉",perm:"injection"},
 {key:"billing",label:"Billing / Charges",icon:"🧾",perm:"billing"},
 {key:"expenses",label:"Expenses",icon:"💸",perm:"expenses"},
 {key:"reports",label:"Reports",icon:"📈",perm:"reports"},
@@ -294,6 +358,16 @@ const SEED_DOCTORS=[
 {name:"Dr. Ahmed Raza",specialization:"General Physician",qualification:"MBBS, FCPS",fee:500,mobile:"+92 300 1234567",commissionEnabled:true,commissionPercent:40,shift:"Morning",active:true},
 {name:"Dr. Sana Khalid",specialization:"Gynaecologist",qualification:"MBBS, MCPS (Gynae)",fee:800,mobile:"+92 301 2345678",commissionEnabled:true,commissionPercent:50,shift:"Evening",active:true},
 {name:"Dr. Bilal Hussain",specialization:"Child Specialist",qualification:"MBBS, DCH",fee:700,mobile:"+92 302 3456789",commissionEnabled:false,commissionPercent:0,shift:"Night",active:true}];
+const SEED_INJ=[
+["Inj. Dexamethasone (Steroid)","Injection"],["Inj. Hydrocortisone","Injection"],["Inj. Diclofenac (Voltral)","Injection"],["Inj. Ketorolac (Toradol)","Injection"],
+["Inj. Tramadol","Injection"],["Inj. Ranitidine","Injection"],["Inj. Pantoprazole","Injection"],["Inj. Metoclopramide (Maxolon)","Injection"],
+["Inj. Ondansetron","Injection"],["Inj. Hyoscine (Buscopan)","Injection"],["Inj. Pheniramine (Avil)","Injection"],["Inj. Ceftriaxone","Injection"],
+["Inj. Gentamicin","Injection"],["Inj. Vitamin B-Complex","Injection"],["Inj. Vitamin B12","Injection"],["Inj. Vitamin C","Injection"],["Inj. Paracetamol (Infusion)","Injection"],
+["Drip Normal Saline 500ml","Drip"],["Drip Ringer's Lactate","Drip"],["Drip Dextrose 5%","Drip"],["Drip DNS (Dextrose Normal Saline)","Drip"],
+["Drip N/S + Inj. Dexamethasone + Inj. Ketorolac + Inj. Ranitidine","Drip (Formula)"],
+["Drip N/S + Inj. Metoclopramide + Inj. Ranitidine","Drip (Formula)"],
+["Drip N/S + Inj. Vitamin B-Complex + Inj. Vitamin C","Drip (Formula)"],
+["Drip N/S + Inj. Diclofenac + Inj. Ranitidine","Drip (Formula)"]];
 const SEED_TESTS=[
 ["CBC (Complete Blood Count)","Haematology","lab",500],["ESR","Haematology","lab",250],["Hb (Haemoglobin)","Haematology","lab",200],
 ["Blood Group","Haematology","lab",300],["Malaria Parasite (MP)","Microbiology","lab",400],["Typhidot (Typhoid)","Serology","lab",900],
@@ -336,26 +410,168 @@ let API_OK=true;
 (function(){try{const h=localStorage.getItem("mcms_owner_handoff");if(h){localStorage.removeItem("mcms_owner_handoff");const o=JSON.parse(h);if(o&&o.u&&o.k&&o.code&&Date.now()-o.t<60000){sessionStorage.setItem("abraj_owner",JSON.stringify({u:o.u,k:o.k}));localStorage.setItem("mcms_clinic",o.code);CLINIC=o.code;history.replaceState(null,"","/")}}}catch(e){}})();
 function ownerCreds(){try{return JSON.parse(sessionStorage.getItem("abraj_owner")||"null")}catch(e){return null}}
 function isOwner(){return !!(app.user&&app.user.role==="owner")}
-async function api(method,path,body){
-let r;
+/* ============================================================
+   OFFLINE-FIRST LAYER  (Internet ho to server, na ho to is device ki local copy)
+   • Internet ho  : data seedha server (MySQL) par save hota hai aur local copy bhi update hoti hai
+   • Internet na ho: data is device (IndexedDB) mein save hota hai aur "outbox" mein line lagti hai
+   • Internet wapas: outbox khud server par bhej di jati hai (sync) — kuch dobara likhna nahi parta
+   ============================================================ */
+const NET={offlineUntil:0,flushing:null,state:"",retry:false};
+function netOK(){return navigator.onLine!==false&&Date.now()>=NET.offlineUntil}
+async function api(method,path,body,opt){
+opt=opt||{};
+if(!opt.force&&!netOK()){API_OK=false;const e=new Error("Internet nahi hai — offline mode");e.net=true;throw e}
+let r;const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),opt.timeout||12000);
 try{
-r=await fetch(API_BASE+path,{method:method,headers:Object.assign({"Content-Type":"application/json","X-Clinic":CLINIC||""},ownerCreds()?{"x-master-user":ownerCreds().u,"x-master-key":ownerCreds().k}:{}),body:body===undefined?undefined:JSON.stringify(body)});
+r=await fetch(API_BASE+path,{method:method,signal:ctl.signal,headers:Object.assign({"Content-Type":"application/json","X-Clinic":CLINIC||""},ownerCreds()?{"x-master-user":ownerCreds().u,"x-master-key":ownerCreds().k}:{}),body:body===undefined?undefined:JSON.stringify(body)});
 }catch(e){
-API_OK=false;
-throw new Error("Server se connection nahi hua ("+API_BASE+"). Server chalu karein: node server.js");
-}
-API_OK=true;
-if(!r.ok){let msg="HTTP "+r.status;try{const j=await r.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
+clearTimeout(tm);API_OK=false;NET.offlineUntil=Date.now()+8000;setNetState();
+const er=new Error("Server se connection nahi hua ("+(API_BASE||location.host)+"). Offline mode mein kaam chal sakta hai.");er.net=true;throw er}
+clearTimeout(tm);API_OK=true;NET.offlineUntil=0;
+if(!r.ok){let msg="HTTP "+r.status;try{const j=await r.json();if(j&&j.error)msg=j.error}catch(e){}
+const er=new Error(msg);er.status=r.status;
+if(r.status===502||r.status===503||r.status===504){er.net=true;NET.offlineUntil=Date.now()+8000;setNetState()}
+throw er}
 return r.json();
 }
-async function qGetAll(store){return api("GET","/api/"+store)}
-async function qGet(store,key){return api("GET","/api/"+store+"/"+encodeURIComponent(key))}
-async function qPut(store,obj){return api("PUT","/api/"+store,obj)}
-async function qBulk(store,arr){if(!arr||!arr.length)return {saved:0};return api("POST","/api/"+store+"/bulk",arr)}
-async function qDel(store,key){return api("DELETE","/api/"+store+"/"+encodeURIComponent(key))}
-async function qClear(store){return api("DELETE","/api/"+store)}
-async function nextSeq(key,start){const j=await api("POST","/api/seq/"+encodeURIComponent(key),{start:start});return j.value}
-async function peekSeq(key,start){const j=await api("GET","/api/seq/"+encodeURIComponent(key)+"?start="+start);return j.value}
+/* ---- local database (IndexedDB) ---- */
+const _dbs={};let OB=[];let OB_FOR="";
+const RECENT=new Map();const CACHE_T={};
+function recKey(o){const k=o&&(o.id!==undefined&&o.id!==null&&o.id!==""?o.id:o.key);return k===undefined||k===null||k===""?"":String(k)}
+function idb(){const c=CLINIC||"";if(_dbs[c])return _dbs[c];
+_dbs[c]=new Promise(res=>{try{if(!window.indexedDB)return res(null);
+const r=indexedDB.open("zainmed_clinic_"+c,1);
+r.onupgradeneeded=()=>{const d=r.result;const kv=d.createObjectStore("kv",{keyPath:"k"});kv.createIndex("s","s");d.createObjectStore("outbox",{keyPath:"n",autoIncrement:true});d.createObjectStore("meta",{keyPath:"k"})};
+r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);r.onblocked=()=>res(null)}catch(e){res(null)}});
+return _dbs[c]}
+function reqP(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function txDone(tx){return new Promise(res=>{tx.oncomplete=()=>res(true);tx.onerror=()=>res(false);tx.onabort=()=>res(false)})}
+async function cGetAll(store){try{const d=await idb();if(!d)return [];const rows=await reqP(d.transaction("kv").objectStore("kv").index("s").getAll(store));return rows.map(x=>x.o)}catch(e){return []}}
+async function cGet(store,key){try{const d=await idb();if(!d)return null;const x=await reqP(d.transaction("kv").objectStore("kv").get(store+"|"+key));return x?x.o:null}catch(e){return null}}
+async function cPutMany(store,arr){try{const d=await idb();const t=Date.now();arr.forEach(o=>{const k=recKey(o);if(k)RECENT.set(store+"|"+k,{ts:t,o:o})});if(!d||!arr.length)return;const tx=d.transaction("kv","readwrite");const os=tx.objectStore("kv");arr.forEach(o=>{const k=recKey(o);if(k)os.put({k:store+"|"+k,s:store,o:o})});await txDone(tx)}catch(e){}}
+async function cPut(store,obj){return cPutMany(store,[obj])}
+async function cDel(store,key){try{const d=await idb();RECENT.set(store+"|"+key,{ts:Date.now(),o:null});if(!d)return;const tx=d.transaction("kv","readwrite");tx.objectStore("kv").delete(store+"|"+key);await txDone(tx)}catch(e){}}
+function cReplace(store,arr,t0){return idb().then(d=>new Promise(res=>{if(!d)return res();
+try{const tx=d.transaction("kv","readwrite"),os=tx.objectStore("kv");
+const keep=new Map();RECENT.forEach((v,k)=>{if(v.ts>=t0&&k.indexOf(store+"|")===0)keep.set(k,v)});
+const cur=os.index("s").openKeyCursor(IDBKeyRange.only(store));
+cur.onsuccess=()=>{const c=cur.result;if(c){os.delete(c.primaryKey);c.continue()}else{
+for(const o of arr){const k=recKey(o);if(!k)continue;const kk=store+"|"+k;if(keep.has(kk))continue;os.put({k:kk,s:store,o:o})}
+keep.forEach((v,kk)=>{if(v.o)os.put({k:kk,s:store,o:v.o})})}};
+tx.oncomplete=()=>res();tx.onerror=()=>res();tx.onabort=()=>res()}catch(e){res()}}))}
+async function metaGet(k){try{const d=await idb();if(!d)return null;const x=await reqP(d.transaction("meta").objectStore("meta").get(k));return x?x.v:null}catch(e){return null}}
+async function metaSet(k,v){try{const d=await idb();if(!d)return;const tx=d.transaction("meta","readwrite");tx.objectStore("meta").put({k:k,v:v});await txDone(tx)}catch(e){}}
+/* ---- outbox (jo abhi server tak nahi pahunch saka) ---- */
+async function obLoad(){if(OB_FOR===(CLINIC||"")&&OB.length)return;OB_FOR=CLINIC||"";OB=[];
+try{const d=await idb();if(d){OB=await reqP(d.transaction("outbox").objectStore("outbox").getAll())}}catch(e){}
+OB.sort((a,b)=>a.n-b.n);setNetState()}
+async function obAdd(op){
+if(op.op==="put"){const k=recKey(op.obj);for(let i=OB.length-1;i>=0;i--){const q=OB[i];if(q.store!==op.store)continue;
+if(q.op==="del"&&String(q.key)===k)break;
+if(q.op==="put"&&recKey(q.obj)===k&&!q.failed){q.obj=op.obj;await obSave(q);setNetState();return}}}
+if(op.op==="seq"){const q=OB.find(x=>x.op==="seq"&&x.key===op.key);if(q){q.last=Math.max(q.last,op.last);await obSave(q);setNetState();return}}
+op.ts=Date.now();await obSave(op);OB.push(op);setNetState()}
+async function obSave(op){try{const d=await idb();if(!d)return;const tx=d.transaction("outbox","readwrite");const r=tx.objectStore("outbox").put(op);r.onsuccess=()=>{op.n=r.result};await txDone(tx)}catch(e){}if(op.n===undefined)op.n=(OB.reduce((m,x)=>Math.max(m,x.n||0),0)+1)}
+async function obRemove(op){OB=OB.filter(x=>x!==op);try{const d=await idb();if(d&&op.n!==undefined){const tx=d.transaction("outbox","readwrite");tx.objectStore("outbox").delete(op.n);await txDone(tx)}}catch(e){}setNetState()}
+function overlay(store,arr){if(!OB.length)return arr;let ch=false;const m=new Map(arr.map(o=>[recKey(o),o]));
+for(const op of OB){if(op.store!==store)continue;
+if(op.op==="put"){m.set(recKey(op.obj),op.obj);ch=true}
+else if(op.op==="bulk"){op.arr.forEach(o=>m.set(recKey(o),o));ch=true}
+else if(op.op==="del"){m.delete(String(op.key));ch=true}}
+return ch?Array.from(m.values()):arr}
+function ovGet(store,key,val){let out=val;key=String(key);
+for(const op of OB){if(op.store!==store)continue;
+if(op.op==="put"&&recKey(op.obj)===key)out=op.obj;
+else if(op.op==="bulk"){const f=op.arr.find(o=>recKey(o)===key);if(f)out=f}
+else if(op.op==="del"&&String(op.key)===key)out=null}
+return out}
+/* ---- outbox ko server par bhejna ---- */
+function flushOutbox(){
+if(NET.flushing)return NET.flushing;
+if(!OB.length||!netOK())return Promise.resolve(false);
+NET.flushing=(async()=>{let did=false;
+for(const op of OB.slice()){
+if(op.failed&&!NET.retry)continue;
+try{
+if(op.op==="put")await api("PUT","/api/"+op.store,op.obj,{force:true});
+else if(op.op==="bulk")await api("POST","/api/"+op.store+"/bulk",op.arr,{force:true,timeout:90000});
+else if(op.op==="del")await api("DELETE","/api/"+op.store+"/"+encodeURIComponent(op.key),undefined,{force:true});
+else if(op.op==="seq")await api("POST","/api/seq/"+encodeURIComponent(op.key),{start:1,last:op.last},{force:true});
+await obRemove(op);did=true;
+}catch(e){
+if(e.net)break;
+op.failed=e.message;op.tries=(op.tries||0)+1;await obSave(op);
+}}
+NET.retry=false;setNetState();return did})().finally(()=>{NET.flushing=null});
+return NET.flushing}
+/* ---- reads: pehle server, na mile to local copy ---- */
+async function qGetAll(store){
+if(netOK()){try{
+await flushOutbox();
+const t0=Date.now();const arr=await api("GET","/api/"+store);
+if(!CACHE_T[store]||t0-CACHE_T[store]>20000){CACHE_T[store]=t0;cReplace(store,arr,t0)}
+return overlay(store,arr)}catch(e){if(!e.net)throw e}}
+return overlay(store,await cGetAll(store))}
+async function qGet(store,key){
+if(netOK()){try{
+const v=await api("GET","/api/"+store+"/"+encodeURIComponent(key));
+if(v)cPut(store,v);
+return ovGet(store,key,v)}catch(e){if(!e.net)throw e}}
+return ovGet(store,key,await cGet(store,key))}
+/* ---- writes: server par, ya offline ho to local + outbox ---- */
+async function qPut(store,obj){
+if(!OB.length&&netOK()){try{const r=await api("PUT","/api/"+store,obj);await cPut(store,obj);return r}catch(e){if(!e.net)throw e}}
+await cPut(store,obj);await obAdd({op:"put",store:store,obj:obj});flushSoon();return obj}
+async function qBulk(store,arr){if(!arr||!arr.length)return {saved:0};
+if(!OB.length&&netOK()){try{const r=await api("POST","/api/"+store+"/bulk",arr,{timeout:90000});await cPutMany(store,arr);return r}catch(e){if(!e.net)throw e}}
+await cPutMany(store,arr);await obAdd({op:"bulk",store:store,arr:arr});flushSoon();return {saved:arr.length}}
+async function qDel(store,key){
+if(!OB.length&&netOK()){try{const r=await api("DELETE","/api/"+store+"/"+encodeURIComponent(key));await cDel(store,key);return r}catch(e){if(!e.net)throw e}}
+await cDel(store,key);await obAdd({op:"del",store:store,key:String(key)});flushSoon();return {deleted:true}}
+async function qClear(store){await flushOutbox();const r=await api("DELETE","/api/"+store,undefined,{timeout:60000});await cReplace(store,[],Date.now()+1);return r}
+/* ---- MR / token numbers: offline mein local counter, online aate hi server counter ko aage badha diya jata hai ---- */
+async function nextSeq(key,start){
+if(netOK()){try{await flushOutbox();const j=await api("POST","/api/seq/"+encodeURIComponent(key),{start:start});metaSet("next:"+key,j.value+1);return j.value}catch(e){if(!e.net)throw e}}
+let nx=await metaGet("next:"+key);if(nx===null||nx===undefined)nx=start||1;
+await metaSet("next:"+key,nx+1);await obAdd({op:"seq",store:"counters",key:key,last:nx});flushSoon();return nx}
+async function peekSeq(key,start){
+if(netOK()){try{await flushOutbox();const j=await api("GET","/api/seq/"+encodeURIComponent(key)+"?start="+start);metaSet("next:"+key,j.value);return j.value}catch(e){if(!e.net)throw e}}
+const nx=await metaGet("next:"+key);return (nx===null||nx===undefined)?(start||1):nx}
+/* ---- auto sync + status ---- */
+let _fs=0;function flushSoon(){clearTimeout(_fs);_fs=setTimeout(()=>{if(OB.length)flushOutbox().then(()=>{})},700)}
+function cachedInfo(code){try{return JSON.parse(localStorage.getItem("zm_info_"+code)||"null")}catch(e){return null}}
+function netCounts(){let f=0,p=0;OB.forEach(o=>{if(o.failed)f++;else p++});return {p:p,f:f}}
+function setNetState(){
+const c=netCounts();const off=!netOK();
+const st=off?"off":(c.f?"fail":(c.p?"sync":"on"));
+const el=document.getElementById("net-pill");
+if(el){
+el.className="net-pill "+st;
+el.textContent=st==="off"?("📴 Offline"+(c.p?" • "+c.p+" pending":"")):st==="fail"?("⚠ "+c.f+" sync failed"):st==="sync"?("⟳ Syncing "+c.p+"…"):"● Online";
+}
+if(NET.state&&NET.state!==st){
+if(st==="off")try{toast("Internet nahi hai — offline mode. Data is device par save hoga, internet aate hi sync ho jayega.","info")}catch(e){}
+else if(NET.state==="off"&&st!=="off")try{toast(c.p?"Internet wapas aa gaya — sync ho raha hai…":"Internet wapas aa gaya","success")}catch(e){}
+else if(NET.state==="sync"&&st==="on")try{toast("Saara offline data server par sync ho gaya","success")}catch(e){}}
+NET.state=st}
+function openSyncModal(){
+const c=netCounts();const ov=openModal("Sync Status",
+'<p style="font-size:13px;line-height:1.7">Server: <b>'+(netOK()?"Connected":"Offline")+'</b><br>Bhejna baaki (pending): <b>'+c.p+'</b><br>Fail hue: <b>'+c.f+'</b></p>'+
+(OB.filter(o=>o.failed).map(o=>'<div style="margin-top:8px;font-size:12px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px"><b>'+esc(o.store)+'</b> ('+esc(o.op)+'): '+esc(o.failed)+' <button class="btn btn-outline sm" data-disc="'+o.n+'">Discard</button></div>').join(""))+
+'<p style="font-size:12px;color:var(--slate-500);margin-top:10px">Offline mein kiya gaya saara kaam is device par mehfooz hai. Internet aate hi khud server par chala jata hai.</p>',
+'<button class="btn btn-outline" data-close>Close</button><button class="btn btn-primary" id="sy-now">⟳ SYNC NOW</button>');
+ov.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>ov.remove());
+ov.querySelector("#sy-now").onclick=async()=>{NET.offlineUntil=0;NET.retry=true;const b=ov.querySelector("#sy-now");b.disabled=true;b.textContent="Syncing…";
+try{await api("GET","/api/ping",undefined,{force:true,timeout:6000});await flushOutbox();toast("Sync mukammal","success")}catch(e){toast(e.net?"Abhi internet / server nahi mil raha":e.message,"error")}
+ov.remove();setNetState()};
+ov.querySelectorAll("[data-disc]").forEach(b=>b.onclick=async()=>{const op=OB.find(x=>String(x.n)===b.dataset.disc);if(op)await obRemove(op);ov.remove();openSyncModal()})}
+window.addEventListener("online",()=>{NET.offlineUntil=0;setNetState();flushSoon()});
+window.addEventListener("offline",()=>setNetState());
+setInterval(async()=>{
+if(!CLINIC)return;
+if(OB.length&&netOK()){await flushOutbox();return}
+if(!OB.length&&NET.state==="off"&&navigator.onLine!==false&&Date.now()>=NET.offlineUntil-1){try{await api("GET","/api/ping",undefined,{force:true,timeout:5000});setNetState()}catch(e){}}
+else setNetState()},15000);
 /* ================= APP STATE ================= */
 const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
 async function audit(user,action,entity,entityId,details){
@@ -375,6 +591,7 @@ app.settings=Object.assign({},DEFAULT_SETTINGS,s||{});
 try{document.title=(app.settings.clinicName||"Clinic")+" • ZainMed"}catch(e){}
 }
 async function seed(){
+if(!netOK())return;   /* offline: data pehle se maujood hota hai, seed ki zaroorat nahi */
 if(!(await qGet("settings","app"))){
 const ci=CLINIC_INFO||{};
 await qPut("settings",Object.assign({},DEFAULT_SETTINGS,ci.name?{clinicName:ci.name,footerText:"Thank you for visiting "+ci.name+".",address:ci.address||DEFAULT_SETTINGS.address,phone:ci.phone||DEFAULT_SETTINGS.phone}:{}));}
@@ -383,6 +600,11 @@ if(!(await qGetAll("doctors")).length)
 await qBulk("doctors",SEED_DOCTORS.map(d=>Object.assign({id:id("doc"),createdAt:new Date().toISOString()},d)));
 if(!(await qGetAll("tests")).length)
 await qBulk("tests",SEED_TESTS.map(t=>({id:id("tst"),name:t[0],category:t[1],type:t[2],price:t[3],active:true,createdAt:new Date().toISOString()})));
+try{const fk="zm_inj_seeded_"+CLINIC;
+if(!localStorage.getItem(fk)){
+if(!(await qGetAll("tests")).some(t=>t.type==="injection"))
+await qBulk("tests",SEED_INJ.map(t=>({id:id("tst"),name:t[0],category:t[1],type:"injection",price:0,active:true,createdAt:new Date().toISOString()})));
+localStorage.setItem(fk,"1")}}catch(e){console.error(e)}
 }
 async function saveRecord(store,obj){await qPut(store,obj);await loadData()}
 async function removeRecord(store,key){await qDel(store,key);await loadData()}
@@ -448,9 +670,10 @@ st.textContent=size==="58"?"@page{size:58mm auto;margin:2mm}":size==="80"?"@page
 function printHTML(html,size){
 const root=document.getElementById("print-root");if(!root)return;
 setPageStyle(size);root.innerHTML=html;
-const after=()=>{root.innerHTML="";window.removeEventListener("afterprint",after)};
-window.addEventListener("afterprint",after);
-setTimeout(()=>window.print(),120);
+const touch=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/i.test(navigator.platform||""));
+/* Mobile par afterprint jaldi fire ho jata hai, isliye wahan slip clear nahi karte (agli print par replace ho jati hai) */
+if(!touch){const after=()=>{root.innerHTML="";window.removeEventListener("afterprint",after)};window.addEventListener("afterprint",after)}
+setTimeout(()=>{try{window.print()}catch(e){toast("Is browser mein print nahi ho raha. Chrome ya Safari mein kholein.","error")}},touch?350:120);
 }
 function shieldSVG(sz,color){color=color||"#000";
 return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M32 3 L58 12 v20 c0 15-11 26-26 29C17 58 6 47 6 32V12z" fill="none" stroke="'+color+'" stroke-width="3"/><path d="M27 17h10v10h10v10H37v10H27V37H17V27h10z" fill="'+color+'"/></svg>'}
@@ -482,7 +705,8 @@ logo+
 tr((s.showMrOnSlip!==false?field("MR No",padMr(v.patientId)):field("",""))+field("Date / Time",fmtDate(v.date)+" "+fmtTime(v.time)))+
 tr(field("Patient",v.patientName,true))+
 tr(field("Age / Gender",(age?age+" / ":"")+(v.gender||"-"))+field("Cell No",v.mobile||"-"))+
-tr(field("Doctor",v.doctorName||"-")+field("Shift",v.shift||"-"))+
+tr(field("Doctor",v.doctorName?("Dr. "+String(v.doctorName).replace(/^dr\.?\s+/i,"")):"-")+field("Shift",v.shift||"-"))+
+(slipDocMobile(v)?tr(field("Doctor Cell",slipDocMobile(v),true)):"")+
 '</table>'+hr+
 '<table style="width:100%;border-collapse:collapse"><tbody>'+(items||'<tr><td style="font-size:'+p+';text-align:center;padding:4px">No charges</td></tr>')+'</tbody></table>'+hr+
 (v.discount>0?line("Sub Total",cur+" "+fmtMoney(v.subTotal))+line("Discount","- "+cur+" "+fmtMoney(v.discount)):"")+
@@ -496,6 +720,56 @@ line("Due",cur+" "+fmtMoney(v.due),p,true)+
 (A4?'</div>':'')+'</div>';
 }
 function printSlip(v,size){printHTML(slipHTML(v,app.settings,size),size||app.settings.printSize)}
+/* ---- Doctor ka mobile number (doctor record se) ---- */
+function slipDocMobile(v){
+try{const d=(app.doctors||[]).find(x=>x.id===v.doctorId)||(app.doctors||[]).find(x=>v.doctorName&&x.name===v.doctorName);
+return (v.doctorMobile||(d&&d.mobile)||"").toString().trim()}catch(e){return ""}
+}
+/* ---- LAB / ULTRASOUND ALAG SLIP ---- */
+function labSlipHTML(v,s,size){
+size=size||s.printSize;const A4=size==="A4";
+const fs=s.slipFontSize||(A4?14:size==="58"?11.5:13);
+const p=fs+"px",sm=(fs*.8)+"px",lg=(fs*1.25)+"px";
+const width=A4?"100%":size==="58"?"54mm":"74mm";
+const hr='<div style="border-top:2px dashed #000;margin:4px 0"></div>';
+const cur=s.currency||"Rs.";
+const field=(l,val,span)=>'<td'+(span?' colspan="2"':'')+' style="padding:2px 3px 2px 0;vertical-align:top;line-height:1.15;word-break:break-word"><div style="font-size:'+sm+';font-weight:700;color:#000">'+esc(l)+'</div><div style="font-size:'+p+';font-weight:900">'+esc(val)+'</div></td>';
+const tr=cells=>'<tr>'+cells+'</tr>';
+const age=((v.age||"")+" "+(v.ageUnit||"")).trim();
+const labItems=(v.items||[]).filter(i=>i.category==="lab"||i.category==="ultrasound");
+const labTotal=labItems.reduce((a,b)=>a+(Number(b.amount)||0),0);
+const rows=labItems.map(it=>'<tr><td style="font-size:'+p+';font-weight:800;padding:2px 0;word-break:break-word">'+(it.category==="ultrasound"?"[US] ":"")+esc(it.description)+(it.qty>1?" x"+it.qty:"")+'</td><td style="font-size:'+p+';font-weight:900;text-align:right;padding:2px 0 2px 6px;white-space:nowrap">'+fmtMoney(it.amount)+'</td></tr>').join("");
+const docMob=slipDocMobile(v);
+const tokenNo=v.token>0?v.token:"-";
+const paid=(Number(v.due)||0)<=0;
+const logoH=A4?56:size==="58"?30:36;
+const logo=s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="display:block;margin:0 auto 2px;max-height:'+logoH+'px;max-width:70%;object-fit:contain"/></div>':'<div style="text-align:center;line-height:0;margin-bottom:2px">'+shieldSVG(logoH-6)+'</div>';
+return '<div style="width:'+width+';margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-weight:700;color:#000;padding:'+(A4?"10px 0":"0")+'">'+(A4?'<div style="border:2px solid #000;padding:12px">':"")+
+logo+
+'<div style="text-align:center;font-weight:900;font-size:'+(A4?"20px":size==="58"?"14px":"16px")+';line-height:1.15">'+esc(s.clinicName)+'</div>'+
+'<div style="text-align:center;font-size:'+sm+';font-weight:800;line-height:1.25">Cell: '+esc(s.phone||"")+(s.phone2?" / "+esc(s.phone2):"")+'</div>'+
+'<div style="background:#000;color:#fff;text-align:center;border-radius:4px;margin:5px 0 4px;padding:4px 0;font-size:'+p+';font-weight:900;letter-spacing:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact">LAB / TEST SLIP</div>'+
+'<div style="display:flex;justify-content:space-between;align-items:center;border:2px solid #000;border-radius:4px;padding:2px 8px;margin-bottom:3px"><span style="font-size:'+sm+';font-weight:800;letter-spacing:2px">TOKEN</span><span style="font-size:'+(fs*2)+'px;font-weight:900;line-height:1.1">'+esc(String(tokenNo))+'</span></div>'+
+'<table style="width:100%;border-collapse:collapse;table-layout:fixed">'+
+tr(field("MR No",padMr(v.patientId))+field("Date / Time",fmtDate(v.date)+" "+fmtTime(v.time)))+
+tr(field("Patient",v.patientName,true))+
+tr(field("Age / Gender",(age?age+" / ":"")+(v.gender||"-"))+field("Cell No",v.mobile||"-"))+
+tr(field("Referred By",v.referredBy||"SELF")+field("Doctor",v.doctorName?("Dr. "+String(v.doctorName).replace(/^dr\.?\s+/i,"")):"-"))+
+(docMob?tr(field("Doctor Cell",docMob,true)):"")+
+'</table>'+hr+
+'<div style="font-size:'+sm+';font-weight:900;letter-spacing:1px;margin-bottom:2px">TESTS ORDERED</div>'+
+'<table style="width:100%;border-collapse:collapse"><tbody>'+(rows||'<tr><td style="font-size:'+p+';text-align:center;padding:4px">No lab / ultrasound tests in this bill</td></tr>')+'</tbody></table>'+hr+
+'<div style="display:flex;justify-content:space-between;gap:8px;font-size:'+lg+';font-weight:900"><span>Tests Total</span><span>'+esc(cur)+' '+fmtMoney(labTotal)+'</span></div>'+
+'<div style="text-align:center;font-size:'+p+';font-weight:900;margin-top:3px;border:2px solid #000;border-radius:4px;padding:2px">'+(paid?"PAID":("BILL DUE: "+esc(cur)+" "+fmtMoney(v.due)))+'</div>'+hr+
+'<div style="font-size:'+sm+';font-weight:700;line-height:2">Sample Taken: ______________<br>Report Date: ______________</div>'+
+'<div style="text-align:center;font-size:'+(A4?"10px":"8.5px")+';font-weight:700;margin-top:3px">Printed: '+new Date().toLocaleString()+(v.createdBy?" • "+esc(v.createdBy):"")+'</div>'+
+'<div style="border-top:1px solid #000;margin-top:4px;padding-top:3px;text-align:center;font-size:'+(A4?"11px":"9.5px")+';font-weight:900;line-height:1.2">Software developed by Zain Ali<br>03702906075</div>'+
+(A4?'</div>':'')+'</div>';
+}
+function printLabSlip(v,size){
+if(!(v.items||[]).some(i=>i.category==="lab"||i.category==="ultrasound")){toast("Is visit mein koi Lab / Ultrasound test nahi hai","error");return}
+printHTML(labSlipHTML(v,app.settings,size),size||app.settings.printSize)}
+
 /* ---- A4 report HTML ---- */
 function reportHTML(cfg,s){
 const align=i=>(cfg.align&&cfg.align[i])||"left";
@@ -561,9 +835,13 @@ e.preventDefault();const btn=$("#lg-btn");btn.disabled=true;btn.textContent="Sig
 const err=$("#lg-err");const fail=m=>{err.style.display="block";err.textContent=m;btn.disabled=false;btn.textContent="SIGN IN"};
 const code=$("#lg-clinic").value.trim().toLowerCase(),un=$("#lg-user").value.trim(),pw=$("#lg-pass").value;
 try{
-const info=await api("GET","/api/clinic/"+encodeURIComponent(code));
+let info;
+try{info=await api("GET","/api/clinic/"+encodeURIComponent(code));try{localStorage.setItem("zm_info_"+code,JSON.stringify(info))}catch(x){}}
+catch(e){if(e.net){info=cachedInfo(code);if(!info)return fail("Internet nahi hai. Is device par pehli dafa login ke liye internet zaroori hai.")}else throw e}
 CLINIC=code;CLINIC_INFO=info;try{localStorage.setItem("mcms_clinic",code)}catch(x){}
+await obLoad();
 await seed();await loadData();
+if(!netOK()&&!app.users.length)return fail("Offline hai aur is device par is clinic ka data saved nahi. Pehli dafa internet se login karein.");
 /* FIRST-TIME ADMIN SETUP: agar is clinic mein koi admin account hi nahi hai to dale gaye username/password se admin ban jayega */
 if(!app.users.some(x=>x.role==="admin"&&x.active!==false)&&!app.users.some(x=>x.username.toLowerCase()===un.toLowerCase())){
 if(pw.length<4)return fail("Is clinic mein abhi koi Admin nahi hai. Admin banane ke liye kam az kam 4 harf ka password likhein.");
@@ -597,7 +875,7 @@ mount('<aside class="sidebar hidden-m" id="sidebar">'+
 '<div class="main-wrap">'+
 '<header class="topbar"><button class="hamburger" id="hbtn">☰</button>'+
 '<div style="min-width:0;flex:1"><h1 id="page-title">Dashboard</h1><p class="sub">'+esc(s.clinicName)+" • "+esc(s.address)+"</p></div>"+
-'<div class="clock" id="clock"></div>'+(can("agent")?'<button class="btn btn-primary sm" id="ai-top" style="white-space:nowrap">🤖 AI Agent</button>':"")+
+'<button class="net-pill on" id="net-pill" title="Sync status">● Online</button><div class="clock" id="clock"></div>'+(can("agent")?'<button class="btn btn-primary sm" id="ai-top" style="white-space:nowrap">🤖 AI Agent</button>':"")+
 '<div class="user-chip">'+esc(app.user.fullName)+"<small>"+esc(app.user.role)+"</small></div>"+
 '<button class="icon-btn" id="logout-btn" title="Logout">⏻</button></header>'+
 '<div id="banner-slot"></div><main class="content" id="page"></main>'+
@@ -609,6 +887,7 @@ $("#logout-btn").onclick=()=>{if(isOwner()){sessionStorage.removeItem("abraj_own
 $$("[data-nav]").forEach(b=>b.onclick=()=>{ $("#sidebar").classList.add("hidden-m");$("#backdrop").classList.remove("show");go(b.dataset.nav)});
 if(_clockTimer)clearInterval(_clockTimer);
 tickClock();_clockTimer=setInterval(tickClock,1000);
+{const np=$("#net-pill");if(np){np.onclick=openSyncModal}NET.state="";setNetState()}
 showBanner();
 }
 function tickClock(){const el=$("#clock");if(!el)return;const d=new Date();
@@ -628,7 +907,7 @@ renderShell();
 const t=NAV.find(n=>n.key===route);
 $("#page-title").textContent=t?t.label:"Dashboard";
 const PAGES={dashboard:pageDashboard,newvisit:pageNewVisit,patients:pagePatients,emr:pageEMR,doctors:pageDoctors,
-lab:()=>pageTestModule("lab"),ultrasound:()=>pageTestModule("ultrasound"),billing:pageBilling,expenses:pageExpenses,
+lab:()=>pageTestModule("lab"),ultrasound:()=>pageTestModule("ultrasound"),injection:()=>pageTestModule("injection"),billing:pageBilling,expenses:pageExpenses,
 reports:pageReports,agent:pageAgent,users:pageUsers,settings:pageSettings,backup:pageBackup};
 (PAGES[route]||pageDashboard)();
 showBanner();
@@ -749,23 +1028,23 @@ activeDocs.map(d=>'<option value="'+d.id+'" '+(editVisit&&editVisit.doctorId===d
 '<div class="card"><div class="card-h"><h2>Bill / Charges</h2><div class="sub">Auto-calculated</div></div><div class="card-b">'+
 '<div class="grid g2 mb"><div class="field"><label>OPD Fee</label><input class="inp" id="nv-opd" style="font-weight:700" inputmode="numeric" value="'+(editVisit?editVisit.opdFee:s.defaultOpdFee)+'"></div>'+
 '<div class="field"><label>Discount</label><input class="inp" id="nv-disc" style="font-weight:700" inputmode="numeric" value="'+(editVisit?editVisit.discount:0)+'"></div></div>'+
-'<div style="max-height:220px;overflow-y:auto;margin-bottom:12px"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Description</th><th>Rate</th><th>Qty</th><th>Amount</th><th></th></tr></thead><tbody id="nv-items"></tbody></table></div></div>'+
+'<div style="max-height:220px;overflow-y:auto;margin-bottom:12px"><div class="tbl-wrap"><table class="tbl tbl-bill"><thead><tr><th>Description</th><th>Rate</th><th>Qty</th><th>Amount</th><th></th></tr></thead><tbody id="nv-items"></tbody></table></div></div>'+
 '<div class="sum-box" id="nv-sums"></div>'+
 '<div class="grid g2 mt"><div class="field"><label>Amount Received</label><input class="inp" id="nv-recv" style="font-weight:700;font-size:15px" inputmode="numeric" value="'+(editVisit?editVisit.received:0)+'"></div>'+
 '<div class="field"><label>Remaining / Due</label><div class="inp" id="nv-duebox" style="font-weight:800;font-size:15px"></div></div></div>'+
 '<div class="flex g8 fw mb"><button class="btn btn-success sm" id="nv-full">FULL PAYMENT</button><button class="btn btn-neutral sm" id="nv-none">NO PAYMENT</button></div>'+
-'<div style="display:grid;gap:8px"><button class="btn btn-success lg block" id="nv-save">💾 SAVE VISIT</button><button class="btn btn-primary lg block" id="nv-saveprint">🖨 SAVE & PRINT SLIP</button>'+
-'<div class="grid g2"><button class="btn btn-neutral" id="nv-clear">CLEAR</button><button class="btn btn-outline" id="nv-reprint" '+(editVisit?"":"disabled")+">PRINT SLIP</button></div></div>"+
+'<div style="display:grid;gap:8px"><button class="btn btn-success lg block" id="nv-save">💾 SAVE VISIT</button><button class="btn btn-primary lg block" id="nv-saveprint">🖨 SAVE & PRINT SLIP</button><button class="btn btn-warn lg block" id="nv-savelab">🧪 SAVE & PRINT LAB SLIP</button>'+
+'<div class="grid g2"><button class="btn btn-neutral" id="nv-clear">CLEAR</button><button class="btn btn-outline" id="nv-reprint" '+(editVisit?"":"disabled")+">PRINT SLIP</button></div>"+(editVisit?'<button class="btn btn-warn block mt" id="nv-reprintlab">🧪 PRINT LAB SLIP</button>':"")+"</div>"+
 '<p style="text-align:center;font-size:11px;color:var(--slate-500);margin-top:10px">Every save is written instantly to the server database (MySQL).</p></div></div>'+
 '<div class="card sticky-top"><div class="card-h"><h2>📋 LIVE SLIP PREVIEW</h2><div class="sub">Automatically updates as you fill the form</div></div><div class="card-b"><div class="preview-box" id="nv-preview"></div>'+
 '<p style="text-align:center;font-size:11px;color:var(--slate-500);margin-top:8px">⬆ Real-time preview — press <b>SAVE & PRINT SLIP</b> to save and print.</p></div></div></div></div>';
 const updTests=()=>{
 const q=$("#nv-testq").value.trim().toLowerCase();
 const list=app.tests.filter(t=>t.active&&(!q||t.name.toLowerCase().includes(q)||t.category.toLowerCase().includes(q))).slice(0,60);
-$("#nv-tests").innerHTML=list.length?list.map(t=>'<button class="test-chip'+(t.type==="ultrasound"?" us":"")+'" data-test="'+t.id+'"><span>'+esc(t.name)+'</span><span class="price">'+C+" "+fmtMoney(t.price)+"</span></button>").join(""):'<p style="padding:12px;font-size:13px;color:var(--slate-400)">No tests found. Add tests from the Lab / Tests page.</p>';
+$("#nv-tests").innerHTML=list.length?list.map(t=>'<button class="test-chip'+(t.type==="ultrasound"?" us":"")+(t.type==="injection"?" inj":"")+'" data-test="'+t.id+'"><span>'+esc(t.name)+'</span><span class="price">'+C+" "+fmtMoney(t.price)+"</span></button>").join(""):'<p style="padding:12px;font-size:13px;color:var(--slate-400)">No tests found. Add tests from the Lab / Tests page.</p>';
 $$("[data-test]").forEach(b=>b.onclick=()=>{
 const t=app.tests.find(x=>x.id===b.dataset.test);if(!t)return;
-const cat=t.type==="ultrasound"?"ultrasound":"lab";
+const cat=t.type==="ultrasound"?"ultrasound":t.type==="injection"?"injection":"lab";
 const ex=nv.items.find(i=>i.refId===t.id);
 if(ex){ex.qty+=1;ex.amount=ex.qty*ex.rate}else
 nv.items.push({id:id("chg"),description:t.name,category:cat,refId:t.id,rate:t.price,qty:1,amount:t.price});
@@ -776,7 +1055,7 @@ const totals=()=>{
 const opd=num($("#nv-opd").value),disc=num($("#nv-disc").value);
 const lab=nv.items.filter(i=>i.category==="lab").reduce((a,b)=>a+b.amount,0);
 const ult=nv.items.filter(i=>i.category==="ultrasound").reduce((a,b)=>a+b.amount,0);
-const oth=nv.items.filter(i=>i.category==="other").reduce((a,b)=>a+b.amount,0);
+const oth=nv.items.filter(i=>i.category==="other"||i.category==="injection").reduce((a,b)=>a+b.amount,0);
 const sub=opd+lab+ult+oth,total=Math.max(0,sub-disc),recv=num($("#nv-recv").value),due=Math.max(0,total-recv);
 return{opd,disc,lab,ult,oth,sub,total,recv,due};
 };
@@ -851,7 +1130,7 @@ if(patientDbId){const p=app.patients.find(x=>x.id===patientDbId);
 if(p)await qPut("patients",Object.assign({},p,{name:v.patientName,age:v.age,ageUnit:v.ageUnit,gender:v.gender,mobile:v.mobile,address:v.address,updatedAt:new Date().toISOString()}))}
 await audit(app.user.username,"UPDATE","visits",v.id,"Visit updated for "+patientId);
 toast("Visit updated and saved on server ("+patientId+")");
-await loadData();if(print)printSlip(v);go("billing");return;
+await loadData();if(print==="lab")printLabSlip(v);else if(print)printSlip(v);go("billing");return;
 }
 if(patientDbId){const p=app.patients.find(x=>x.id===patientDbId);
 if(p){patientId=p.patientId;
@@ -863,16 +1142,18 @@ const v=buildVisitObj(patientId,token,doc?doc.name:"");
 await qPut("visits",v);
 await audit(app.user.username,"CREATE","visits",v.id,"Visit "+patientId+" token "+token+" total "+v.total);
 toast("Saved ✔ Patient "+patientId+" • Token "+token);
-await loadData();if(print)printSlip(v);go("billing");
+await loadData();if(print==="lab")printLabSlip(v);else if(print)printSlip(v);go("billing");
 }catch(e){console.error(e);toast(e.message||"Could not save the record. Please try again.","error")}
 };
 $("#nv-save").onclick=()=>doSave(false);
 $("#nv-saveprint").onclick=()=>doSave(true);
+$("#nv-savelab").onclick=()=>doSave("lab");
 $("#nv-clear").onclick=async()=>{
 if(($("#nv-name").value||nv.items.length)&&!await confirmBox({title:"Clear Form",message:"All values entered in this form will be cleared. This does not delete any saved record. Continue?",confirmText:"Yes, clear"}))return;
 pageNewVisit();
 };
 $("#nv-reprint").onclick=()=>{if(editVisit)printSlip(editVisit)};
+if($("#nv-reprintlab"))$("#nv-reprintlab").onclick=()=>{if(editVisit)printLabSlip(editVisit)};
 updBill();
 }
 function patientPicker(onSelect){
@@ -1120,7 +1401,7 @@ await loadData();toast(d.id?"Doctor updated":"Doctor added successfully");ov.rem
 LAB / ULTRASOUND MODULE
 ============================================================ */
 function pageTestModule(type){
-const s=app.settings;const isUS=type==="ultrasound";
+const s=app.settings;const isUS=type==="ultrasound";const isINJ=type==="injection";
 let from=today(),to=today();
 const drawList=()=>{
 const q=$("#tm-q").value.trim().toLowerCase();
@@ -1140,7 +1421,7 @@ await removeRecord("tests",t.id);await audit(app.user.username,"DELETE","tests",
 const workList=()=>{
 const rows=[];
 app.visits.filter(v=>v.status!=="Cancelled"&&inRange(v.date,from,to)).forEach(v=>{
-const its=v.items.filter(i=>i.category===(isUS?"ultrasound":"lab"));
+const its=v.items.filter(i=>i.category===(isUS?"ultrasound":isINJ?"injection":"lab"));
 if(its.length)rows.push({visitId:v.id,patientId:v.patientId,name:v.patientName,token:v.token,date:v.date,time:v.time,doctor:v.doctorName,
 items:its.map(i=>i.description+(i.qty>1?" x"+i.qty:"")),amount:its.reduce((a,b)=>a+b.amount,0)})});
 return rows.sort((a,b)=>(a.date+a.time)<(b.date+b.time)?1:-1);
@@ -1157,39 +1438,39 @@ $("#tm-wrows").innerHTML=rows.length?rows.map(r=>
 const listCount=app.tests.filter(t=>t.type===type).length;
 $("#page").innerHTML=
 '<div class="grid g3 mb">'+
-'<div class="mini-stat" style="background:var(--blue-50);border-color:var(--blue-200);color:#1e3a8a"><div class="lbl">'+(isUS?"Ultrasound Services":"Tests in Price List")+'</div><div class="val">'+listCount+"</div></div>"+
+'<div class="mini-stat" style="background:var(--blue-50);border-color:var(--blue-200);color:#1e3a8a"><div class="lbl">'+(isUS?"Ultrasound Services":isINJ?"Injections / Drips in List":"Tests in Price List")+'</div><div class="val">'+listCount+"</div></div>"+
 '<div class="mini-stat" style="background:var(--green-bg);border-color:var(--green-bd);color:#065f46"><div class="lbl">Patients in Period</div><div class="val" id="tm-count">0</div></div>'+
 '<div class="mini-stat" style="background:var(--violet-bg);border-color:#ddd6fe;color:#5b21b6"><div class="lbl">Collection in Period</div><div class="val" id="tm-amt">—</div></div></div>'+
-'<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":"Laboratory Test")+' Price List</h2><div class="sub">Prices are added to the patient bill automatically when selected at the counter</div></div>'+
-'<div class="flex g8"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button><button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":"ADD TEST")+"</button></div></div>"+
+'<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory Test")+' Price List</h2><div class="sub">Prices are added to the patient bill automatically when selected at the counter</div></div>'+
+'<div class="flex g8"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button><button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
 '<div class="card-b"><input class="inp mb" id="tm-q" placeholder="🔍 Search test / category…"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tm-rows"></tbody></table></div></div></div>'+
-'<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":"Laboratory")+' Work List</h2><div class="sub">Patients who have been charged for these services</div></div>'+
+'<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory")+' Work List</h2><div class="sub">Patients who have been charged for these services</div></div>'+
 '<div class="flex g8 fw"><input class="inp" type="date" id="tm-from" style="width:150px" value="'+from+'"><input class="inp" type="date" id="tm-to" style="width:150px" value="'+to+'">'+
 '<button class="btn btn-outline sm" id="tm-wcsv">⬇ CSV</button><button class="btn btn-dark sm" id="tm-print">🖨 PRINT</button></div></div>'+
-'<div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date / Time</th><th>Token</th><th>MR No</th><th>Patient</th><th>Doctor</th><th>'+(isUS?"Study":"Tests")+'</th><th>Amount</th></tr></thead><tbody id="tm-wrows"></tbody></table></div></div></div>';
+'<div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date / Time</th><th>Token</th><th>MR No</th><th>Patient</th><th>Doctor</th><th>'+(isUS?"Study":isINJ?"Injection / Drip":"Tests")+'</th><th>Amount</th></tr></thead><tbody id="tm-wrows"></tbody></table></div></div></div>';
 $("#tm-q").addEventListener("input",drawList);
 $("#tm-from").addEventListener("change",e=>{from=e.target.value;drawWork()});
 $("#tm-to").addEventListener("change",e=>{to=e.target.value;drawWork()});
-$("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":"Haematology",type:type,price:0,active:true},type);
+$("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":isINJ?"Injection":"Haematology",type:type,price:0,active:true},type);
 $("#tm-csv").onclick=()=>downloadCSV(type+"_price_list.csv",["Name","Category","Price","Status"],app.tests.filter(t=>t.type===type).map(t=>[t.name,t.category,t.price,t.active?"Active":"Inactive"]));
 $("#tm-wcsv").onclick=()=>downloadCSV(type+"_worklist_"+from+"_"+to+".csv",["Date","Time","Token","MR No","Patient","Doctor","Items","Amount"],workList().map(r=>[r.date,r.time,r.token,padMr(r.patientId),r.name,r.doctor,r.items.join(" | "),r.amount]));
 $("#tm-print").onclick=()=>{const rows=workList();
-printReport({title:isUS?"Ultrasound Report":"Laboratory Report",subtitle:"Period: "+fmtDate(from)+" to "+fmtDate(to)+" • "+rows.length+" patient(s)",
-headers:["Date","Token","MR No","Patient","Doctor",isUS?"Ultrasound":"Tests","Amount"],
+printReport({title:isUS?"Ultrasound Report":isINJ?"Injection / Drip Report":"Laboratory Report",subtitle:"Period: "+fmtDate(from)+" to "+fmtDate(to)+" • "+rows.length+" patient(s)",
+headers:["Date","Token","MR No","Patient","Doctor",isUS?"Ultrasound":isINJ?"Injection / Drip":"Tests","Amount"],
 align:["left","center","left","left","left","left","right"],
 rows:rows.map(r=>[fmtDate(r.date),r.token,padMr(r.patientId),r.name,r.doctor||"-",r.items.join(", "),fmtMoney(r.amount)]),
-summary:[[isUS?"Total Ultrasound Studies":"Total Lab Patients",String(rows.length)],["Total Collection",s.currency+" "+fmtMoney(rows.reduce((a,b)=>a+b.amount,0))]]})};
+summary:[[isUS?"Total Ultrasound Studies":isINJ?"Total Injection / Drip Patients":"Total Lab Patients",String(rows.length)],["Total Collection",s.currency+" "+fmtMoney(rows.reduce((a,b)=>a+b.amount,0))]]})};
 drawList();drawWork();
 }
 function testModal(t,type){
 const cats=Array.from(new Set(app.tests.filter(x=>x.type===type).map(x=>x.category)));
-const ov=openModal(t.id?"Edit — "+t.name:(type==="ultrasound"?"Add Ultrasound Service":"Add Laboratory Test"),
+const ov=openModal(t.id?"Edit — "+t.name:(type==="ultrasound"?"Add Ultrasound Service":type==="injection"?"Add Injection / Drip":"Add Laboratory Test"),
 '<div class="grid g2">'+
-'<div class="field" style="grid-column:span 2"><label>Test / Service Name <span class="req">*</span></label><input class="inp" id="tt-name" value="'+esc(t.name)+'" placeholder="'+(type==="ultrasound"?"Ultrasound Abdomen":"CBC (Complete Blood Count)")+'"></div>'+
+'<div class="field" style="grid-column:span 2"><label>Test / Service Name <span class="req">*</span></label><input class="inp" id="tt-name" value="'+esc(t.name)+'" placeholder="'+(type==="ultrasound"?"Ultrasound Abdomen":type==="injection"?"Inj. Dexamethasone / Drip Normal Saline":"CBC (Complete Blood Count)")+'"></div>'+
 '<div class="field"><label>Category</label><input class="inp" id="tt-cat" list="tt-cats" value="'+esc(t.category)+'"><datalist id="tt-cats">'+cats.map(c=>'<option value="'+esc(c)+'"></option>').join("")+"</datalist></div>"+
 '<div class="field"><label>Price <span class="req">*</span></label><input class="inp" id="tt-price" inputmode="numeric" value="'+t.price+'"></div>'+
 '<div class="field"><label>Status</label><select class="inp" id="tt-active"><option value="active" '+(t.active?"selected":"")+">Active</option><option value=\"inactive\" "+(!t.active?"selected":"")+">Inactive</option></select></div>"+
-'<div class="field"><label>Type</label><select class="inp" id="tt-type"><option value="lab" '+(t.type==="lab"?"selected":"")+">Laboratory</option><option value=\"ultrasound\" "+(t.type==="ultrasound"?"selected":"")+">Ultrasound</option></select></div></div>",
+'<div class="field"><label>Type</label><select class="inp" id="tt-type"><option value="lab" '+(t.type==="lab"?"selected":"")+">Laboratory</option><option value=\"ultrasound\" "+(t.type==="ultrasound"?"selected":"")+">Ultrasound</option><option value=\"injection\" "+(t.type==="injection"?"selected":"")+">Injection / Drip</option></select></div></div>",
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="tt-save">💾 SAVE</button>');
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
 ov.querySelector("#tt-save").onclick=async()=>{
@@ -1277,9 +1558,10 @@ v.items.map((it,i)=>"<tr><td>"+(i+1)+'</td><td style="font-weight:600">'+esc(it.
 '<div class="sum-row"><span style="font-weight:700;color:#be123c">DUE / BALANCE</span><b style="color:#be123c">'+C+" "+fmtMoney(v.due)+"</b></div></div>"+
 (pays.length?'<div style="margin-top:12px"><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--slate-600);margin-bottom:6px">Additional Payments Received</p><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Time</th><th>Amount</th><th>Method</th><th>By</th></tr></thead><tbody>'+
 pays.map(p=>"<tr><td>"+fmtDate(p.date)+"</td><td>"+fmtTime(p.time)+'</td><td style="font-weight:700">'+C+" "+fmtMoney(p.amount)+"</td><td>"+esc(p.method)+"</td><td>"+esc(p.createdBy)+"</td></tr>").join("")+"</tbody></table></div></div>":""),
-'<button class="btn btn-neutral" data-close>Close</button><button class="btn btn-primary" id="vb-print">🖨 PRINT SLIP</button>',true);
+'<button class="btn btn-neutral" data-close>Close</button><button class="btn btn-warn" id="vb-printlab">🧪 LAB SLIP</button><button class="btn btn-primary" id="vb-print">🖨 PRINT SLIP</button>',true);
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
 ov.querySelector("#vb-print").onclick=()=>printSlip(v);
+ov.querySelector("#vb-printlab").onclick=()=>printLabSlip(v);
 }
 function payModal(v){
 const s=app.settings,C=s.currency;
@@ -1481,7 +1763,7 @@ updExtra();draw();
 USERS
 ============================================================ */
 function pageUsers(){
-const PERM_LABELS={dashboard:"Dashboard",newvisit:"New Visit",patients:"Patients",emr:"EMR",doctors:"Doctors",lab:"Lab",ultrasound:"Ultrasound",billing:"Billing",expenses:"Expenses",reports:"Reports",agent:"AI Agent",appointments:"Appointments",leads:"WhatsApp Leads",inventory:"Inventory",staff:"Staff & Payroll",users:"Users",settings:"Settings",backup:"Backup",delete:"Delete Records (dangerous)"};
+const PERM_LABELS={dashboard:"Dashboard",newvisit:"New Visit",patients:"Patients",emr:"EMR",doctors:"Doctors",lab:"Lab",ultrasound:"Ultrasound",injection:"Injections / Drips",billing:"Billing",expenses:"Expenses",reports:"Reports",agent:"AI Agent",appointments:"Appointments",leads:"WhatsApp Leads",inventory:"Inventory",staff:"Staff & Payroll",users:"Users",settings:"Settings",backup:"Backup",delete:"Delete Records (dangerous)"};
 const draw=()=>{
 $("#us-rows").innerHTML=app.users.map(u=>
 '<tr><td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--blue-800)">'+esc(u.username)+'</td><td style="font-weight:600">'+esc(u.fullName)+"</td>"+
@@ -1743,8 +2025,10 @@ STARTUP
 async function boot(){
 try{
 if(!CLINIC){renderLogin();return}
-try{CLINIC_INFO=await api("GET","/api/clinic/"+encodeURIComponent(CLINIC))}
-catch(e){if(!API_OK)throw e;CLINIC="";CLINIC_INFO=null;try{localStorage.removeItem("mcms_clinic")}catch(x){}renderLogin(e.message);return}
+try{CLINIC_INFO=await api("GET","/api/clinic/"+encodeURIComponent(CLINIC));try{localStorage.setItem("zm_info_"+CLINIC,JSON.stringify(CLINIC_INFO))}catch(x){}}
+catch(e){if(e.net){const ci=cachedInfo(CLINIC);if(ci)CLINIC_INFO=ci;else throw e}
+else{CLINIC="";CLINIC_INFO=null;try{localStorage.removeItem("mcms_clinic")}catch(x){}renderLogin(e.message);return}}
+await obLoad();
 await seed();
 await loadData();
 const oc=ownerCreds();

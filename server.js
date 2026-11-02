@@ -23,11 +23,8 @@ const DB = {
   host:     pick("DB_HOST", "dbHost", "127.0.0.1"),
   user:     pick("DB_USER", "dbUser", "root"),
   password: pick("DB_PASS", "dbPass", ""),
-  database: pick("DB_NAME", "dbName", "abraj_medical_center"),
-  port:     Number(pick("DB_PORT", "dbPort", 3306))
+  database: pick("DB_NAME", "dbName", "abraj_medical_center")
 };
-const DB_SSL = String(pick("DB_SSL", "dbSsl", "false")).toLowerCase() === "true";   /* cloud MySQL (Aiven/TiDB) ke liye true */
-const ON_VERCEL = !!process.env.VERCEL;
 const MASTER_KEY  = pick("MASTER_KEY", "masterKey", "ChangeMe@123");   /* master panel ka password */
 const MASTER_USER = pick("MASTER_USER", "masterUser", "owner");                  /* owner ka naam */
 const WEBHOOK_KEY = pick("WEBHOOK_KEY", "webhookKey", "");               /* WhatsApp / n8n webhook ki key */
@@ -40,7 +37,7 @@ const DEV_CONTACT = "Zain Ali — 03702906075";
 
 const STORES = ["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters",
                 "appointments","leads","inventory","staff"];
-const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","billing","expenses","reports",
+const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports",
                    "appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const DEFAULT_CLINIC = "abraj";
 const ADMIN_ID = "usr_faheem_admin";
@@ -58,14 +55,11 @@ const ckey = (req, key) => (req.clinic === DEFAULT_CLINIC ? key : req.clinic + "
 
 /* ---------- Database + tables + purani data ki migration ---------- */
 async function initDB() {
-  const ssl = DB_SSL ? { minVersion: "TLSv1.2", rejectUnauthorized: true } : undefined;
-  try {   /* cloud database mein CREATE DATABASE ki ijazat aksar nahi hoti — pehle se bani hui DB chalegi */
-    const conn = await mysql.createConnection({ host: DB.host, port: DB.port, user: DB.user, password: DB.password, ssl });
-    await conn.query("CREATE DATABASE IF NOT EXISTS `" + DB.database + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-    await conn.end();
-  } catch (e) { if (!ON_VERCEL) throw e; }
-  pool = mysql.createPool({ host: DB.host, port: DB.port, user: DB.user, password: DB.password, database: DB.database, ssl,
-                            connectionLimit: ON_VERCEL ? 2 : 10, charset: "utf8mb4_unicode_ci" });
+  const conn = await mysql.createConnection({ host: DB.host, user: DB.user, password: DB.password });
+  await conn.query("CREATE DATABASE IF NOT EXISTS `" + DB.database + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+  await conn.end();
+  pool = mysql.createPool({ host: DB.host, user: DB.user, password: DB.password, database: DB.database,
+                            connectionLimit: 10, charset: "utf8mb4_unicode_ci" });
 
   await pool.query(
     "CREATE TABLE IF NOT EXISTS records (" +
@@ -149,12 +143,6 @@ function clinicProblem(c) {
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "25mb" }));
-/* Vercel (serverless): har cold start par database ready karo */
-let _ready = null;
-if (ON_VERCEL) app.use((req, res, next) => {
-  _ready = _ready || initDB();
-  _ready.then(() => next(), e => { _ready = null; res.status(500).json({ error: "Database connect nahi hua: " + errMsg(e) }); });
-});
 /* SECURITY: sirf ye files browser ko milengi (config.json, server.js waghera kabhi nahi) */
 const PUBLIC_FILES = new Set(["index.html","master.html","login-bg.jpg","manifest.json","sw.js","icon-192.png","icon-512.png"]);
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
@@ -506,6 +494,13 @@ app.post("/api/seq/:key", async (req, res) => {
   try {
     const start = parseInt((req.body && req.body.start) || "1", 10) || 1;
     const k = ckey(req, req.params.key);
+    /* OFFLINE SYNC: device ne offline rehte hue "last" tak number diye — server counter ko kam az kam wahan tak le jao (number issue nahi hota) */
+    if (req.body && req.body.last !== undefined) {
+      const last = parseInt(req.body.last, 10) || 0;
+      await pool.query("INSERT INTO counters (ckey,cval) VALUES (?,?) ON DUPLICATE KEY UPDATE cval=GREATEST(cval,VALUES(cval))", [k, last]);
+      const [r2] = await pool.query("SELECT cval FROM counters WHERE ckey=?", [k]);
+      return res.json({ value: r2[0].cval });
+    }
     await pool.query("INSERT INTO counters (ckey,cval) VALUES (?,?) ON DUPLICATE KEY UPDATE cval=cval+1", [k, start]);
     const [rows] = await pool.query("SELECT cval FROM counters WHERE ckey=?", [k]);
     res.json({ value: rows[0].cval });
@@ -569,7 +564,7 @@ app.delete("/api/:store", async (req, res) => {
 });
 
 /* ---------- start ---------- */
-if (ON_VERCEL) { module.exports = app; } else (async () => {
+(async () => {
   try {
     await initDB();
     app.listen(PORT, () => {
