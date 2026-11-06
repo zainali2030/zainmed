@@ -1,0 +1,13 @@
+{
+  "port": 4000,
+  "dbHost": "127.0.0.1",
+  "dbPort": 3306,
+  "dbUser": "zainmed_user",
+  "dbPass": "CHANGE_THIS_DATABASE_PASSWORD",
+  "dbName": "abraj_medical_center",
+  "dbSsl": false,
+  "masterUser": "owner",
+  "masterKey": "REPLACE_WITH_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARACTERS",
+  "timezone": "Asia/Karachi",
+  "seedDefaultClinic": false
+}
