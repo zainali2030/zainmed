@@ -12,6 +12,7 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 /* ---------- CONFIG: config.json ya environment variables ---------- */
 let CFG = {};
@@ -42,12 +43,12 @@ const GEMINI_MODEL= pick("GEMINI_MODEL", "geminiModel", "gemini-flash-latest");
 const CLAUDE_KEY  = pick("ANTHROPIC_API_KEY", "anthropicKey", "");
 const CLAUDE_MODEL= pick("ANTHROPIC_MODEL", "anthropicModel", "claude-haiku-5-5");
 const TZ          = pick("CLINIC_TZ", "timezone", "Asia/Karachi");
-const DEV_CONTACT = "Zain Ali — 03702906075";
+const DEV_CONTACT = "Zain Ali — 03702906075 — zainaliofficialtrada343@gmail.com";
 
 const STORES = ["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters",
-                "appointments","leads","inventory","staff"];
+                "appointments","leads","inventory","staff","sales"];
 const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports",
-                   "appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
+                   "appointments","leads","inventory","staff","agent","users","settings","backup","delete","pharmacy"];
 const DEFAULT_CLINIC = "abraj";
 const ADMIN_ID = "usr_faheem_admin";
 
@@ -57,6 +58,18 @@ let pool = null;
 const todayStr = () => new Date().toLocaleDateString("en-CA", { timeZone: TZ });
 const parseRow = r => { try { return JSON.parse(r.data); } catch (e) { return null; } };
 const recId = obj => String(obj && obj.id !== undefined ? obj.id : (obj && obj.key !== undefined ? obj.key : ""));
+const hashPassword = async password => {
+  const salt=crypto.randomBytes(16);
+  const key=await new Promise((resolve,reject)=>crypto.scrypt(String(password),salt,64,(e,k)=>e?reject(e):resolve(k)));
+  return "scrypt$"+salt.toString("base64url")+"$"+Buffer.from(key).toString("base64url");
+};
+const verifyPassword = async (password,stored) => {
+  const s=String(stored||"");
+  if(!s.startsWith("scrypt$"))return s===String(password);
+  const parts=s.split("$");if(parts.length!==3)return false;
+  try{const salt=Buffer.from(parts[1],"base64url"),expected=Buffer.from(parts[2],"base64url");const actual=await new Promise((resolve,reject)=>crypto.scrypt(String(password),salt,expected.length,(e,k)=>e?reject(e):resolve(k)));return expected.length===actual.length&&crypto.timingSafeEqual(expected,actual)}catch(e){return false}
+};
+
 const errMsg = e => String((e && e.message) || e);
 const cleanCode = s => String(s || "").trim().toLowerCase();
 const validCode = s => /^[a-z0-9_-]{2,30}$/.test(s);
@@ -95,6 +108,8 @@ async function initDB() {
     "ckey VARCHAR(64) NOT NULL PRIMARY KEY, " +
     "cval BIGINT NOT NULL DEFAULT 1) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+  await pool.query("CREATE TABLE IF NOT EXISTS auth_sessions (token_hash CHAR(64) NOT NULL PRIMARY KEY, clinic VARCHAR(40) NOT NULL, user_id VARCHAR(64) NOT NULL, expires_at DATETIME NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX idx_auth_user (clinic,user_id), INDEX idx_auth_exp (expires_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
   await pool.query(
     "CREATE TABLE IF NOT EXISTS clinics (" +
     "code VARCHAR(40) NOT NULL PRIMARY KEY, " +
@@ -102,11 +117,12 @@ async function initDB() {
     "address VARCHAR(300) NOT NULL DEFAULT '', " +
     "phone VARCHAR(60) NOT NULL DEFAULT '', " +
     "admin_user VARCHAR(60) NOT NULL, " +
-    "admin_pass VARCHAR(100) NOT NULL, " +
+    "admin_pass VARCHAR(255) NOT NULL, " +
     "active TINYINT NOT NULL DEFAULT 1, " +
     "expiry DATE NULL, " +
     "note VARCHAR(300) NOT NULL DEFAULT '', " +
     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  await pool.query("ALTER TABLE clinics MODIFY admin_pass VARCHAR(255) NOT NULL");
 
   /* Naye server par koi default clinic (known password ke saath) nahi banti. Sirf config.json mein "seedDefaultClinic": true likhne par. */
   if (pick("SEED_DEFAULT_CLINIC", "seedDefaultClinic", false))
@@ -120,10 +136,15 @@ async function initDB() {
 
 /* Har clinic ka admin account server khud bana/update kar deta hai */
 async function syncAdmin(c) {
+  let password=String(c.admin_pass||"");
+  if(!password.startsWith("scrypt$")){
+    password=await hashPassword(password);
+    await pool.query("UPDATE clinics SET admin_pass=? WHERE code=?",[password,c.code]);
+  }
   const user = {
-    id: ADMIN_ID, username: c.admin_user, password: c.admin_pass,
+    id: ADMIN_ID, username: c.admin_user, password,
     fullName: c.admin_user + " (Administrator)", role: "admin",
-    permissions: ALL_PERMS.filter(p => p !== "users" && p !== "settings"), active: true, createdAt: "2025-01-01T00:00:00.000Z"
+    permissions: ALL_PERMS.slice(), active: true, createdAt: "2025-01-01T00:00:00.000Z"
   };
   await pool.query(
     "INSERT INTO records (clinic,store,id,data) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
@@ -136,7 +157,7 @@ async function getClinic(code) {
   const hit = clinicCache.get(code);
   if (hit && Date.now() - hit.t < 10000) return hit.v;
   const [rows] = await pool.query(
-    "SELECT code,name,address,phone,admin_user,admin_pass,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note FROM clinics WHERE code=?", [code]);
+    "SELECT code,name,address,phone,admin_user,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note FROM clinics WHERE code=?", [code]);
   const v = rows.length ? rows[0] : null;
   clinicCache.set(code, { t: Date.now(), v });
   return v;
@@ -182,7 +203,7 @@ function masterAuth(req, res, next) {
 app.get("/api/master/clinics", masterAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      "SELECT code,name,address,phone,admin_user,admin_pass,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note," +
+      "SELECT code,name,address,phone,admin_user,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note," +
       "DATE_FORMAT(created_at,'%Y-%m-%d') AS created FROM clinics ORDER BY created_at");
     const [cnt] = await pool.query("SELECT clinic, store, COUNT(*) AS n FROM records WHERE store IN ('patients','visits') GROUP BY clinic, store");
     rows.forEach(r => {
@@ -205,7 +226,7 @@ app.post("/api/master/clinics", masterAuth, async (req, res) => {
     await pool.query(
       "INSERT INTO clinics (code,name,address,phone,admin_user,admin_pass,active,expiry,note) VALUES (?,?,?,?,?,?,1,?,?)",
       [code, String(b.name).trim(), String(b.address || "").trim(), String(b.phone || "").trim(),
-       String(b.adminUser).trim(), String(b.adminPass).trim(), b.expiry || null, String(b.note || "").trim()]);
+       String(b.adminUser).trim(), await hashPassword(String(b.adminPass).trim()), b.expiry || null, String(b.note || "").trim()]);
     clinicCache.delete(code);
     await syncAdmin(await getClinic(code).then(c => ({ code: c.code, admin_user: c.admin_user, admin_pass: c.admin_pass })));
     res.json({ ok: true, code });
@@ -222,7 +243,7 @@ app.put("/api/master/clinics/:code", masterAuth, async (req, res) => {
     const address = b.address !== undefined ? String(b.address).trim() : c.address;
     const phone = b.phone !== undefined ? String(b.phone).trim() : c.phone;
     const adminUser = b.adminUser ? String(b.adminUser).trim() : c.admin_user;
-    const adminPass = b.adminPass ? String(b.adminPass).trim() : c.admin_pass;
+    const adminPass = b.adminPass ? await hashPassword(String(b.adminPass).trim()) : c.admin_pass;
     const active = b.active !== undefined ? (b.active ? 1 : 0) : c.active;
     const note = b.note !== undefined ? String(b.note).trim() : c.note;
     const expiry = b.expiry !== undefined ? (b.expiry || null) : null;
@@ -234,8 +255,45 @@ app.put("/api/master/clinics/:code", masterAuth, async (req, res) => {
         [name, address, phone, adminUser, adminPass, active, note, code]);
     clinicCache.delete(code);
     await syncAdmin({ code, admin_user: adminUser, admin_pass: adminPass });
+    if(b.adminPass){
+      const [ar]=await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?",[code,ADMIN_ID]);
+      if(ar.length){const au=parseRow(ar[0]);au.password=adminPass;au.username=adminUser;await pool.query("UPDATE records SET data=? WHERE clinic=? AND store='users' AND id=?",[JSON.stringify(au),code,ADMIN_ID]);}
+    }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
+});
+
+/* ---------- USER AUTHENTICATION + SERVER-SIDE ROLE ENFORCEMENT ---------- */
+const ROLE_DEFAULTS = {
+  admin: ALL_PERMS,
+  doctor: ["dashboard","patients","emr","reports"],
+  reception: ["dashboard","newvisit","patients","emr","billing","lab","ultrasound","injection"],
+  medical_store: ["dashboard","inventory","pharmacy","billing"]
+};
+const hashToken = token => crypto.createHash("sha256").update(token).digest("hex");
+app.post("/api/auth/login", async (req,res) => {
+  try {
+    const code=cleanCode(req.get("x-clinic")||req.body.clinic||"");
+    const c=await getClinic(code);const problem=clinicProblem(c);
+    if(problem)return res.status(problem.status).json({error:problem.msg});
+    const username=String(req.body.username||"").trim().toLowerCase();
+    const password=String(req.body.password||"");
+    if(!username||!password)return res.status(400).json({error:"Username aur password zaroori hain"});
+    const [rows]=await pool.query("SELECT data FROM records WHERE clinic=? AND store='users'",[code]);
+    const user=rows.map(parseRow).filter(Boolean).find(x=>String(x.username||"").toLowerCase()===username);
+    if(!user||user.active===false||!(await verifyPassword(password,user.password)))return res.status(401).json({error:"Username ya password ghalat hai"});
+    if(!String(user.password||"").startsWith("scrypt$")){user.password=await hashPassword(password);await pool.query("UPDATE records SET data=? WHERE clinic=? AND store='users' AND id=?",[JSON.stringify(user),code,user.id]);}
+    const token=crypto.randomBytes(32).toString("base64url");
+    await pool.query("INSERT INTO auth_sessions (token_hash,clinic,user_id,expires_at) VALUES (?,?,?,DATE_ADD(NOW(),INTERVAL 12 HOUR))",[hashToken(token),code,user.id]);
+    const permissions=user.role==="admin"?ALL_PERMS:(Array.isArray(user.permissions)?user.permissions:(ROLE_DEFAULTS[user.role]||[]));
+    res.json({token,user:{id:user.id,username:user.username,fullName:user.fullName,role:user.role,permissions,active:user.active!==false}});
+  } catch(e){res.status(500).json({error:errMsg(e)});}
+});
+app.post("/api/auth/logout", async(req,res)=>{try{const t=String(req.get("authorization")||"").replace(/^Bearer\s+/i,"");if(t)await pool.query("DELETE FROM auth_sessions WHERE token_hash=?",[hashToken(t)]);res.json({ok:true})}catch(e){res.status(500).json({error:errMsg(e)})}});
+
+app.delete("/api/master/clinics/:code", masterAuth, async (req,res)=>{
+  const code=cleanCode(req.params.code);if(!validCode(code))return res.status(400).json({error:"Invalid clinic ID"});
+  const conn=await pool.getConnection();try{await conn.beginTransaction();await conn.query("DELETE FROM records WHERE clinic=?",[code]);await conn.query("DELETE FROM auth_sessions WHERE clinic=?",[code]);await conn.query("DELETE FROM clinics WHERE code=?",[code]);await conn.commit();clinicCache.delete(code);res.json({ok:true,deleted:code})}catch(e){await conn.rollback();res.status(500).json({error:errMsg(e)})}finally{conn.release()}
 });
 
 /* ---------- OWNER GUARD: users aur settings sirf owner badal sakta hai ---------- */
@@ -454,14 +512,29 @@ app.use("/api", async (req, res, next) => {
     const p = clinicProblem(c);
     if (p) return res.status(p.status).json({ error: p.msg });
     req.clinic = code;
+    const isMaster=isOwnerReq(req);
+    const bearer=String(req.get("authorization")||"").replace(/^Bearer\s+/i,"");
+    if(!isMaster){
+      if(!bearer)return res.status(401).json({error:"Login session missing. Dobara login karein."});
+      const [ss]=await pool.query("SELECT user_id FROM auth_sessions WHERE token_hash=? AND clinic=? AND expires_at>NOW()",[hashToken(bearer),code]);
+      if(!ss.length)return res.status(401).json({error:"Login session expire ho gaya. Dobara login karein."});
+      const [ur]=await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?",[code,ss[0].user_id]);
+      const su=ur.length?parseRow(ur[0]):null;
+      if(!su||su.active===false)return res.status(403).json({error:"User account disabled hai"});
+      req.sessionUser=su;
+      const perms=su.role==="admin"?ALL_PERMS:(Array.isArray(su.permissions)?su.permissions:(ROLE_DEFAULTS[su.role]||[]));
+      const route=req.path.split("/").filter(Boolean)[0]||"";
+      const map={patients:"patients",visits:"newvisit",doctors:"doctors",tests:"lab",inventory:"inventory",sales:"pharmacy",expenses:"expenses",payments:"billing",appointments:"appointments",leads:"leads",staff:"staff",audit:"users",users:"users",settings:"settings"};
+      let needed=map[route];
+      if(route==="tests"&&req.body&&(req.body.type==="injection"||/injection|drip/i.test(String(req.body.category||""))))needed="injection";
+      if(needed&&req.method!=="GET"&&!perms.includes(needed))return res.status(403).json({error:"Is module ki permission aap ke account mein nahi hai"});
+      if(req.method==="DELETE"&&!perms.includes("delete"))return res.status(403).json({error:"Delete permission required"});
+      if(req.path.startsWith("/agent")&&!perms.includes("agent"))return res.status(403).json({error:"AI Agent permission required"});
+    }
     const gm = req.path.match(/^\/(users|settings)(\/|$)/);
-    if (gm && req.method !== "GET" && !isOwnerReq(req)) {
-      let allow = false;
-      if (gm[1] === "settings" && req.method === "PUT") {            /* sirf pehli dafa default settings banne dein */
-        const [ex] = await pool.query("SELECT 1 FROM records WHERE clinic=? AND store='settings' LIMIT 1", [code]);
-        allow = ex.length === 0;
-      }
-      if (!allow) return res.status(403).json({ error: "Users aur Settings sirf Owner badal sakta hai. Software provider se rabta karein: " + DEV_CONTACT });
+    if (gm && req.method !== "GET" && !isMaster) {
+      const perms=req.sessionUser&&req.sessionUser.role==="admin"?ALL_PERMS:(req.sessionUser&&req.sessionUser.permissions||[]);
+      if(!perms.includes(gm[1]))return res.status(403).json({error:"Users aur Settings ke liye Admin permission zaroori hai"});
     }
     next();
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
@@ -487,7 +560,13 @@ app.get("/api/agent/status", (req, res) => res.json({ ai: !!(GEMINI_KEY || CLAUD
 app.get("/api/stores", async (req, res) => {
   try {
     const out = {};
-    for (const s of STORES) out[s] = await loadStore(req.clinic, s);
+    const su=req.sessionUser;const perms=su&&su.role==="admin"?ALL_PERMS:(su&&su.permissions||[]);
+    for (const s of STORES) {
+      const rp={patients:"patients",visits:"emr",doctors:"doctors",tests:"lab",payments:"billing",expenses:"expenses",users:"users",settings:"settings",audit:"users",appointments:"appointments",leads:"leads",inventory:"inventory",staff:"staff",sales:"pharmacy"}[s];
+      if(rp&&!perms.includes(rp)){out[s]=[];continue;}
+      out[s]=await loadStore(req.clinic,s);
+      if(s==="users")out[s]=out[s].map(u=>{const v={...u};delete v.password;return v;});
+    }
     res.json(out);
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
@@ -522,14 +601,31 @@ const okStore = (req, res) => { if (STORES.indexOf(req.params.store) < 0) { res.
 
 app.get("/api/:store", async (req, res) => {
   if (!okStore(req, res)) return;
-  try { res.json(await loadStore(req.clinic, req.params.store)); }
-  catch (e) { res.status(500).json({ error: errMsg(e) }); }
+  try {
+    const store=req.params.store;
+    if(!isOwnerReq(req)){
+      const su=req.sessionUser;const perms=su&&su.role==="admin"?ALL_PERMS:(su&&su.permissions||[]);
+      if(store==="users"&&!perms.includes("users"))return res.json(su?[{id:su.id,username:su.username,fullName:su.fullName,role:su.role,permissions:su.permissions||[],active:su.active!==false}]:[]);
+      if(store==="audit"&&!perms.includes("users"))return res.json([]);
+      const readPerm={inventory:"inventory",sales:"pharmacy",expenses:"expenses",payments:"billing",appointments:"appointments",leads:"leads",staff:"staff",doctors:"doctors",tests:"lab",patients:"patients",visits:"emr"}[store];
+      const workflowRead=(store==="doctors"&&perms.includes("newvisit"))||(store==="tests"&&perms.includes("newvisit"))||(store==="inventory"&&(perms.includes("newvisit")||perms.includes("emr")));
+      if(readPerm&&!perms.includes(readPerm)&&!workflowRead&&!(store==="visits"&&perms.includes("newvisit")))return res.json([]);
+    }
+    const data=await loadStore(req.clinic, store);
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 app.get("/api/:store/:id", async (req, res) => {
   if (!okStore(req, res)) return;
   try {
+    if(!isOwnerReq(req)&&req.sessionUser){
+      const perms=req.sessionUser.role==="admin"?ALL_PERMS:(req.sessionUser.permissions||[]);
+      const rp={patients:"patients",visits:"emr",doctors:"doctors",tests:"lab",inventory:"inventory",sales:"pharmacy",expenses:"expenses",payments:"billing",users:"users",settings:"settings"}[req.params.store];
+      if(rp&&!perms.includes(rp)&&!(req.params.store==="doctors"&&perms.includes("newvisit"))&&!(req.params.store==="tests"&&perms.includes("newvisit"))&&!(req.params.store==="visits"&&perms.includes("newvisit")))return res.json(null);
+      if(req.params.store==="users"&&!perms.includes("users")&&req.sessionUser.id!==req.params.id)return res.json(null);
+    }
     const [rows] = await pool.query("SELECT data FROM records WHERE clinic=? AND store=? AND id=?", [req.clinic, req.params.store, req.params.id]);
-    res.json(rows.length ? parseRow(rows[0]) : null);
+    const record=rows.length?parseRow(rows[0]):null;if(record&&req.params.store==="users")delete record.password;res.json(record);
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 app.put("/api/:store", async (req, res) => {
@@ -537,9 +633,17 @@ app.put("/api/:store", async (req, res) => {
   const id = recId(req.body);
   if (!id) return res.status(400).json({ error: "Record needs id or key" });
   try {
+    let record=req.body;
+    if(req.params.store==="users"){
+      const [old]=await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?",[req.clinic,id]);
+      const prior=old.length?parseRow(old[0]):{};record={...prior,...req.body};
+      if(record.password&&!String(record.password).startsWith("scrypt$"))record.password=await hashPassword(record.password);
+      if(!record.password)return res.status(400).json({error:"New user password required"});
+    }
     await pool.query("INSERT INTO records (clinic,store,id,data) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
-      [req.clinic, req.params.store, id, JSON.stringify(req.body)]);
-    res.json(req.body);
+      [req.clinic, req.params.store, id, JSON.stringify(record)]);
+    if(req.params.store==="users")delete record.password;
+    res.json(record);
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 app.post("/api/:store/bulk", async (req, res) => {
@@ -548,8 +652,15 @@ app.post("/api/:store/bulk", async (req, res) => {
   try {
     for (const obj of arr) {
       const id = recId(obj); if (!id) continue;
+      let record=obj;
+      if(req.params.store==="users"){
+        const [old]=await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?",[req.clinic,id]);
+        record={...(old.length?parseRow(old[0]):{}),...obj};
+        if(record.password&&!String(record.password).startsWith("scrypt$"))record.password=await hashPassword(record.password);
+        if(!record.password)continue;
+      }
       await pool.query("INSERT INTO records (clinic,store,id,data) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
-        [req.clinic, req.params.store, id, JSON.stringify(obj)]);
+        [req.clinic, req.params.store, id, JSON.stringify(record)]);
     }
     res.json({ saved: arr.length });
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
