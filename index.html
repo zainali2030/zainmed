@@ -324,12 +324,11 @@ fetch() API calls ke zariye. Saara design/features wohi hain.
 ============================================================ */
 "use strict";
 /* ================= CONSTANTS ================= */
-const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff","sales"];
+const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff"];
 let CLINIC=(function(){try{return localStorage.getItem("mcms_clinic")||""}catch(e){return ""}})();let CLINIC_INFO=null;
 const ADMIN_ID="usr_faheem_admin",ADMIN_USER="Faheem",ADMIN_PASS="Faheem786";
-const ALL_PERMS=["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete","pharmacy"];
+const ALL_PERMS=["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const RECEPTION_PERMS=["dashboard","newvisit","patients","emr","billing","lab","ultrasound","injection"];
-const MEDSTORE_PERMS=["dashboard","inventory","pharmacy","billing"];
 const DOCTOR_PERMS=["dashboard","patients","emr","reports"];
 const NAV=[
 {key:"dashboard",label:"Dashboard",icon:"📊",perm:"dashboard"},
@@ -340,8 +339,6 @@ const NAV=[
 {key:"lab",label:"Lab / Tests",icon:"🧪",perm:"lab"},
 {key:"ultrasound",label:"Ultrasound",icon:"📡",perm:"ultrasound"},
 {key:"injection",label:"Injections / Drips",icon:"💉",perm:"injection"},
-{key:"inventory",label:"Medical Store Stock",icon:"📦",perm:"inventory"},
-{key:"pharmacy",label:"Medical Store Billing",icon:"💊",perm:"pharmacy"},
 {key:"billing",label:"Billing / Charges",icon:"🧾",perm:"billing"},
 {key:"expenses",label:"Expenses",icon:"💸",perm:"expenses"},
 {key:"reports",label:"Reports",icon:"📈",perm:"reports"},
@@ -356,7 +353,7 @@ printSize:"80",currency:"Rs.",defaultOpdFee:500,patientIdPrefix:"",slipFontSize:
 dutyStaffName:"",shifts:["Morning","Evening","Night"],
 paymentMethods:["Cash","Card","Easypaisa","JazzCash","Bank Transfer","Credit / Due"],
 expenseCategories:["Salary","Utilities","Medicines","Lab Supplies","Maintenance","Rent","Doctor Payout","Miscellaneous"],
-backupReminderDays:3,lastBackupAt:"",autoPrintAfterSave:true,developerPhone:"03702906075",developerEmail:"zainaliofficialtrada343@gmail.com",slipUserName:""};
+backupReminderDays:3,lastBackupAt:"",autoPrintAfterSave:true};
 const SEED_DOCTORS=[
 {name:"Dr. Ahmed Raza",specialization:"General Physician",qualification:"MBBS, FCPS",fee:500,mobile:"+92 300 1234567",commissionEnabled:true,commissionPercent:40,shift:"Morning",active:true},
 {name:"Dr. Sana Khalid",specialization:"Gynaecologist",qualification:"MBBS, MCPS (Gynae)",fee:800,mobile:"+92 301 2345678",commissionEnabled:true,commissionPercent:50,shift:"Evening",active:true},
@@ -426,7 +423,7 @@ opt=opt||{};
 if(!opt.force&&!netOK()){API_OK=false;const e=new Error("Internet nahi hai — offline mode");e.net=true;throw e}
 let r;const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),opt.timeout||12000);
 try{
-r=await fetch(API_BASE+path,{method:method,signal:ctl.signal,headers:Object.assign({"Content-Type":"application/json","X-Clinic":CLINIC||""},(localStorage.getItem("zm_auth_token_"+CLINIC)||sessionStorage.getItem("zm_auth_token"))?{"Authorization":"Bearer "+(localStorage.getItem("zm_auth_token_"+CLINIC)||sessionStorage.getItem("zm_auth_token"))}: {},ownerCreds()?{"x-master-user":ownerCreds().u,"x-master-key":ownerCreds().k}:{}),body:body===undefined?undefined:JSON.stringify(body)});
+r=await fetch(API_BASE+path,{method:method,signal:ctl.signal,headers:Object.assign({"Content-Type":"application/json","X-Clinic":CLINIC||""},ownerCreds()?{"x-master-user":ownerCreds().u,"x-master-key":ownerCreds().k}:{}),body:body===undefined?undefined:JSON.stringify(body)});
 }catch(e){
 clearTimeout(tm);API_OK=false;NET.offlineUntil=Date.now()+8000;setNetState();
 const er=new Error("Server se connection nahi hua ("+(API_BASE||location.host)+"). Offline mode mein kaam chal sakta hai.");er.net=true;throw er}
@@ -523,12 +520,10 @@ return ovGet(store,key,v)}catch(e){if(!e.net)throw e}}
 return ovGet(store,key,await cGet(store,key))}
 /* ---- writes: server par, ya offline ho to local + outbox ---- */
 async function qPut(store,obj){
-if(store==="users"&&(!netOK()||OB.length))throw new Error("User accounts ko manage karne se pehle server online aur sync queue clear honi chahiye.");
-if(!OB.length&&netOK()){try{const r=await api("PUT","/api/"+store,obj);await cPut(store,store==="users"?r:obj);return r}catch(e){if(!e.net)throw e}}
+if(!OB.length&&netOK()){try{const r=await api("PUT","/api/"+store,obj);await cPut(store,obj);return r}catch(e){if(!e.net)throw e}}
 await cPut(store,obj);await obAdd({op:"put",store:store,obj:obj});flushSoon();return obj}
 async function qBulk(store,arr){if(!arr||!arr.length)return {saved:0};
-if(store==="users"&&(!netOK()||OB.length))throw new Error("User accounts restore karne se pehle server online aur sync queue clear honi chahiye.");
-if(!OB.length&&netOK()){try{const r=await api("POST","/api/"+store+"/bulk",arr,{timeout:90000});await cPutMany(store,store==="users"?arr.map(x=>{const y={...x};delete y.password;return y;}):arr);return r}catch(e){if(!e.net)throw e}}
+if(!OB.length&&netOK()){try{const r=await api("POST","/api/"+store+"/bulk",arr,{timeout:90000});await cPutMany(store,arr);return r}catch(e){if(!e.net)throw e}}
 await cPutMany(store,arr);await obAdd({op:"bulk",store:store,arr:arr});flushSoon();return {saved:arr.length}}
 async function qDel(store,key){
 if(!OB.length&&netOK()){try{const r=await api("DELETE","/api/"+store+"/"+encodeURIComponent(key));await cDel(store,key);return r}catch(e){if(!e.net)throw e}}
@@ -578,19 +573,19 @@ if(OB.length&&netOK()){await flushOutbox();return}
 if(!OB.length&&NET.state==="off"&&navigator.onLine!==false&&Date.now()>=NET.offlineUntil-1){try{await api("GET","/api/ping",undefined,{force:true,timeout:5000});setNetState()}catch(e){}}
 else setNetState()},15000);
 /* ================= APP STATE ================= */
-const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],inventory:[],sales:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
+const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
 async function audit(user,action,entity,entityId,details){
 await qPut("audit",{id:id("log"),ts:new Date().toISOString(),user:user,action:action,entity:entity,entityId:entityId,details:details||""});
 }
 async function loadData(){
-const [p,v,d,t,pay,ex,u,au,s,inv,sales]=await Promise.all([
+const [p,v,d,t,pay,ex,u,au,s]=await Promise.all([
 qGetAll("patients"),qGetAll("visits"),qGetAll("doctors"),qGetAll("tests"),qGetAll("payments"),
-qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app"),qGetAll("inventory"),qGetAll("sales")]);
+qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app")]);
 app.patients=p.sort((a,b)=>a.patientId<b.patientId?1:-1);
 app.visits=v.sort((a,b)=>a.createdAt<b.createdAt?1:-1);
 app.doctors=d.sort((a,b)=>a.name.localeCompare(b.name));
 app.tests=t.sort((a,b)=>a.name.localeCompare(b.name));
-app.payments=pay;app.expenses=ex.sort((a,b)=>a.date<b.date?1:-1);app.inventory=inv||[];app.sales=sales||[];
+app.payments=pay;app.expenses=ex.sort((a,b)=>a.date<b.date?1:-1);
 app.users=u;app.audit=au.sort((a,b)=>a.ts<b.ts?1:-1).slice(0,600);
 app.settings=Object.assign({},DEFAULT_SETTINGS,s||{});
 try{document.title=(app.settings.clinicName||"Clinic")+" • ZainMed"}catch(e){}
@@ -614,10 +609,10 @@ localStorage.setItem(fk,"1")}}catch(e){console.error(e)}
 async function saveRecord(store,obj){await qPut(store,obj);await loadData()}
 async function removeRecord(store,key){await qDel(store,key);await loadData()}
 async function saveSettingsObj(obj){await qPut("settings",Object.assign({},obj,{key:"app"}));app.settings=Object.assign({},DEFAULT_SETTINGS,obj,{key:"app"})}
-function can(perm){if(!app.user)return false;if(app.user.role==="owner"||app.user.role==="admin")return true;return (app.user.permissions||[]).indexOf(perm)>=0}
-function backupDue(){const s=app.settings;
+function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users"||perm==="settings")return false;if(app.user.role==="admin")return true;return (app.user.permissions||[]).indexOf(perm)>=0}
+function backupDue(){const s=app.settings;if(!s.backupReminderDays)return false;
 if(!s.lastBackupAt)return app.visits.length>0;
-return daysBetween(s.lastBackupAt.slice(0,10),today())>=3}
+return daysBetween(s.lastBackupAt.slice(0,10),today())>=s.backupReminderDays}
 /* patient MR numbers */
 async function createPatientId(prefix){const yr=new Date().getFullYear();const n=await nextSeq("patientSeq_"+yr,1);return (prefix||"")+yr+"/"+String(n).padStart(4,"0")}
 async function peekPatientId(prefix){const yr=new Date().getFullYear();const n=await peekSeq("patientSeq_"+yr,1);return (prefix||"")+yr+"/"+String(n).padStart(4,"0")}
@@ -718,10 +713,10 @@ tr(field("Doctor",v.doctorName?("Dr. "+String(v.doctorName).replace(/^dr\.?\s+/i
 line("TOTAL",cur+" "+fmtMoney(v.total),lg,true)+
 line("Received",cur+" "+fmtMoney(v.received))+
 line("Due",cur+" "+fmtMoney(v.due),p,true)+
-'<div style="font-size:'+sm+';font-weight:700;margin-top:1px">Payment: '+esc(v.paymentMethod||"-")+(s.slipUserName||s.dutyStaffName||v.createdBy?" • User: "+esc(s.slipUserName||s.dutyStaffName||v.createdBy):"")+'</div>'+hr+
+'<div style="font-size:'+sm+';font-weight:700;margin-top:1px">Payment: '+esc(v.paymentMethod||"-")+(s.dutyStaffName||v.createdBy?" • User: "+esc(s.dutyStaffName||v.createdBy):"")+'</div>'+hr+
 (s.footerText?'<div style="text-align:center;font-size:'+sm+';font-weight:800;line-height:1.2">'+esc(s.footerText)+'</div>':'')+
 '<div style="text-align:center;font-size:'+(A4?"10px":"8.5px")+';font-weight:700;margin-top:2px">Printed: '+new Date().toLocaleString()+'</div>'+
-'<div style="border-top:1px solid #000;margin-top:4px;padding-top:3px;text-align:center;font-size:'+(A4?"11px":"9.5px")+';font-weight:900;line-height:1.2">Software developed by Zain Ali<br>03702906075<br>zainaliofficialtrada343@gmail.com</div>'+
+'<div style="border-top:1px solid #000;margin-top:4px;padding-top:3px;text-align:center;font-size:'+(A4?"11px":"9.5px")+';font-weight:900;line-height:1.2">Software developed by Zain Ali<br>03702906075</div>'+
 (A4?'</div>':'')+'</div>';
 }
 function printSlip(v,size){printHTML(slipHTML(v,app.settings,size),size||app.settings.printSize)}
@@ -768,7 +763,7 @@ tr(field("Referred By",v.referredBy||"SELF")+field("Doctor",v.doctorName?("Dr. "
 '<div style="text-align:center;font-size:'+p+';font-weight:900;margin-top:3px;border:2px solid #000;border-radius:4px;padding:2px">'+(paid?"PAID":("BILL DUE: "+esc(cur)+" "+fmtMoney(v.due)))+'</div>'+hr+
 '<div style="font-size:'+sm+';font-weight:700;line-height:2">Sample Taken: ______________<br>Report Date: ______________</div>'+
 '<div style="text-align:center;font-size:'+(A4?"10px":"8.5px")+';font-weight:700;margin-top:3px">Printed: '+new Date().toLocaleString()+(v.createdBy?" • "+esc(v.createdBy):"")+'</div>'+
-'<div style="border-top:1px solid #000;margin-top:4px;padding-top:3px;text-align:center;font-size:'+(A4?"11px":"9.5px")+';font-weight:900;line-height:1.2">Software developed by Zain Ali<br>03702906075<br>zainaliofficialtrada343@gmail.com</div>'+
+'<div style="border-top:1px solid #000;margin-top:4px;padding-top:3px;text-align:center;font-size:'+(A4?"11px":"9.5px")+';font-weight:900;line-height:1.2">Software developed by Zain Ali<br>03702906075</div>'+
 (A4?'</div>':'')+'</div>';
 }
 function printLabSlip(v,size){
@@ -832,7 +827,7 @@ mount('<div class="login-wrap"><div class="login-card">'+
 '<div class="field"><label>Password <span class="req">*</span></label><input class="inp" type="password" id="lg-pass" placeholder="••••••••" required></div>'+
 '<div id="lg-err" style="display:none;background:var(--red-bg);border:1px solid var(--red-bd);color:#9f1239;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;margin-bottom:12px"></div>'+
 '<button class="btn btn-primary lg block" id="lg-btn">SIGN IN</button></form>'+
-'<div style="margin-top:20px;font-size:12px;color:var(--slate-500);text-align:center">Clinic ID aur login ke liye software provider se rabta karein: Zain Ali — 03702906075 • zainaliofficialtrada343@gmail.com</div></div></div></div>');
+'<div style="margin-top:20px;font-size:12px;color:var(--slate-500);text-align:center">Clinic ID aur login ke liye software provider se rabta karein: Zain Ali — 03702906075</div></div></div></div>');
 if(msg){const e0=$("#lg-err");e0.style.display="block";e0.textContent=msg}
 (function(){const lgc=$("#lg-clinic");let _t;const showName=async()=>{const c=lgc.value.trim().toLowerCase();if(c.length<2)return;try{const i=await api("GET","/api/clinic/"+encodeURIComponent(c));document.querySelectorAll(".lg-cname").forEach(e=>e.textContent=i.name);document.querySelectorAll(".lg-caddr").forEach(e=>e.textContent=i.address||"");document.title=i.name+" • ZainMed"}catch(e){}};lgc.addEventListener("input",()=>{clearTimeout(_t);_t=setTimeout(showName,500)});if(lgc.value)showName()})();
 $("#login-form").addEventListener("submit",async e=>{
@@ -845,7 +840,6 @@ try{info=await api("GET","/api/clinic/"+encodeURIComponent(code));try{localStora
 catch(e){if(e.net){info=cachedInfo(code);if(!info)return fail("Internet nahi hai. Is device par pehli dafa login ke liye internet zaroori hai.")}else throw e}
 CLINIC=code;CLINIC_INFO=info;try{localStorage.setItem("mcms_clinic",code)}catch(x){}
 await obLoad();
-if(netOK()){const authResult=await api("POST","/api/auth/login",{username:un,password:pw},{force:true});localStorage.setItem("zm_auth_token_"+code,authResult.token);localStorage.setItem("zm_auth_user_"+code,JSON.stringify(authResult.user));NET.retry=true;try{const dig=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(pw));localStorage.setItem("zm_pw_hash_"+code+"_"+authResult.user.id,Array.from(new Uint8Array(dig)).map(x=>x.toString(16).padStart(2,"0")).join(""));}catch(x){}}
 await seed();await loadData();
 if(!netOK()&&!app.users.length)return fail("Offline hai aur is device par is clinic ka data saved nahi. Pehli dafa internet se login karein.");
 /* FIRST-TIME ADMIN SETUP: agar is clinic mein koi admin account hi nahi hai to dale gaye username/password se admin ban jayega */
@@ -858,9 +852,8 @@ await qPut("users",adm);await loadData();
 }
 const u=app.users.find(x=>x.username.toLowerCase()===un.toLowerCase());
 if(!u)return fail("User not found (username check karein — is clinic mein yeh user nahi hai)");
-if(!netOK()){let ok=false;try{const dig=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(pw));const ph=Array.from(new Uint8Array(dig)).map(x=>x.toString(16).padStart(2,"0")).join("");ok=localStorage.getItem("zm_pw_hash_"+code+"_"+u.id)===ph;}catch(x){}if(!ok)return fail("Offline login ke liye pehle online sign-in isi device par zaroori hai.");}
+if(u.password!==pw)return fail("Incorrect password");
 if(!u.active)return fail("This account is disabled");
-if(netOK() && localStorage.getItem("zm_auth_user_"+code)){const au=JSON.parse(localStorage.getItem("zm_auth_user_"+code));if(au&&au.id===u.id)Object.assign(u,au)}
 app.user=u;sessionStorage.setItem("abraj_session_user",u.id);
 await audit(u.username,"LOGIN","users",u.id,"Signed in");
 go("dashboard");
@@ -886,11 +879,11 @@ mount('<aside class="sidebar hidden-m" id="sidebar">'+
 '<div class="user-chip">'+esc(app.user.fullName)+"<small>"+esc(app.user.role)+"</small></div>"+
 '<button class="icon-btn" id="logout-btn" title="Logout">⏻</button></header>'+
 '<div id="banner-slot"></div><main class="content" id="page"></main>'+
-'<footer class="app-foot">'+esc(s.clinicName)+" — Management System • MySQL • Software developed by Zain Ali — 03702906075 • zainaliofficialtrada343@gmail.com</footer></div>");
+'<footer class="app-foot">'+esc(s.clinicName)+" — Management System • All records are stored centrally in the clinic server database (MySQL). Every connected computer sees the same data.</footer></div>");
 $("#hbtn").onclick=()=>{$("#sidebar").classList.toggle("hidden-m");$("#backdrop").classList.toggle("show")};
 $("#backdrop").onclick=()=>{$("#sidebar").classList.add("hidden-m");$("#backdrop").classList.remove("show")};
 if($("#ai-top"))$("#ai-top").onclick=()=>go("agent");
-$("#logout-btn").onclick=async()=>{if(isOwner()){sessionStorage.removeItem("abraj_owner");location.href="/master.html";return}try{await api("POST","/api/auth/logout",undefined,{force:true})}catch(e){}app.user=null;sessionStorage.removeItem("abraj_session_user");sessionStorage.removeItem("zm_auth_token");sessionStorage.removeItem("zm_auth_user");localStorage.removeItem("zm_auth_token_"+CLINIC);localStorage.removeItem("zm_auth_user_"+CLINIC);renderLogin()};
+$("#logout-btn").onclick=()=>{if(isOwner()){sessionStorage.removeItem("abraj_owner");location.href="/master.html";return}app.user=null;sessionStorage.removeItem("abraj_session_user");renderLogin()};
 $$("[data-nav]").forEach(b=>b.onclick=()=>{ $("#sidebar").classList.add("hidden-m");$("#backdrop").classList.remove("show");go(b.dataset.nav)});
 if(_clockTimer)clearInterval(_clockTimer);
 tickClock();_clockTimer=setInterval(tickClock,1000);
@@ -913,7 +906,7 @@ if(!can((NAV.find(n=>n.key===route)||{}).perm||"dashboard")&&route!=="dashboard"
 renderShell();
 const t=NAV.find(n=>n.key===route);
 $("#page-title").textContent=t?t.label:"Dashboard";
-const PAGES={dashboard:pageDashboard,newvisit:pageNewVisit,patients:pagePatients,emr:pageEMR,doctors:pageDoctors,inventory:pageInventory,pharmacy:pagePharmacy,
+const PAGES={dashboard:pageDashboard,newvisit:pageNewVisit,patients:pagePatients,emr:pageEMR,doctors:pageDoctors,
 lab:()=>pageTestModule("lab"),ultrasound:()=>pageTestModule("ultrasound"),injection:()=>pageTestModule("injection"),billing:pageBilling,expenses:pageExpenses,
 reports:pageReports,agent:pageAgent,users:pageUsers,settings:pageSettings,backup:pageBackup};
 (PAGES[route]||pageDashboard)();
@@ -1029,7 +1022,7 @@ activeDocs.map(d=>'<option value="'+d.id+'" '+(editVisit&&editVisit.doctorId===d
 '<div class="grid mt" style="grid-template-columns:1fr 140px auto"><input class="inp" id="nv-chg-desc" placeholder="Additional charge description (Injection, Dressing, ECG…)"><input class="inp" id="nv-chg-amt" placeholder="Amount" inputmode="numeric"><button class="btn btn-success" id="nv-chg-add">➕ ADD CHARGE</button></div></div></div>'+
 '<div class="card"><div class="card-h"><h2>Clinical Notes (optional)</h2><div class="sub">Saved permanently to the patient\'s EMR history</div></div><div class="card-b"><div class="grid g3">'+
 '<div class="field"><label>Diagnosis</label><textarea class="inp" id="nv-dx" placeholder="e.g. Acute gastritis">'+esc(editVisit?editVisit.diagnosis:"")+'</textarea></div>'+
-'<div class="field"><label>Prescription</label><textarea class="inp" id="nv-rx" placeholder="Tab. Panadol 500mg BD x 3 days">'+esc(editVisit?editVisit.prescription:"")+'</textarea><div class="grid" style="grid-template-columns:2fr 90px 110px auto;margin-top:6px"><input class="inp" id="nv-rx-search" list="nv-rx-list" placeholder="Search medicine in stock"><datalist id="nv-rx-list">'+app.inventory.map(x=>'<option value="'+esc(x.name)+'">').join("")+'</datalist><input class="inp" id="nv-rx-qty" type="number" min="1" value="1" title="Quantity"><select class="inp" id="nv-rx-unit"><option>tablet</option><option>strip</option><option>box</option><option>capsule</option><option>bottle</option><option>vial</option></select><button class="btn btn-outline sm" type="button" id="nv-rx-add">Add</button></div></div>'+
+'<div class="field"><label>Prescription</label><textarea class="inp" id="nv-rx" placeholder="Tab. Panadol 500mg BD x 3 days">'+esc(editVisit?editVisit.prescription:"")+'</textarea></div>'+
 '<div class="field"><label>Remarks / Notes</label><textarea class="inp" id="nv-notes" placeholder="Any note for the record">'+esc(editVisit?editVisit.notes:"")+"</textarea></div></div></div></div></div>"+
 '<div>'+
 '<div class="card"><div class="card-h"><h2>Bill / Charges</h2><div class="sub">Auto-calculated</div></div><div class="card-b">'+
@@ -1103,7 +1096,6 @@ const v=buildVisitObj(mrNo,num($("#nv-token").value)||0,$("#nv-doc").value?activ
 $("#nv-preview").innerHTML=slipHTML(v,s,"80");
 };
 updTests();
-if($("#nv-rx-add"))$("#nv-rx-add").onclick=()=>{const name=$("#nv-rx-search").value.trim();if(!name)return;const qty=Math.max(1,num($("#nv-rx-qty").value)||1),unit=$("#nv-rx-unit").value;const line=name+" — "+qty+" "+unit;const rx=$("#nv-rx");rx.value=(rx.value.trim()?rx.value.trim()+"\n":"")+line;$("#nv-rx-search").value="";};
 $("#nv-testq").addEventListener("input",updTests);
 ["nv-opd","nv-disc","nv-recv","nv-name","nv-age","nv-mobile","nv-token"].forEach(i=>$("#"+i).addEventListener("input",updBill));
 $("#nv-doc").addEventListener("change",()=>{const d=activeDocs.find(x=>x.id===$("#nv-doc").value);if(d)$("#nv-opd").value=d.fee;updBill()});
@@ -1381,8 +1373,8 @@ const s=app.settings;
 const ov=openModal(d.id?"Edit Doctor — "+d.name:"Add New Doctor",
 '<div class="grid g2">'+
 '<div class="field"><label>Doctor Name <span class="req">*</span></label><input class="inp" id="dm-name" value="'+esc(d.name)+'" placeholder="Dr. ..."></div>'+
-'<div class="field"><label>Specialization</label><input class="inp" list="doctor-specializations" id="dm-spec" value="'+esc(d.specialization)+'"><datalist id="doctor-specializations"><option>General Physician</option><option>Family Medicine</option><option>Cardiologist</option><option>Dermatologist</option><option>Gynaecologist</option><option>Paediatrician</option><option>General Surgeon</option><option>Orthopaedic Surgeon</option><option>ENT Specialist</option><option>Ophthalmologist</option><option>Neurologist</option><option>Psychiatrist</option><option>Urologist</option><option>Radiologist</option><option>Pathologist</option><option>Nephrologist</option><option>Endocrinologist</option></datalist></div>'+
-'<div class="field"><label>Qualification</label><input class="inp" list="doctor-qualifications" id="dm-qual" value="'+esc(d.qualification)+'" placeholder="MBBS, FCPS"><datalist id="doctor-qualifications"><option>MBBS</option><option>FCPS</option><option>MCPS</option><option>MD</option><option>MS</option><option>MRCP</option><option>MRCS</option><option>FRCS</option><option>DCH</option><option>DGO</option><option>DA</option><option>BDS</option><option>MDS</option><option>DPT</option><option>Pharm-D</option></datalist></div>'+
+'<div class="field"><label>Specialization</label><input class="inp" id="dm-spec" value="'+esc(d.specialization)+'"></div>'+
+'<div class="field"><label>Qualification</label><input class="inp" id="dm-qual" value="'+esc(d.qualification)+'" placeholder="MBBS, FCPS"></div>'+
 '<div class="field"><label>Mobile</label><input class="inp" id="dm-mob" value="'+esc(d.mobile)+'"></div>'+
 '<div class="field"><label>Consultation / OPD Fee <span class="req">*</span></label><input class="inp" id="dm-fee" inputmode="numeric" value="'+d.fee+'"></div>'+
 '<div class="field"><label>Duty Shift</label><select class="inp" id="dm-shift">'+s.shifts.map(x=>'<option '+(d.shift===x?"selected":"")+">"+x+"</option>").join("")+'<option '+(d.shift==="Full Day"?"selected":"")+">Full Day</option></select></div>"+
@@ -1768,27 +1760,10 @@ $("#rp-to").addEventListener("change",e=>{to=e.target.value;draw()});
 updExtra();draw();
 }
 /* ============================================================
-MEDICAL STORE — inventory + standalone billing
-============================================================ */
-function pageInventory(){
- const rows=app.inventory.map(x=>'<tr><td><b>'+esc(x.name)+'</b><div style="font-size:11px;color:var(--slate-500)">'+esc(x.category||'Medicine')+' • '+esc(x.unit||'piece')+'</div></td><td>'+fmtMoney(x.cost||0)+'</td><td>'+fmtMoney(x.price||0)+'</td><td><b>'+num(x.stock)+'</b></td><td>'+num(x.reorder||0)+'</td><td><button class="btn btn-outline sm" data-stock-edit="'+esc(x.id)+'">Edit</button></td></tr>').join('');
- $('#page').innerHTML='<div class="card"><div class="card-h"><div><h2>Medical Store Inventory</h2><div class="sub">Medicine, injections and drips stock, purchase and sale rates</div></div><button class="btn btn-success sm" id="inv-add">➕ Add Item</button></div><div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Item</th><th>Purchase</th><th>Sale</th><th>Stock</th><th>Reorder</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6">No stock items yet</td></tr>')+'</tbody></table></div></div></div>';
- const edit=(x)=>{const o=x||{id:'',name:'',category:'Medicine',unit:'tablet',cost:0,price:0,stock:0,reorder:5};const ov=openModal(x?'Edit Stock Item':'Add Stock Item','<div class="grid g2"><div class="field"><label>Item Name</label><input class="inp" id="ii-name" value="'+esc(o.name)+'"></div><div class="field"><label>Category</label><select class="inp" id="ii-cat">'+['Medicine','Injection','Drip','Syrup','Medical Supply','Other'].map(c=>'<option '+(o.category===c?'selected':'')+'>'+c+'</option>').join('')+'</select></div><div class="field"><label>Unit</label><select class="inp" id="ii-unit">'+['tablet','capsule','strip','box','bottle','vial','ampoule','piece','pack','drip'].map(c=>'<option '+(o.unit===c?'selected':'')+'>'+c+'</option>').join('')+'</select></div><div class="field"><label>Purchase Rate</label><input class="inp" id="ii-cost" type="number" min="0" value="'+num(o.cost)+'"></div><div class="field"><label>Sale Rate</label><input class="inp" id="ii-price" type="number" min="0" value="'+num(o.price)+'"></div><div class="field"><label>Current Stock</label><input class="inp" id="ii-stock" type="number" min="0" value="'+num(o.stock)+'"></div><div class="field"><label>Low Stock Alert</label><input class="inp" id="ii-reorder" type="number" min="0" value="'+num(o.reorder)+'"></div></div>','<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="ii-save">Save Item</button>');
- ov.querySelector('[data-close]').onclick=()=>ov.remove();ov.querySelector('#ii-save').onclick=async()=>{const name=ov.querySelector('#ii-name').value.trim();if(!name)return toast('Item name required','error');const obj={id:o.id||id('stk'),name,category:ov.querySelector('#ii-cat').value,unit:ov.querySelector('#ii-unit').value,cost:num(ov.querySelector('#ii-cost').value),price:num(ov.querySelector('#ii-price').value),stock:num(ov.querySelector('#ii-stock').value),reorder:num(ov.querySelector('#ii-reorder').value),active:true,updatedAt:new Date().toISOString()};await qPut('inventory',obj);await loadData();ov.remove();pageInventory();};};
- $('#inv-add').onclick=()=>edit(null);document.querySelectorAll('[data-stock-edit]').forEach(b=>b.onclick=()=>edit(app.inventory.find(x=>x.id===b.dataset.stockEdit)));
-}
-function pagePharmacy(){
- let cart=[];const draw=()=>{const q=$('#ph-q').value.trim().toLowerCase();const hits=app.inventory.filter(x=>x.active!==false&&(!q||x.name.toLowerCase().includes(q)||String(x.category).toLowerCase().includes(q))).slice(0,40);$('#ph-hits').innerHTML=hits.map(x=>'<button class="test-chip" data-ph-add="'+esc(x.id)+'"><b>'+esc(x.name)+'</b><span class="price">'+esc(x.unit||'unit')+' • '+fmtMoney(x.price)+'</span><small>Stock: '+num(x.stock)+'</small></button>').join('')||'<p>No stock item found. Add it in Medical Store Stock.</p>';$('#ph-lines').innerHTML=cart.map(x=>'<tr><td>'+esc(x.name)+'</td><td><input class="bill-inp" data-ph-qty="'+x.id+'" type="number" min="1" value="'+x.qty+'"></td><td>'+fmtMoney(x.price)+'</td><td>'+fmtMoney(x.price*x.qty)+'</td><td><button class="btn btn-danger sm" data-ph-del="'+x.id+'">×</button></td></tr>').join('')||'<tr><td colspan="5">No items added</td></tr>';$('#ph-total').textContent=fmtMoney(cart.reduce((a,x)=>a+x.qty*x.price,0));document.querySelectorAll('[data-ph-add]').forEach(b=>b.onclick=()=>{const x=app.inventory.find(z=>z.id===b.dataset.phAdd);if(!x)return;const c=cart.find(z=>z.id===x.id);if(c)c.qty++;else cart.push({id:x.id,name:x.name,price:num(x.price),qty:1,unit:x.unit});draw()});document.querySelectorAll('[data-ph-qty]').forEach(i=>i.onchange=()=>{const c=cart.find(z=>z.id===i.dataset.phQty);if(c)c.qty=Math.max(1,num(i.value));draw()});document.querySelectorAll('[data-ph-del]').forEach(b=>b.onclick=()=>{cart=cart.filter(x=>x.id!==b.dataset.phDel);draw()});};
- $('#page').innerHTML='<div class="grid" style="grid-template-columns:1fr 1fr;align-items:start"><div class="card"><div class="card-h"><h2>Medical Store Billing</h2></div><div class="card-b"><div class="field"><label>Customer Name</label><input class="inp" id="ph-customer" placeholder="Walk-in customer"></div><div class="field"><label>Search medicine / injection / drip</label><input class="inp" id="ph-q" placeholder="Type item name"></div><div class="test-list" id="ph-hits"></div></div></div><div class="card"><div class="card-h"><h2>Current Bill</h2><span>'+fmtDate(today())+' • '+fmtTime(timeNow())+'</span></div><div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th><th></th></tr></thead><tbody id="ph-lines"></tbody></table></div><div class="sum-row total">Total <b>Rs. <span id="ph-total">0</span></b></div><button class="btn btn-success lg block" id="ph-save">Save & Print Receipt</button></div></div></div><div class="card"><div class="card-h"><h2>Recent Medical Store Bills</h2></div><div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Bill</th><th>Customer</th><th>Date / Time</th><th>Total</th><th>User</th><th></th></tr></thead><tbody>'+app.sales.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,30).map(x=>'<tr><td>'+esc(x.id)+'</td><td>'+esc(x.customer)+'</td><td>'+new Date(x.createdAt).toLocaleString()+'</td><td>'+fmtMoney(x.total)+'</td><td>'+esc(x.createdBy)+'</td><td><button class="btn btn-outline sm" data-ph-print="'+esc(x.id)+'">Print</button></td></tr>').join('')+'</tbody></table></div></div></div>';
- $('#ph-q').oninput=draw;draw();$('#ph-save').onclick=async()=>{if(!cart.length)return toast('Bill mein item add karein','error');const bill={id:id('sale'),customer:$('#ph-customer').value.trim()||'Walk-in Customer',date:today(),time:timeNow(),items:cart.map(x=>({...x,amount:x.qty*x.price})),total:cart.reduce((a,x)=>a+x.qty*x.price,0),createdBy:app.settings.slipUserName||app.user.fullName||app.user.username,createdAt:new Date().toISOString()};for(const it of cart){const stock=app.inventory.find(x=>x.id===it.id);if(stock){if(num(stock.stock)<it.qty)return toast('Stock kam hai: '+stock.name,'error');await qPut('inventory',{...stock,stock:num(stock.stock)-it.qty})}}await qPut('sales',bill);await loadData();printPharmacyBill(bill);pagePharmacy();};document.querySelectorAll('[data-ph-print]').forEach(b=>b.onclick=()=>{const x=app.sales.find(z=>z.id===b.dataset.phPrint);if(x)printPharmacyBill(x)});
-}
-function printPharmacyBill(b){const s=app.settings,size=s.printSize||'80',width=size==='58'?'54mm':size==='80'?'74mm':'100%';const rows=b.items.map(x=>'<tr><td>'+esc(x.name)+' x'+x.qty+'</td><td style="text-align:right">'+fmtMoney(x.amount)+'</td></tr>').join('');const html='<div style="width:'+width+';margin:auto;font:12px Arial;color:#000"><h3 style="text-align:center">'+esc(s.clinicName)+'</h3><p style="text-align:center">MEDICAL STORE RECEIPT</p><hr><p>Customer: '+esc(b.customer)+'</p><p>Date: '+esc(b.date)+' '+esc(b.time)+'</p><table style="width:100%">'+rows+'</table><hr><h3>Total: '+esc(s.currency||'Rs.')+' '+fmtMoney(b.total)+'</h3><p>Served by: '+esc(b.createdBy)+'</p><hr><p style="text-align:center">'+esc(s.developerPhone||'03702906075')+'<br>'+esc(s.developerEmail||'zainaliofficialtrada343@gmail.com')+'</p></div>';printHTML(html,size)}
-
-/* ============================================================
 USERS
 ============================================================ */
 function pageUsers(){
-const PERM_LABELS={dashboard:"Dashboard",newvisit:"New Visit",patients:"Patients",emr:"EMR",doctors:"Doctors",lab:"Lab",ultrasound:"Ultrasound",injection:"Injections / Drips",billing:"Billing",expenses:"Expenses",reports:"Reports",agent:"AI Agent",appointments:"Appointments",leads:"WhatsApp Leads",inventory:"Inventory",pharmacy:"Medical Store Billing",staff:"Staff & Payroll",users:"Users",settings:"Settings",backup:"Backup",delete:"Delete Records (dangerous)",pharmacy:"Medical Store Billing"};
+const PERM_LABELS={dashboard:"Dashboard",newvisit:"New Visit",patients:"Patients",emr:"EMR",doctors:"Doctors",lab:"Lab",ultrasound:"Ultrasound",injection:"Injections / Drips",billing:"Billing",expenses:"Expenses",reports:"Reports",agent:"AI Agent",appointments:"Appointments",leads:"WhatsApp Leads",inventory:"Inventory",staff:"Staff & Payroll",users:"Users",settings:"Settings",backup:"Backup",delete:"Delete Records (dangerous)"};
 const draw=()=>{
 $("#us-rows").innerHTML=app.users.map(u=>
 '<tr><td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--blue-800)">'+esc(u.username)+'</td><td style="font-weight:600">'+esc(u.fullName)+"</td>"+
@@ -1819,9 +1794,9 @@ function userModal(u){
 const ov=openModal(u.id?"Edit User — "+u.username:"Add New User",
 '<div class="grid g2">'+
 '<div class="field"><label>Username <span class="req">*</span></label><input class="inp" id="um-user" value="'+esc(u.username)+'" autocomplete="off"></div>'+
-'<div class="field"><label>Password <span class="req">*</span></label><input class="inp" id="um-pass" value="" autocomplete="new-password" placeholder="'+(u.id?'Leave blank to keep current password':'Set a password')+'"></div>'+
+'<div class="field"><label>Password <span class="req">*</span></label><input class="inp" id="um-pass" value="'+esc(u.password)+'" autocomplete="new-password"></div>'+
 '<div class="field"><label>Full Name</label><input class="inp" id="um-name" value="'+esc(u.fullName)+'"></div>'+
-'<div class="field"><label>Role</label><select class="inp" id="um-role"><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option><option value=\"medical_store\" "+(u.role==="medical_store"?"selected":"")+">Medical Store — stock & billing</option></select></div></div>"+
+'<div class="field"><label>Role</label><select class="inp" id="um-role"><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option></select></div></div>"+
 '<div><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--slate-600);margin-bottom:8px">Module Permissions</p><div id="um-perms"></div></div>',
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="um-save">💾 SAVE USER</button>');
 let role=u.role,perms=u.permissions.slice();
@@ -1834,18 +1809,17 @@ $$("[data-perm]",ov).forEach(cb=>cb.addEventListener("change",()=>{
 const p=cb.dataset.perm;if(cb.checked){if(perms.indexOf(p)<0)perms.push(p)}else perms=perms.filter(x=>x!==p)}));
 };
 $("#um-role",ov).addEventListener("change",e=>{role=e.target.value;
-perms=role==="admin"?ALL_PERMS.slice():role==="doctor"?DOCTOR_PERMS.slice():role==="medical_store"?MEDSTORE_PERMS.slice():RECEPTION_PERMS.slice();drawPerms()});
+perms=role==="admin"?ALL_PERMS.slice():role==="doctor"?DOCTOR_PERMS.slice():RECEPTION_PERMS.slice();drawPerms()});
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
 ov.querySelector("#um-save").onclick=async()=>{
 if(u.id===ADMIN_ID){toast("The fixed administrator account cannot be edited","error");return}
 const un=$("#um-user",ov).value.trim(),pw=$("#um-pass",ov).value.trim();
 if(un.toLowerCase()===ADMIN_USER.toLowerCase()){toast("That username is reserved for the fixed administrator account","error");return}
 if(!un){toast("Username is required","error");return}
-if(!pw&&!u.id){toast("Password is required for a new user","error");return}
+if(!pw){toast("Password is required","error");return}
 if(app.users.some(x=>x.username.toLowerCase()===un.toLowerCase()&&x.id!==u.id)){toast("That username already exists","error");return}
-const obj={id:u.id||id("usr"),username:un,fullName:$("#um-name",ov).value.trim()||un,role:role,
+const obj={id:u.id||id("usr"),username:un,password:pw,fullName:$("#um-name",ov).value.trim()||un,role:role,
 permissions:role==="admin"?ALL_PERMS.slice():perms,active:u.active!==undefined?u.active:true,createdAt:u.createdAt||new Date().toISOString()};
-if(pw)obj.password=pw;
 await qPut("users",obj);await audit(app.user.username,u.id?"UPDATE":"CREATE","users",obj.id,un+" ("+role+")");
 await loadData();toast(u.id?"User updated":"User created");ov.remove();pageUsers();
 };
@@ -1878,9 +1852,8 @@ $("#page").innerHTML='<div class="grid" style="grid-template-columns:2fr 1fr;ali
 '<div class="field"><label>MR Number Prefix</label><input class="inp" id="st-prefix" value="'+esc(s.patientIdPrefix||"")+'"></div>'+
 '<div class="field"><label>Slip Font Size (Standard: 13)</label><div class="flex g12 aic"><input type="range" id="st-font" min="9" max="26" step="0.5" value="'+s.slipFontSize+'" style="flex:1;accent-color:var(--blue-700)"><span id="st-fontv" style="font-weight:700;color:var(--blue-800);width:48px;text-align:center">'+s.slipFontSize+"px</span></div></div>"+
 '<div class="field"><label>Duty Staff Name (shown on slip)</label><input class="inp" id="st-duty" value="'+esc(s.dutyStaffName||"")+'" placeholder="e.g. Ali, Hamza — blank = logged-in user"></div>'+
-'<div class="field"><label>Fixed Slip User Name (optional)</label><input class="inp" id="st-slipuser" value="'+esc(s.slipUserName||"")+'" placeholder="Blank = logged-in user"></div>'+
 '<div class="field"><label>Show MR Number on Slip</label><div class="flex g12 aic"><button id="st-mr" style="border:2px solid '+(s.showMrOnSlip?"var(--blue-600)":"var(--slate-300)")+';background:'+(s.showMrOnSlip?"var(--blue-600)":"var(--slate-200)")+';width:52px;height:28px;border-radius:99px;position:relative;transition:.2s"><span style="position:absolute;top:2px;'+(s.showMrOnSlip?"left:26px":"left:2px")+';width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:.2s"></span></button><span id="st-mrtxt" style="font-size:13px;font-weight:600">'+(s.showMrOnSlip?"ON — slip par MR number aayega":"OFF — slip par MR number nahi aayega")+"</span></div></div>"+
-'<div class="field"><label>Backup Reminder</label><div class="inp" style="background:var(--slate-50)">Every 3 days — reminder only; no data is deleted</div></div>'+
+'<div class="field"><label>Backup Reminder (days)</label><input class="inp" id="st-bk" inputmode="numeric" value="'+s.backupReminderDays+'"></div>'+
 '<div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:8px;padding:12px"><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--blue-800);margin-bottom:8px">Test Print Sample Slip</p><div class="flex g8 fw">'+
 ["58","80","A4"].map(x=>'<button class="btn btn-outline sm" data-demo="'+x+'">🖨 '+(x==="A4"?"A4":x+"mm")+"</button>").join("")+"</div></div></div></div></div>"+
 '<div class="card"><div class="card-h"><h2>Counter Lists</h2><div class="sub">One value per line — used in dropdowns at the OPD counter</div></div><div class="card-b"><div class="grid g3">'+
@@ -1913,8 +1886,8 @@ const obj=Object.assign({},s,{clinicName:$("#st-name").value.trim()||s.clinicNam
 phone:$("#st-phone").value,phone2:$("#st-phone2").value,email:$("#st-email").value,timing:$("#st-timing").value,
 slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,
 logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
-slipFontSize:parseFloat($("#st-font").value),dutyStaffName:$("#st-duty").value,slipUserName:$("#st-slipuser").value,showMrOnSlip:showMr,
-backupReminderDays:3,shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
+slipFontSize:parseFloat($("#st-font").value),dutyStaffName:$("#st-duty").value,showMrOnSlip:showMr,
+backupReminderDays:num($("#st-bk").value),shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
 await saveSettingsObj(obj);
 await audit(app.user.username,"UPDATE","settings","app","Clinic settings updated");
 toast("Settings saved to the server database");
