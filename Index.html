@@ -350,13 +350,13 @@ const NAV=[
 {key:"settings",label:"Settings",icon:"⚙️",perm:"settings"},
 {key:"backup",label:"Backup & Restore",icon:"💾",perm:"backup"}];
 const DEFAULT_SETTINGS={key:"app",clinicName:"ZainMed Clinic",tagline:"General Practice • Laboratory • Ultrasound",
-address:"",phone:"03192061690",phone2:"03702906075",email:"zainaliofficialtrada343@gmail.com",
+address:"",phone:"",phone2:"",email:"",
 timing:"Open 24/7",logoDataUrl:"",slipTitle:"",footerText:"Thank you for visiting us.",
 printSize:"80",currency:"Rs.",defaultOpdFee:500,patientIdPrefix:"",slipFontSize:13,showMrOnSlip:true,
 dutyStaffName:"",shifts:["Morning","Evening","Night"],
 paymentMethods:["Cash","Card","Easypaisa","JazzCash","Bank Transfer","Credit / Due"],
 expenseCategories:["Salary","Utilities","Medicines","Lab Supplies","Maintenance","Rent","Doctor Payout","Miscellaneous"],
-backupReminderDays:3,lastBackupAt:"",autoPrintAfterSave:true,developerPhone:"03192061690",developerEmail:"zainaliofficialtrada343@gmail.com",slipUserName:""};
+backupReminderDays:3,lastBackupAt:"",autoPrintAfterSave:true,developerPhone:"03702906075",developerEmail:"zainaliofficialtrada343@gmail.com",slipUserName:""};
 const SEED_DOCTORS=[
 {name:"Dr. Ahmed Raza",specialization:"General Physician",qualification:"MBBS, FCPS",fee:500,mobile:"+92 300 1234567",commissionEnabled:true,commissionPercent:40,shift:"Morning",active:true},
 {name:"Dr. Sana Khalid",specialization:"Gynaecologist",qualification:"MBBS, MCPS (Gynae)",fee:800,mobile:"+92 301 2345678",commissionEnabled:true,commissionPercent:50,shift:"Evening",active:true},
@@ -864,7 +864,7 @@ if(netOK() && localStorage.getItem("zm_auth_user_"+code)){const au=JSON.parse(lo
 app.user=u;sessionStorage.setItem("abraj_session_user",u.id);
 await audit(u.username,"LOGIN","users",u.id,"Signed in");
 go("dashboard");
-}catch(ex){fail(ex&&ex.status===404?"HTTP 404: Login server API nahi mila. Sirf index.html upload karne se login nahi chalega; Vercel par server.js, vercel.json aur package.json bhi deploy karna zaroori hai. Aapka database reset na karein.":(ex.message||"Login failed"))}
+}catch(ex){fail(ex.message)}
 });
 }
 /* ---------------- SHELL ---------------- */
