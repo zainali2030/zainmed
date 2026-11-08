@@ -25,15 +25,6 @@ const DB = {
   password: pick("DB_PASS", "dbPass", ""),
   database: pick("DB_NAME", "dbName", "abraj_medical_center")
 };
-/* SSL / TLS: TiDB Cloud, Aiven, PlanetScale jaise online databases bina SSL ke connection nahi lete
-   ("Connections using insecure transport are prohibited"). Cloud host ho to SSL khud on ho jata hai.
-   Zabardasti on: DB_SSL=1   |   band karne ke liye: DB_SSL=0   (ya config.json mein "dbSsl") */
-const _sslPref = String(pick("DB_SSL", "dbSsl", "auto")).toLowerCase();
-const DB_USE_SSL = _sslPref === "1" || _sslPref === "true" || _sslPref === "yes" ||
-  (_sslPref === "auto" && /(tidbcloud|aivencloud|psdb\.cloud|planetscale|\.rds\.amazonaws|azure\.com|neon\.tech|cockroachlabs)/i.test(DB.host));
-/* Port: DB_PORT / config.json "dbPort"; TiDB Cloud ka port 4000 hota hai, baaqi ka 3306 */
-const DB_PORT = parseInt(pick("DB_PORT", "dbPort", /tidbcloud/i.test(DB.host) ? "4000" : "3306"), 10) || 3306;
-const DB_SSL_OPT = DB_USE_SSL ? { minVersion: "TLSv1.2", rejectUnauthorized: true } : undefined;
 const MASTER_KEY  = pick("MASTER_KEY", "masterKey", "ChangeMe@123");   /* master panel ka password */
 const MASTER_USER = pick("MASTER_USER", "masterUser", "owner");                  /* owner ka naam */
 const WEBHOOK_KEY = pick("WEBHOOK_KEY", "webhookKey", "");               /* WhatsApp / n8n webhook ki key */
@@ -64,11 +55,10 @@ const ckey = (req, key) => (req.clinic === DEFAULT_CLINIC ? key : req.clinic + "
 
 /* ---------- Database + tables + purani data ki migration ---------- */
 async function initDB() {
-  const conn = await mysql.createConnection({ host: DB.host, user: DB.user, password: DB.password, ssl: DB_SSL_OPT, port: DB_PORT });
+  const conn = await mysql.createConnection({ host: DB.host, user: DB.user, password: DB.password });
   await conn.query("CREATE DATABASE IF NOT EXISTS `" + DB.database + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
   await conn.end();
   pool = mysql.createPool({ host: DB.host, user: DB.user, password: DB.password, database: DB.database,
-                            ssl: DB_SSL_OPT, port: DB_PORT,
                             connectionLimit: 10, charset: "utf8mb4_unicode_ci" });
 
   await pool.query(
@@ -106,7 +96,16 @@ async function initDB() {
     "active TINYINT NOT NULL DEFAULT 1, " +
     "expiry DATE NULL, " +
     "note VARCHAR(300) NOT NULL DEFAULT '', " +
+    "clinic_type VARCHAR(20) NOT NULL DEFAULT 'clinic', " +
     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  const [typeCols] = await pool.query(
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='clinics' AND COLUMN_NAME='clinic_type'",
+    [DB.database]);
+  if (!typeCols.length) {
+    await pool.query("ALTER TABLE clinics ADD COLUMN clinic_type VARCHAR(20) NOT NULL DEFAULT 'clinic' AFTER note");
+    console.log("Clinic type field add ho gaya; purane accounts Clinic ke taur par rahenge.");
+  }
 
   /* Naye server par koi default clinic (known password ke saath) nahi banti. Sirf config.json mein "seedDefaultClinic": true likhne par. */
   if (pick("SEED_DEFAULT_CLINIC", "seedDefaultClinic", false))
@@ -136,7 +135,7 @@ async function getClinic(code) {
   const hit = clinicCache.get(code);
   if (hit && Date.now() - hit.t < 10000) return hit.v;
   const [rows] = await pool.query(
-    "SELECT code,name,address,phone,admin_user,admin_pass,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note FROM clinics WHERE code=?", [code]);
+    "SELECT code,name,address,phone,admin_user,admin_pass,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note,clinic_type FROM clinics WHERE code=?", [code]);
   const v = rows.length ? rows[0] : null;
   clinicCache.set(code, { t: Date.now(), v });
   return v;
@@ -168,7 +167,7 @@ app.get("/api/clinic/:code", async (req, res) => {
     const c = await getClinic(code);
     const p = clinicProblem(c);
     if (p) return res.status(p.status).json({ error: p.msg });
-    res.json({ code: c.code, name: c.name, address: c.address, phone: c.phone, adminUser: c.admin_user, expiry: c.expiry });
+    res.json({ code: c.code, name: c.name, address: c.address, phone: c.phone, adminUser: c.admin_user, expiry: c.expiry, type: c.clinic_type || "clinic" });
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 
@@ -182,7 +181,7 @@ function masterAuth(req, res, next) {
 app.get("/api/master/clinics", masterAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      "SELECT code,name,address,phone,admin_user,admin_pass,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note," +
+      "SELECT code,name,address,phone,admin_user,admin_pass,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note,clinic_type," +
       "DATE_FORMAT(created_at,'%Y-%m-%d') AS created FROM clinics ORDER BY created_at");
     const [cnt] = await pool.query("SELECT clinic, store, COUNT(*) AS n FROM records WHERE store IN ('patients','visits') GROUP BY clinic, store");
     rows.forEach(r => {
@@ -197,15 +196,16 @@ app.post("/api/master/clinics", masterAuth, async (req, res) => {
     const b = req.body || {};
     const code = cleanCode(b.code);
     if (!validCode(code)) return res.status(400).json({ error: "Clinic ID sirf english letters/numbers (2-30), e.g. cityclinic" });
-    if (!String(b.name || "").trim()) return res.status(400).json({ error: "Clinic ka naam likhein" });
+    if (!String(b.name || "").trim()) return res.status(400).json({ error: "Clinic / Medical Store ka naam likhein" });
+    const clinicType = b.type === "medicalstore" ? "medicalstore" : "clinic";
     if (!String(b.adminUser || "").trim() || !String(b.adminPass || "").trim())
       return res.status(400).json({ error: "Admin username aur password likhein" });
     const [ex] = await pool.query("SELECT code FROM clinics WHERE code=?", [code]);
     if (ex.length) return res.status(409).json({ error: "Ye Clinic ID pehle se maujood hai" });
     await pool.query(
-      "INSERT INTO clinics (code,name,address,phone,admin_user,admin_pass,active,expiry,note) VALUES (?,?,?,?,?,?,1,?,?)",
+      "INSERT INTO clinics (code,name,address,phone,admin_user,admin_pass,active,expiry,note,clinic_type) VALUES (?,?,?,?,?,?,1,?,?,?)",
       [code, String(b.name).trim(), String(b.address || "").trim(), String(b.phone || "").trim(),
-       String(b.adminUser).trim(), String(b.adminPass).trim(), b.expiry || null, String(b.note || "").trim()]);
+       String(b.adminUser).trim(), String(b.adminPass).trim(), b.expiry || null, String(b.note || "").trim(), clinicType]);
     clinicCache.delete(code);
     await syncAdmin(await getClinic(code).then(c => ({ code: c.code, admin_user: c.admin_user, admin_pass: c.admin_pass })));
     res.json({ ok: true, code });
@@ -225,13 +225,14 @@ app.put("/api/master/clinics/:code", masterAuth, async (req, res) => {
     const adminPass = b.adminPass ? String(b.adminPass).trim() : c.admin_pass;
     const active = b.active !== undefined ? (b.active ? 1 : 0) : c.active;
     const note = b.note !== undefined ? String(b.note).trim() : c.note;
+    const clinicType = b.type === "medicalstore" ? "medicalstore" : (b.type === "clinic" ? "clinic" : (c.clinic_type || "clinic"));
     const expiry = b.expiry !== undefined ? (b.expiry || null) : null;
     if (b.expiry !== undefined)
-      await pool.query("UPDATE clinics SET name=?,address=?,phone=?,admin_user=?,admin_pass=?,active=?,note=?,expiry=? WHERE code=?",
-        [name, address, phone, adminUser, adminPass, active, note, expiry, code]);
+      await pool.query("UPDATE clinics SET name=?,address=?,phone=?,admin_user=?,admin_pass=?,active=?,note=?,expiry=?,clinic_type=? WHERE code=?",
+        [name, address, phone, adminUser, adminPass, active, note, expiry, clinicType, code]);
     else
-      await pool.query("UPDATE clinics SET name=?,address=?,phone=?,admin_user=?,admin_pass=?,active=?,note=? WHERE code=?",
-        [name, address, phone, adminUser, adminPass, active, note, code]);
+      await pool.query("UPDATE clinics SET name=?,address=?,phone=?,admin_user=?,admin_pass=?,active=?,note=?,clinic_type=? WHERE code=?",
+        [name, address, phone, adminUser, adminPass, active, note, clinicType, code]);
     clinicCache.delete(code);
     await syncAdmin({ code, admin_user: adminUser, admin_pass: adminPass });
     res.json({ ok: true });
