@@ -23,8 +23,11 @@ const DB = {
   host:     pick("DB_HOST", "dbHost", "127.0.0.1"),
   user:     pick("DB_USER", "dbUser", "root"),
   password: pick("DB_PASS", "dbPass", ""),
-  database: pick("DB_NAME", "dbName", "abraj_medical_center")
+  database: pick("DB_NAME", "dbName", "abraj_medical_center"),
+  port:     Number(pick("DB_PORT", "dbPort", 3306)),
+  ssl:      ["1","true","yes"].includes(String(pick("DB_SSL", "dbSsl", "")).toLowerCase()) ? { minVersion: "TLSv1.2", rejectUnauthorized: true } : undefined
 };
+const IS_VERCEL = !!process.env.VERCEL;   /* Vercel par server.listen() nahi chalta, app export hoti hai */
 const MASTER_KEY  = pick("MASTER_KEY", "masterKey", "ChangeMe@123");   /* master panel ka password */
 const MASTER_USER = pick("MASTER_USER", "masterUser", "owner");                  /* owner ka naam */
 const WEBHOOK_KEY = pick("WEBHOOK_KEY", "webhookKey", "");               /* WhatsApp / n8n webhook ki key */
@@ -55,11 +58,16 @@ const ckey = (req, key) => (req.clinic === DEFAULT_CLINIC ? key : req.clinic + "
 
 /* ---------- Database + tables + purani data ki migration ---------- */
 async function initDB() {
-  const conn = await mysql.createConnection({ host: DB.host, user: DB.user, password: DB.password });
-  await conn.query("CREATE DATABASE IF NOT EXISTS `" + DB.database + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-  await conn.end();
-  pool = mysql.createPool({ host: DB.host, user: DB.user, password: DB.password, database: DB.database,
-                            connectionLimit: 10, charset: "utf8mb4_unicode_ci" });
+  /* Cloud MySQL par CREATE DATABASE ki ijazat aksar nahi hoti — wahan database pehle se bana hota hai, isliye error ignore */
+  try {
+    const conn = await mysql.createConnection({ host: DB.host, port: DB.port, user: DB.user, password: DB.password, ssl: DB.ssl });
+    try { await conn.query("CREATE DATABASE IF NOT EXISTS `" + DB.database + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"); }
+    catch (e) { console.log("CREATE DATABASE skip:", e.message); }
+    await conn.end();
+  } catch (e) { if (!IS_VERCEL) throw e; /* Vercel par neeche pool se hi asli error milega */ }
+  pool = mysql.createPool({ host: DB.host, port: DB.port, user: DB.user, password: DB.password, database: DB.database, ssl: DB.ssl,
+                            connectionLimit: IS_VERCEL ? 3 : 10, charset: "utf8mb4_unicode_ci", connectTimeout: 15000 });
+  await pool.query("SELECT 1");
 
   await pool.query(
     "CREATE TABLE IF NOT EXISTS records (" +
@@ -159,6 +167,22 @@ app.get("/:f", (req, res, next) => PUBLIC_FILES.has(req.params.f) ? res.sendFile
 
 /* ---------- PUBLIC routes (clinic ID ki zaroorat nahi) ---------- */
 app.get("/api/ping", (req, res) => res.json({ ok: true, service: "ZainMed API", time: new Date().toISOString() }));
+
+/* Database ek hi baar connect hoti hai (pehli request par). Fail ho to server crash nahi hota — saaf error milta hai */
+let readyP = null;
+function ensureReady() {
+  if (pool) return Promise.resolve();
+  if (!readyP) readyP = initDB().catch(e => { readyP = null; pool = null; throw e; });
+  return readyP;
+}
+app.get("/api/health", async (req, res) => {
+  try { await ensureReady(); res.json({ ok: true, db: "connected", host: DB.host, port: DB.port, ssl: !!DB.ssl, database: DB.database }); }
+  catch (e) { res.status(503).json({ ok: false, db: "FAILED", error: errMsg(e), host: DB.host, port: DB.port, ssl: !!DB.ssl, database: DB.database, user: DB.user }); }
+});
+app.use("/api", async (req, res, next) => {
+  try { await ensureReady(); next(); }
+  catch (e) { res.status(503).json({ error: "Database connect nahi ho rahi: " + errMsg(e) }); }
+});
 
 app.get("/api/clinic/:code", async (req, res) => {
   try {
@@ -575,23 +599,27 @@ app.delete("/api/:store", async (req, res) => {
 });
 
 /* ---------- start ---------- */
-(async () => {
-  try {
-    await initDB();
-    app.listen(PORT, () => {
-      console.log("==================================================");
-      console.log(" ZainMed (Multi-Clinic) server RUNNING");
-      console.log(" Frontend     : http://localhost:" + PORT + "/");
-      console.log(" Master panel : http://localhost:" + PORT + "/master.html");
-      console.log(" Database     : MySQL -> " + DB.database);
-      console.log(" AI Agent     : " + (GEMINI_KEY ? "Gemini (" + GEMINI_MODEL + ")" : CLAUDE_KEY ? "Claude (" + CLAUDE_MODEL + ")" : "OFFLINE mode (AI key nahi lagi)"));
-      if (MASTER_KEY === "ChangeMe@123") console.log(" WARNING      : config.json mein masterKey zaroor badal lein!");
-      console.log(" Software developed by " + DEV_CONTACT);
-      console.log("==================================================");
-    });
-  } catch (e) {
-    console.error("DB CONNECTION FAILED:", e.message);
-    console.error("Check karein: MySQL running hai? config.json / server.js mein DB user/password sahi hai?");
-    process.exit(1);
-  }
-})();
+if (IS_VERCEL || require.main !== module) {
+  module.exports = app;            /* Vercel / serverless: app export, DB pehli request par connect hogi */
+} else {
+  (async () => {
+    try {
+      await initDB();
+      app.listen(PORT, () => {
+        console.log("==================================================");
+        console.log(" ZainMed (Multi-Clinic) server RUNNING");
+        console.log(" Frontend     : http://localhost:" + PORT + "/");
+        console.log(" Master panel : http://localhost:" + PORT + "/master.html");
+        console.log(" Database     : MySQL -> " + DB.database);
+        console.log(" AI Agent     : " + (GEMINI_KEY ? "Gemini (" + GEMINI_MODEL + ")" : CLAUDE_KEY ? "Claude (" + CLAUDE_MODEL + ")" : "OFFLINE mode (AI key nahi lagi)"));
+        if (MASTER_KEY === "ChangeMe@123") console.log(" WARNING      : config.json mein masterKey zaroor badal lein!");
+        console.log(" Software developed by " + DEV_CONTACT);
+        console.log("==================================================");
+      });
+    } catch (e) {
+      console.error("DB CONNECTION FAILED:", e.message);
+      console.error("Check karein: MySQL running hai? config.json / server.js mein DB user/password sahi hai?");
+      process.exit(1);
+    }
+  })();
+}
