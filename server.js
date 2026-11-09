@@ -263,6 +263,22 @@ app.put("/api/master/clinics/:code", masterAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 
+/* Clinic / Medical Store ko hamesha ke liye delete karna (data samet). Confirm ke liye body mein clinic ka ID likhna zaroori hai */
+app.delete("/api/master/clinics/:code", masterAuth, async (req, res) => {
+  try {
+    const code = cleanCode(req.params.code);
+    const b = req.body || {};
+    const [ex] = await pool.query("SELECT code FROM clinics WHERE code=?", [code]);
+    if (!ex.length) return res.status(404).json({ error: "Clinic nahi mila" });
+    if (cleanCode(b.confirm) !== code) return res.status(400).json({ error: "Delete confirm karne ke liye Clinic ID bilkul sahi likhein" });
+    const [r] = await pool.query("DELETE FROM records WHERE clinic=?", [code]);
+    await pool.query("DELETE FROM counters WHERE ckey LIKE ?", [code + ":%"]);
+    await pool.query("DELETE FROM clinics WHERE code=?", [code]);
+    clinicCache.delete(code);
+    res.json({ ok: true, deletedRecords: r.affectedRows || 0 });
+  } catch (e) { res.status(500).json({ error: errMsg(e) }); }
+});
+
 /* ---------- OWNER GUARD: users aur settings sirf owner badal sakta hai ---------- */
 function isOwnerReq(req) {
   const u = String(req.get("x-master-user") || "").trim().toLowerCase();
