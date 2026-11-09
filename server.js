@@ -508,6 +508,60 @@ app.use("/api", async (req, res, next) => {
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 
+
+/* ---------- MEDICINE SCAN (camera photo -> auto-fill) ---------- */
+async function askVision(system, images, prompt) {
+  const imgs = (images || []).slice(0, 3).map(i => ({ mime: String(i.mime || "image/jpeg"), data: String(i.data || "").replace(/^data:[^,]*,/, "") })).filter(i => i.data);
+  if (!imgs.length) throw new Error("Photo nahi mili");
+  if (GEMINI_KEY) {
+    const parts = imgs.map(i => ({ inlineData: { mimeType: i.mime, data: i.data } })); parts.push({ text: prompt });
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent", {
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json" } })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error("Gemini: " + ((j.error && j.error.message) || r.status));
+    const ps = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
+    const t = ps && ps.map(p => p.text || "").join("");
+    if (!t) throw new Error("Gemini ne khali jawab diya");
+    return t;
+  }
+  if (CLAUDE_KEY) {
+    const content = imgs.map(i => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.data } })); content.push({ type: "text", text: prompt });
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", headers: { "Content-Type": "application/json", "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 800, system, messages: [{ role: "user", content }] })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error("Claude: " + ((j.error && j.error.message) || r.status));
+    return (j.content || []).map(b => b.text || "").join("");
+  }
+  throw new Error("AI key set nahi hai. config.json mein geminiKey ya anthropicKey likhein.");
+}
+app.post("/api/scan-medicine", async (req, res) => {
+  try {
+    const cats = Array.isArray(req.body.categories) ? req.body.categories.slice(0, 80).map(x => String(x).slice(0, 60)) : [];
+    const sys = "You read photos of medicine packaging (front and/or back of a box/strip/bottle, often Pakistani products with English and Urdu text). " +
+      "Extract the printed facts and reply with ONE JSON object only, no markdown. Use null for anything not clearly visible; never guess prices, batch or dates.";
+    const prompt = "Return JSON with keys: " +
+      "name (brand name exactly as printed, e.g. 'Dexpril 20mg'), " +
+      "generic (active ingredient/formula with strength, e.g. 'Piroxicam-beta-cyclodextrin 20mg'), " +
+      "category (pick EXACTLY one from this list, the closest dosage form: " + JSON.stringify(cats) + "), " +
+      "company (manufacturer name), " +
+      "batch (Batch No. value), " +
+      "mfgDate and expiry (as YYYY-MM-DD; if only month-year is printed use the LAST day of that month), " +
+      "mrp (number, M.R.P. Rs. of the whole pack), " +
+      "packUnits (integer, total tablets/capsules/ml-units in the pack, e.g. '20 Tablets' -> 20), " +
+      "barcode (digits of the printed GTIN/EAN/barcode number if visible, digits only). " +
+      "The batch/mfg/expiry/MRP labels are often on the side flap and the values may be printed in a separate column next to the labels: match them in order.";
+    const raw = await askVision(sys, req.body.images, prompt);
+    let data = null;
+    try { data = JSON.parse(raw.replace(/```json|```/g, "").trim()); } catch (e) { const m = raw.match(/\{[\s\S]*\}/); if (m) data = JSON.parse(m[0]); }
+    if (!data || typeof data !== "object") throw new Error("Scan result samajh nahi aaya, dobara photo lein");
+    res.json({ ok: true, data });
+  } catch (e) { res.status(500).json({ error: errMsg(e) }); }
+});
+
 app.post("/api/agent", async (req, res) => {
   try {
     const message = String((req.body && req.body.message) || "").slice(0, 1500).trim();
