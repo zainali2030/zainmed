@@ -2077,7 +2077,7 @@ async function pageMedicalStore(){
     opts=opts||{};
     p=p||{id:"",name:"",generic:"",company:"",batch:"",expiry:"",purchasePrice:0,salePrice:0,stock:0,reorderLevel:5};
     const ov=openModal(p.id?"Edit Medicine":"Add Medicine",
-      (p.id?'':'<div class="info-tile mb" id="mm-scanbox"><div class="flex jb fw aic"><div><b>📷 Camera se Scan karein</b><div class="hint" id="mm-scan-msg">Dawai ke dabbe ki photo lein — naam, formula, category, company, batch, expiry, price khud bhar jayenge. Sirf quantity likhni hai. Behtar result ke liye back side (batch/expiry wali side) ki photo bhi lein.</div></div><div class="flex gap fw"><button type="button" class="btn btn-success sm" id="mm-scan-cam">📷 SCAN</button><button type="button" class="btn btn-outline sm" id="mm-scan-more" style="display:none">＋ Dusri side</button></div></div><input type="file" id="mm-scan-file" accept="image/*" capture="environment" style="display:none"><input type="file" id="mm-scan-file2" accept="image/*" capture="environment" style="display:none"></div>')+
+      (p.id?'':'<div class="info-tile mb" id="mm-scanbox"><div class="flex jb fw aic"><div><b>📷 Camera se Scan karein</b><div class="hint" id="mm-scan-msg">Dawai ke dabbe ki photo lein — naam, formula, category, company, batch, expiry, price khud bhar jayenge. Sirf quantity likhni hai. Behtar result ke liye back side (batch/expiry wali side) ki photo bhi lein.</div></div><div class="flex gap fw" style="margin-top:14px;width:100%"><button type="button" class="btn btn-success sm" id="mm-scan-cam">📷 CAMERA SCAN</button><button type="button" class="btn btn-outline sm" id="mm-scan-gal">🖼 PHOTO CHUNEIN</button><button type="button" class="btn btn-outline sm" id="mm-scan-more" style="display:none">＋ Dusri side</button></div></div><input type="file" id="mm-scan-file" accept="image/*" multiple style="display:none"></div>')+
       '<div class="grid g2">'+
       '<div class="field"><label>Medicine Name *</label><input class="inp" id="mm-name" value="'+esc(p.name)+'"></div>'+
       '<div class="field"><label>Generic / Strength</label><input class="inp" id="mm-generic" value="'+esc(p.generic||"")+'"></div>'+
@@ -2117,7 +2117,7 @@ async function pageMedicalStore(){
     /* ===== SCAN MEDICINE (camera -> AI -> auto-fill) ===== */
     {const camBtn=ov.querySelector("#mm-scan-cam");
     if(camBtn){
-      const msg=ov.querySelector("#mm-scan-msg"),f1=ov.querySelector("#mm-scan-file"),f2=ov.querySelector("#mm-scan-file2"),moreBtn=ov.querySelector("#mm-scan-more");
+      const msg=ov.querySelector("#mm-scan-msg"),f1=ov.querySelector("#mm-scan-file"),gal=ov.querySelector("#mm-scan-gal"),moreBtn=ov.querySelector("#mm-scan-more");
       const shots=[];let codes=[];
       const setMsg=(t,c)=>{msg.textContent=t;msg.style.color=c||""};
       const shrink=file=>new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();
@@ -2155,10 +2155,41 @@ async function pageMedicalStore(){
         camBtn.disabled=false;moreBtn.disabled=false;
       };
       const take=async(file)=>{if(!file)return;try{setMsg("⏳ Photo tayyar ho rahi hai…");const s=await shrink(file);shots.push(s);codes=codes.concat(s.codes);await run()}catch(e){setMsg("❌ "+e.message,"var(--danger,#b91c1c)")}};
-      f1.onchange=()=>{const f=f1.files[0];f1.value="";take(f)};f2.onchange=()=>{const f=f2.files[0];f2.value="";take(f)};
-      camBtn.onclick=()=>{shots.length=0;codes=[];f1.click()};
-      moreBtn.onclick=()=>f2.click();
-      if(opts.autoScan)setTimeout(()=>f1.click(),0);
+      const BAD="var(--danger,#b91c1c)";
+      const openLive=async(append)=>{
+        if(!append){shots.length=0;codes=[]}
+        if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setMsg("❌ Is browser mein live camera nahi chal raha. 'PHOTO CHUNEIN' dabayein.",BAD);return}
+        let stream;
+        try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false})}
+        catch(e){setMsg("❌ Camera allow nahi hua ("+(e.name||"error")+"). iPhone: Settings → apna browser (Safari/Chrome) → Camera → Allow, phir page refresh karein. Ya 'PHOTO CHUNEIN' se photo lein.",BAD);return}
+        const wrap=document.createElement("div");
+        wrap.style.cssText="position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;font-family:sans-serif";
+        wrap.innerHTML='<video autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:cover;background:#000"></video>'+
+          '<div id="lv-hint" style="position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 14px;color:#fff;text-align:center;font-weight:700;font-size:16px;background:linear-gradient(#000a,#0000)"></div>'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px calc(16px + env(safe-area-inset-bottom,0px));background:#000">'+
+          '<button type="button" id="lv-x" style="width:64px;height:64px;border-radius:50%;border:0;background:#333;color:#fff;font-size:24px">✕</button>'+
+          '<button type="button" id="lv-shot" style="width:78px;height:78px;border-radius:50%;border:5px solid #888;background:#fff"></button>'+
+          '<button type="button" id="lv-done" style="min-width:64px;height:64px;border-radius:32px;border:0;background:#15803d;color:#fff;font-size:15px;font-weight:700;padding:0 14px;opacity:.4" disabled>✔ SCAN</button></div>';
+        document.body.appendChild(wrap);
+        const vid=wrap.querySelector("video"),hint=wrap.querySelector("#lv-hint"),done=wrap.querySelector("#lv-done"),shot=wrap.querySelector("#lv-shot");
+        const stop=()=>{try{stream.getTracks().forEach(t=>t.stop())}catch(e){}wrap.remove()};
+        const upd=()=>{const n=shots.length;
+          hint.textContent=n===0?"1) Pehle NAAM wali side (front) ki photo lein":n===1?"2) Ab PRICE / BATCH / EXPIRY wali side ki photo lein, phir ✔ SCAN dabayein":"Photos: "+n+" — ✔ SCAN dabayein";
+          done.disabled=n===0;done.style.opacity=n===0?".4":"1";done.textContent=n?"✔ SCAN ("+n+")":"✔ SCAN"};
+        upd();vid.srcObject=stream;vid.setAttribute("playsinline","");vid.muted=true;try{await vid.play()}catch(e){}
+        wrap.querySelector("#lv-x").onclick=()=>{stop();if(shots.length)setMsg("Camera band. "+shots.length+" photo li hui hain — 'Dusri side' ya dobara SCAN dabayein.")};
+        let busy=false;
+        shot.onclick=()=>{if(busy)return;if(!vid.videoWidth){hint.textContent="⚠️ Camera abhi tayyar nahi (black screen?). 1-2 second ruk kar dobara dabayein, ya ✕ dabakar 'PHOTO CHUNEIN' use karein.";return}
+          busy=true;const cv=document.createElement("canvas");cv.width=vid.videoWidth;cv.height=vid.videoHeight;cv.getContext("2d").drawImage(vid,0,0);
+          cv.toBlob(async blob=>{try{const s=await shrink(blob);shots.push(s);codes=codes.concat(s.codes);upd();shot.style.background="#9f9";setTimeout(()=>shot.style.background="#fff",200)}catch(e){hint.textContent="❌ "+e.message}busy=false},"image/jpeg",0.92)};
+        done.onclick=()=>{if(!shots.length)return;stop();run()};
+      };
+      f1.onchange=async()=>{const files=Array.from(f1.files||[]).slice(0,3);f1.value="";if(!files.length)return;
+        try{setMsg("⏳ Photo tayyar ho rahi hai…");shots.length=0;codes=[];for(const f of files){const s=await shrink(f);shots.push(s);codes=codes.concat(s.codes)}await run()}catch(e){setMsg("❌ "+e.message,BAD)}};
+      camBtn.onclick=()=>openLive(false);
+      gal.onclick=()=>f1.click();
+      moreBtn.onclick=()=>openLive(true);
+      if(opts.autoScan)setTimeout(()=>openLive(false),0);
     }}
     ov.querySelector("#mm-save").onclick=async()=>{
       const name=ov.querySelector("#mm-name").value.trim();if(!name){toast("Medicine name is required","error");return}
