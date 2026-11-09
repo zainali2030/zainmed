@@ -437,22 +437,33 @@ function localAnswer(q, S) {
   return "Main aap ke clinic ke database se jawab deta hoon. Aise poochein:\n- **Aaj kitni collection hui?**\n- **Aaj ke patients dikhao**\n- **Kis ka due baqaya hai?**\n- **Doctor-wise report**\n- **Is mahine ka kharcha / net**\n- **Low stock dawaiyan**\n- **Pichle 7 din**\n\n_(Offline mode — poori AI chat ke liye config.json mein Gemini ya Claude key lagayein.)_";
 }
 
+/* Gemini: ek model busy ho (503 "high demand", 429, timeout) to khud agla model try karta hai */
+const GEMINI_FALLBACKS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"];
+async function geminiGenerate(body) {
+  const models = [GEMINI_MODEL].concat(GEMINI_FALLBACKS).filter((m, i, a) => m && a.indexOf(m) === i).slice(0, 4);
+  let lastErr = "Gemini jawab nahi de saka";
+  for (const model of models) {
+    try {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
+        signal: AbortSignal.timeout(14000), body: JSON.stringify(body)
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { lastErr = "Gemini(" + model + "): " + ((j.error && j.error.message) || r.status); console.error(lastErr); continue; }
+      const ps = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
+      const t = ps && ps.map(p => p.text || "").join("");
+      if (t) return t;
+      lastErr = "Gemini(" + model + ") ne khali jawab diya"; console.error(lastErr);
+    } catch (e) { lastErr = "Gemini(" + model + "): " + (e && (e.name === "TimeoutError" || e.name === "AbortError") ? "der lag gayi" : errMsg(e)); console.error(lastErr); }
+  }
+  throw new Error(lastErr);
+}
 async function askLLM(system, history, message) {
   const turns = (history || []).slice(-8).filter(h => h && h.text).map(h => ({ role: h.role === "assistant" ? "assistant" : "user", text: String(h.text).slice(0, 3000) }));
   if (GEMINI_KEY) {
     const contents = turns.map(h => ({ role: h.role === "assistant" ? "model" : "user", parts: [{ text: h.text }] }));
     contents.push({ role: "user", parts: [{ text: message }] });
-    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent", {
-      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
-      signal: AbortSignal.timeout(40000),
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents })
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error("Gemini: " + ((j.error && j.error.message) || r.status));
-    const parts = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
-    const text = parts && parts.map(p => p.text || "").join("");
-    if (!text) throw new Error("Gemini ne khali jawab diya");
-    return text;
+    return await geminiGenerate({ systemInstruction: { parts: [{ text: system }] }, contents });
   }
   if (CLAUDE_KEY) {
     const messages = turns.map(h => ({ role: h.role, content: h.text }));
@@ -549,17 +560,7 @@ async function askVision(system, images, prompt) {
   if (!imgs.length) throw new Error("Photo nahi mili");
   if (GEMINI_KEY) {
     const parts = imgs.map(i => ({ inlineData: { mimeType: i.mime, data: i.data } })); parts.push({ text: prompt });
-    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent", {
-      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
-      signal: AbortSignal.timeout(40000),
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json" } })
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error("Gemini: " + ((j.error && j.error.message) || r.status));
-    const ps = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
-    const t = ps && ps.map(p => p.text || "").join("");
-    if (!t) throw new Error("Gemini ne khali jawab diya");
-    return t;
+    return await geminiGenerate({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json" } });
   }
   if (CLAUDE_KEY) {
     const content = imgs.map(i => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.data } })); content.push({ type: "text", text: prompt });
@@ -598,7 +599,7 @@ app.post("/api/scan-medicine", async (req, res) => {
     if (!data || typeof data !== "object") throw new Error("Scan result samajh nahi aaya, dobara photo lein");
     res.json({ ok: true, data });
   } catch (e) {
-    const m = (e && (e.name === "TimeoutError" || e.name === "AbortError")) ? "AI ne 40 second mein jawab nahi diya. Dobara try karein ya sirf 1 photo lein." : errMsg(e);
+    const m = (e && (e.name === "TimeoutError" || e.name === "AbortError")) ? "AI abhi busy hai. 1 minute baad dobara try karein ya sirf 1 photo lein." : errMsg(e);
     console.error("scan-medicine:", m);
     res.status(500).json({ error: m });
   }
