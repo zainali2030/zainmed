@@ -169,6 +169,28 @@ app.get("/:f", (req, res, next) => PUBLIC_FILES.has(req.params.f) ? res.sendFile
 /* ---------- PUBLIC routes (clinic ID ki zaroorat nahi) ---------- */
 /* AI check: browser mein /api/ai-test kholein — AI key chal rahi hai ya nahi, saaf pata chal jata hai */
 app.get("/api/ai-test", async (req, res) => {
+  /* /api/ai-test?list=1  -> is key se kaun kaun se Gemini models milte hain
+     /api/ai-test?model=gemini-2.5-flash -> koi bhi model seedha test karein */
+  if (req.query.list || req.query.model) {
+    const t1 = Date.now();
+    try {
+      if (!GEMINI_KEY) return res.json({ ok: false, error: "GEMINI_API_KEY server ko nahi mili" });
+      if (req.query.list) {
+        const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { headers: { "x-goog-api-key": GEMINI_KEY }, signal: AbortSignal.timeout(15000) });
+        const j = await r.json();
+        if (!r.ok) return res.json({ ok: false, status: r.status, ms: Date.now() - t1, error: (j.error && j.error.message) || "error" });
+        return res.json({ ok: true, ms: Date.now() - t1, models: (j.models || []).filter(m => /generateContent/.test((m.supportedGenerationMethods || []).join())).map(m => String(m.name).replace("models/", "")).filter(n => /flash|pro/.test(n)) });
+      }
+      const mdl = String(req.query.model).replace(/[^a-zA-Z0-9._-]/g, "");
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + mdl + ":generateContent", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY }, signal: AbortSignal.timeout(25000),
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: "Reply with the single word OK." }] }] })
+      });
+      const j = await r.json();
+      const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
+      return res.json({ ok: r.ok, model: mdl, status: r.status, ms: Date.now() - t1, reply: t ? t.map(p => p.text || "").join("").slice(0, 40) : null, error: r.ok ? undefined : ((j.error && j.error.message) || "error") });
+    } catch (e) { return res.json({ ok: false, ms: Date.now() - t1, error: errMsg(e) }); }
+  }
   const t0 = Date.now();
   const prov = GEMINI_KEY ? "Gemini (" + GEMINI_MODEL + ")" : CLAUDE_KEY ? "Claude" : "none";
   try {
