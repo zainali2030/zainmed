@@ -159,6 +159,7 @@ function clinicProblem(c) {
 /* ---------- express app ---------- */
 const app = express();
 app.use(cors());
+app.use((req, res, next) => { res.setHeader("Permissions-Policy", "camera=(self), microphone=()"); next(); });
 app.use(express.json({ limit: "25mb" }));
 /* SECURITY: sirf ye files browser ko milengi (config.json, server.js waghera kabhi nahi) */
 const PUBLIC_FILES = new Set(["index.html","master.html","login-bg.jpg","manifest.json","sw.js","icon-192.png","icon-512.png"]);
@@ -166,6 +167,15 @@ app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/:f", (req, res, next) => PUBLIC_FILES.has(req.params.f) ? res.sendFile(path.join(__dirname, req.params.f)) : next());
 
 /* ---------- PUBLIC routes (clinic ID ki zaroorat nahi) ---------- */
+/* AI check: browser mein /api/ai-test kholein — AI key chal rahi hai ya nahi, saaf pata chal jata hai */
+app.get("/api/ai-test", async (req, res) => {
+  const t0 = Date.now();
+  const prov = GEMINI_KEY ? "Gemini (" + GEMINI_MODEL + ")" : CLAUDE_KEY ? "Claude" : "none";
+  try {
+    const out = await askLLM("Reply with the single word OK.", [], "ping");
+    res.json({ ok: true, provider: prov, ms: Date.now() - t0, reply: String(out || "").slice(0, 40) });
+  } catch (e) { res.json({ ok: false, provider: prov, ms: Date.now() - t0, error: errMsg(e) }); }
+});
 app.get("/api/ping", (req, res) => res.json({ ok: true, service: "ZainMed API", time: new Date().toISOString() }));
 
 /* Database ek hi baar connect hoti hai (pehli request par). Fail ho to server crash nahi hota — saaf error milta hai */
@@ -412,6 +422,7 @@ async function askLLM(system, history, message) {
     contents.push({ role: "user", parts: [{ text: message }] });
     const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent", {
       method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
+      signal: AbortSignal.timeout(40000),
       body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents })
     });
     const j = await r.json();
@@ -426,6 +437,7 @@ async function askLLM(system, history, message) {
     messages.push({ role: "user", content: message });
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST", headers: { "Content-Type": "application/json", "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01" },
+      signal: AbortSignal.timeout(40000),
       body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1200, system, messages })
     });
     const j = await r.json();
@@ -517,6 +529,7 @@ async function askVision(system, images, prompt) {
     const parts = imgs.map(i => ({ inlineData: { mimeType: i.mime, data: i.data } })); parts.push({ text: prompt });
     const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent", {
       method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
+      signal: AbortSignal.timeout(40000),
       body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json" } })
     });
     const j = await r.json();
@@ -530,13 +543,16 @@ async function askVision(system, images, prompt) {
     const content = imgs.map(i => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.data } })); content.push({ type: "text", text: prompt });
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST", headers: { "Content-Type": "application/json", "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01" },
+      signal: AbortSignal.timeout(40000),
       body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 800, system, messages: [{ role: "user", content }] })
     });
     const j = await r.json();
     if (!r.ok) throw new Error("Claude: " + ((j.error && j.error.message) || r.status));
     return (j.content || []).map(b => b.text || "").join("");
   }
-  throw new Error("AI key set nahi hai. config.json mein geminiKey ya anthropicKey likhein.");
+  throw new Error(IS_VERCEL
+    ? "AI key set nahi hai. Vercel → Project → Settings → Environment Variables mein GEMINI_API_KEY (ya ANTHROPIC_API_KEY) daalein, phir Redeploy karein."
+    : "AI key set nahi hai. config.json mein geminiKey ya anthropicKey likhein, phir server restart karein.");
 }
 app.post("/api/scan-medicine", async (req, res) => {
   try {
@@ -559,7 +575,11 @@ app.post("/api/scan-medicine", async (req, res) => {
     try { data = JSON.parse(raw.replace(/```json|```/g, "").trim()); } catch (e) { const m = raw.match(/\{[\s\S]*\}/); if (m) data = JSON.parse(m[0]); }
     if (!data || typeof data !== "object") throw new Error("Scan result samajh nahi aaya, dobara photo lein");
     res.json({ ok: true, data });
-  } catch (e) { res.status(500).json({ error: errMsg(e) }); }
+  } catch (e) {
+    const m = (e && (e.name === "TimeoutError" || e.name === "AbortError")) ? "AI ne 40 second mein jawab nahi diya. Dobara try karein ya sirf 1 photo lein." : errMsg(e);
+    console.error("scan-medicine:", m);
+    res.status(500).json({ error: m });
+  }
 });
 
 app.post("/api/agent", async (req, res) => {
