@@ -32,7 +32,7 @@ const MASTER_KEY  = pick("MASTER_KEY", "masterKey", "ChangeMe@123");   /* master
 const MASTER_USER = pick("MASTER_USER", "masterUser", "owner");                  /* owner ka naam */
 const WEBHOOK_KEY = pick("WEBHOOK_KEY", "webhookKey", "");               /* WhatsApp / n8n webhook ki key */
 const GEMINI_KEY  = pick("GEMINI_API_KEY", "geminiKey", "");
-const GEMINI_MODEL= pick("GEMINI_MODEL", "geminiModel", "gemini-2.5-flash");
+const GEMINI_MODEL= pick("GEMINI_MODEL", "geminiModel", "gemini-flash-latest");
 const CLAUDE_KEY  = pick("ANTHROPIC_API_KEY", "anthropicKey", "");
 const CLAUDE_MODEL= pick("ANTHROPIC_MODEL", "anthropicModel", "claude-haiku-5-5");
 const TZ          = pick("CLINIC_TZ", "timezone", "Asia/Karachi");
@@ -439,18 +439,14 @@ function localAnswer(q, S) {
 
 /* Gemini: ek model busy ho (503 "high demand", 429, timeout) to khud agla model try karta hai */
 const GEMINI_FALLBACKS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"];
-async function geminiGenerate(body, opt) {
-  opt = opt || {};
-  const models = [GEMINI_MODEL].concat(GEMINI_FALLBACKS).filter((m, i, a) => m && a.indexOf(m) === i).slice(0, opt.maxModels || 4);
+async function geminiGenerate(body) {
+  const models = [GEMINI_MODEL].concat(GEMINI_FALLBACKS).filter((m, i, a) => m && a.indexOf(m) === i).slice(0, 4);
   let lastErr = "Gemini jawab nahi de saka";
   for (const model of models) {
     try {
-      let b = body;
-      /* photo padhne ke liye "thinking" ki zaroorat nahi — band karne se jawab tez aata hai */
-      if (opt.fast && /^gemini-2\.5-flash/.test(model)) b = Object.assign({}, body, { generationConfig: Object.assign({}, body.generationConfig, { thinkingConfig: { thinkingBudget: 0 } }) });
       const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
         method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
-        signal: AbortSignal.timeout(opt.timeoutMs || 14000), body: JSON.stringify(b)
+        signal: AbortSignal.timeout(14000), body: JSON.stringify(body)
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { lastErr = "Gemini(" + model + "): " + ((j.error && j.error.message) || r.status); console.error(lastErr); continue; }
@@ -559,20 +555,19 @@ app.use("/api", async (req, res, next) => {
 
 
 /* ---------- MEDICINE SCAN (camera photo -> auto-fill) ---------- */
-async function askVision(system, images, prompt, opt) {
-  opt = opt || {};
+async function askVision(system, images, prompt) {
   const imgs = (images || []).slice(0, 3).map(i => ({ mime: String(i.mime || "image/jpeg"), data: String(i.data || "").replace(/^data:[^,]*,/, "") })).filter(i => i.data);
   if (!imgs.length) throw new Error("Photo nahi mili");
   if (GEMINI_KEY) {
     const parts = imgs.map(i => ({ inlineData: { mimeType: i.mime, data: i.data } })); parts.push({ text: prompt });
-    return await geminiGenerate({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json" } }, { fast: true, timeoutMs: opt.timeoutMs, maxModels: opt.maxModels });
+    return await geminiGenerate({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json" } });
   }
   if (CLAUDE_KEY) {
     const content = imgs.map(i => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.data } })); content.push({ type: "text", text: prompt });
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST", headers: { "Content-Type": "application/json", "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01" },
-      signal: AbortSignal.timeout(opt.timeoutMs ? opt.timeoutMs * 2 : 40000),
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: opt.maxTokens || 800, system, messages: [{ role: "user", content }] })
+      signal: AbortSignal.timeout(40000),
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 800, system, messages: [{ role: "user", content }] })
     });
     const j = await r.json();
     if (!r.ok) throw new Error("Claude: " + ((j.error && j.error.message) || r.status));
@@ -582,90 +577,30 @@ async function askVision(system, images, prompt, opt) {
     ? "AI key set nahi hai. Vercel → Project → Settings → Environment Variables mein GEMINI_API_KEY (ya ANTHROPIC_API_KEY) daalein, phir Redeploy karein."
     : "AI key set nahi hai. config.json mein geminiKey ya anthropicKey likhein, phir server restart karein.");
 }
-function parseJsonLoose(raw) {
-  let data = null;
-  const t = String(raw || "").replace(/```json|```/g, "").trim();
-  try { data = JSON.parse(t); } catch (e) { const m = t.match(/[\[{][\s\S]*[\]}]/); if (m) data = JSON.parse(m[0]); }
-  return data;
-}
-const aiErrMsg = e => (e && (e.name === "TimeoutError" || e.name === "AbortError")) ? "AI abhi busy hai. 1 minute baad dobara try karein." : errMsg(e);
-
 app.post("/api/scan-medicine", async (req, res) => {
   try {
     const cats = Array.isArray(req.body.categories) ? req.body.categories.slice(0, 80).map(x => String(x).slice(0, 60)) : [];
-    const imgs = (Array.isArray(req.body.images) ? req.body.images : []).slice(0, 3);
-    if (!imgs.length) throw new Error("Photo nahi mili");
-    const sys = "You read ONE photo of medicine packaging (it may be the front, back, side flap, strip or bottle; often Pakistani products with English and Urdu text). " +
-      "Extract the printed facts and reply with ONE JSON object only, no markdown. Use null for anything not clearly visible in THIS photo; never guess prices, batch or dates.";
+    const sys = "You read photos of medicine packaging (front and/or back of a box/strip/bottle, often Pakistani products with English and Urdu text). " +
+      "Extract the printed facts and reply with ONE JSON object only, no markdown. Use null for anything not clearly visible; never guess prices, batch or dates.";
     const prompt = "Return JSON with keys: " +
       "name (brand name exactly as printed, e.g. 'Dexpril 20mg'), " +
       "generic (active ingredient/formula with strength, e.g. 'Piroxicam-beta-cyclodextrin 20mg'), " +
       "category (pick EXACTLY one from this list, the closest dosage form: " + JSON.stringify(cats) + "), " +
-      "company (manufacturer / marketed by), " +
-      "batch (the value after 'Batch No.', 'B.No', 'B. No.', 'Batch', 'Lot' or 'LOT'; usually inkjet-printed on the side flap or bottom of the box; copy the letters and digits exactly), " +
-      "mfgDate (value after 'Mfg.', 'Mfd', 'Mfg. Date', 'Manufacturing Date', 'M.D.'), " +
-      "expiry (value after 'Exp.', 'Expiry', 'Exp. Date', 'Use before', 'E.D.'), " +
-      "mfgDate and expiry must be YYYY-MM-DD; dates are often printed like 03/2027, 03-27, MAR 2027, 2027-03 or 03.2027 - if only month and year are printed use the LAST day of that month, " +
-      "mrp (number: price after 'M.R.P.', 'MRP', 'Retail Price', 'Rs.' for the whole pack; digits only), " +
-      "packUnits (integer, total tablets/capsules/ml-units in the pack, e.g. '20 Tablets' -> 20, '3x10' -> 30; for a bottle use the ml), " +
-      "barcode (digits printed under a 1D barcode or next to a 2D DataMatrix/QR code as GTIN / EAN, digits only). " +
-      "The batch/mfg/expiry/MRP labels may be on one line and the values on the next line or in a separate column next to the labels: match them in order. " +
-      "If the labels are there but the print is too blurry or cut off, return null for that key.";
-    const results = await Promise.all(imgs.map(async img => {
-      try { return { d: parseJsonLoose(await askVision(sys, [img], prompt, { timeoutMs: 18000, maxModels: 3 })) }; }
-      catch (e) { return { err: e }; }
-    }));
-    const okr = results.filter(r => r.d && typeof r.d === "object" && !Array.isArray(r.d));
-    if (!okr.length) throw (results.find(r => r.err) || {}).err || new Error("Scan result samajh nahi aaya, dobara photo lein");
-    const data = {};
-    for (const r of okr) for (const k of Object.keys(r.d)) { const v = r.d[k]; if ((data[k] === undefined || data[k] === null || data[k] === "") && v !== null && v !== undefined && v !== "") data[k] = v; }
-    res.json({ ok: true, data, photos: imgs.length, failed: results.length - okr.length });
+      "company (manufacturer name), " +
+      "batch (Batch No. value), " +
+      "mfgDate and expiry (as YYYY-MM-DD; if only month-year is printed use the LAST day of that month), " +
+      "mrp (number, M.R.P. Rs. of the whole pack), " +
+      "packUnits (integer, total tablets/capsules/ml-units in the pack, e.g. '20 Tablets' -> 20), " +
+      "barcode (digits of the printed GTIN/EAN/barcode number if visible, digits only). " +
+      "The batch/mfg/expiry/MRP labels are often on the side flap and the values may be printed in a separate column next to the labels: match them in order.";
+    const raw = await askVision(sys, req.body.images, prompt);
+    let data = null;
+    try { data = JSON.parse(raw.replace(/```json|```/g, "").trim()); } catch (e) { const m = raw.match(/\{[\s\S]*\}/); if (m) data = JSON.parse(m[0]); }
+    if (!data || typeof data !== "object") throw new Error("Scan result samajh nahi aaya, dobara photo lein");
+    res.json({ ok: true, data });
   } catch (e) {
-    const m = aiErrMsg(e);
+    const m = (e && (e.name === "TimeoutError" || e.name === "AbortError")) ? "AI abhi busy hai. 1 minute baad dobara try karein ya sirf 1 photo lein." : errMsg(e);
     console.error("scan-medicine:", m);
-    res.status(500).json({ error: m });
-  }
-});
-
-/* ---------- BILL SCAN (supplier invoice photo -> lines) ---------- */
-app.post("/api/scan-bill", async (req, res) => {
-  try {
-    const cats = Array.isArray(req.body.categories) ? req.body.categories.slice(0, 80).map(x => String(x).slice(0, 60)) : [];
-    const img = req.body.image;
-    if (!img || !img.data) throw new Error("Photo nahi mili");
-    const sys = "You read ONE photograph (or a screenshot) of a pharmacy / medical-store purchase invoice from a distributor or company in Pakistan (English and Urdu). " +
-      "Extract every product line of the table and reply with ONE JSON object only, no markdown. Use null for anything not clearly visible. Never invent numbers.";
-    const prompt = "Return JSON with keys: " +
-      "supplier (seller / distributor / company name printed at the top; null if this photo has no header), " +
-      "invoiceNo (invoice / bill / challan number; null if absent), " +
-      "date (invoice date as YYYY-MM-DD; null if absent), " +
-      "grandTotal (final net payable amount at the bottom as a number; null if this photo does not show it), " +
-      "items (array, one entry per product row, in the same order as printed). Each item has: " +
-      "name (product name with strength exactly as printed, e.g. 'Panadol 500mg Tab'), " +
-      "generic (formula if printed, else null), " +
-      "category (EXACTLY one from this list, the closest dosage form, else null: " + JSON.stringify(cats) + "), " +
-      "qty (number of packs/units billed in the Qty column, NOT including bonus), " +
-      "bonus (free / bonus quantity, 0 if none), " +
-      "packUnits (tablets/capsules/ml in ONE pack if printed, e.g. 'Pack 10x10' -> 100, '20s' -> 20; null if not printed), " +
-      "rate (price of ONE billed unit before discount: columns like 'Rate', 'T.P', 'Trade Price', 'Price'), " +
-      "mrp (retail price per pack if printed: 'M.R.P', 'Retail'), " +
-      "amount (the net amount of that line after discount / tax: 'Net Amount', 'Amount', 'Value'), " +
-      "batch (Batch / B.No / Lot), " +
-      "expiry (YYYY-MM-DD; if only month and year are printed use the LAST day of that month). " +
-      "Rules: skip header rows, sub-totals, tax rows and signatures. Numbers must be plain numbers without commas or currency. " +
-      "If a row wraps onto two lines, merge it into one item. If the photo is a continuation page without a header, set supplier / invoiceNo / date to null.";
-    const raw = await askVision(sys, [img], prompt, { timeoutMs: 28000, maxModels: 2, maxTokens: 6000 });
-    const d = parseJsonLoose(raw);
-    if (!d || typeof d !== "object") throw new Error("Bill samajh nahi aaya, dobara saaf photo lein");
-    const items = (Array.isArray(d.items) ? d.items : []).slice(0, 80).filter(x => x && x.name).map(x => ({
-      name: String(x.name).slice(0, 120), generic: x.generic ? String(x.generic).slice(0, 120) : null, category: x.category ? String(x.category).slice(0, 60) : null,
-      qty: x.qty, bonus: x.bonus, packUnits: x.packUnits, rate: x.rate, mrp: x.mrp, amount: x.amount,
-      batch: x.batch ? String(x.batch).slice(0, 40) : null, expiry: x.expiry ? String(x.expiry).slice(0, 10) : null
-    }));
-    res.json({ ok: true, data: { supplier: d.supplier || null, invoiceNo: d.invoiceNo || null, date: d.date || null, grandTotal: d.grandTotal, items } });
-  } catch (e) {
-    const m = aiErrMsg(e);
-    console.error("scan-bill:", m);
     res.status(500).json({ error: m });
   }
 });
