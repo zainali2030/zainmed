@@ -633,41 +633,33 @@ app.post("/api/scan-bill", async (req, res) => {
     const cats = Array.isArray(req.body.categories) ? req.body.categories.slice(0, 80).map(x => String(x).slice(0, 60)) : [];
     const img = req.body.image;
     if (!img || !img.data) throw new Error("Photo nahi mili");
-    const sys = "You read ONE photograph, screenshot or scan of a purchase bill / invoice / challan / handwritten stock list that a pharmacy or medical store received from a supplier in Pakistan. " +
-      "Bills come in MANY different layouts: thermal receipts, computer invoices, handwritten slips, English or Urdu, with or without batch / expiry / discount / tax columns. The photo may be slightly curved or tilted, with fingers or clutter around it. " +
-      "Your job: work out what each column means (use the column headings when there are any, otherwise the position and the numbers), then read every product row. Reply with ONE JSON object only, no markdown. Use null for anything not clearly visible. Never invent numbers.";
+    const sys = "You read ONE photograph (or a screenshot) of a pharmacy / medical-store purchase invoice from a distributor or company in Pakistan (English and Urdu). " +
+      "Extract every product line of the table and reply with ONE JSON object only, no markdown. Use null for anything not clearly visible. Never invent numbers.";
     const prompt = "Return JSON with keys: " +
-      "supplier (name of the SELLER shop / distributor / company, usually the big title at the top; the 'Customer' / 'Buyer' / 'Bill to' lines are the store receiving the goods, NOT the supplier; null if this photo has no header), " +
-      "invoiceNo (invoice / bill / challan / 'Number' value; null if absent), " +
-      "date (YYYY-MM-DD; dates in Pakistan are normally DAY/MONTH/YEAR; null if absent), " +
-      "grandTotal (final net payable total as a number, only if visible in this photo, else null), " +
-      "items (array, ONE entry per product row, in printed order). Each item has: " +
-      "name (product name with strength / form as printed, without the manufacturer word; e.g. 'GEN-M 20/120 TAB'), " +
-      "company (manufacturer or brand-owner word if printed, else null), " +
+      "supplier (seller / distributor / company name printed at the top; null if this photo has no header), " +
+      "invoiceNo (invoice / bill / challan number; null if absent), " +
+      "date (invoice date as YYYY-MM-DD; null if absent), " +
+      "grandTotal (final net payable amount at the bottom as a number; null if this photo does not show it), " +
+      "items (array, one entry per product row, in the same order as printed). Each item has: " +
+      "name (product name with strength exactly as printed, e.g. 'Panadol 500mg Tab'), " +
       "generic (formula if printed, else null), " +
       "category (EXACTLY one from this list, the closest dosage form, else null: " + JSON.stringify(cats) + "), " +
-      "qty (THE MOST IMPORTANT FIELD: how many units/packs of this product the buyer received, from the Qty / Pcs / Packs / Box / Carton / Unit column; whole packs only; if both cartons and pieces are given, give the total in pieces and put the unit word in 'unit'), " +
-      "bonus (free / bonus / scheme quantity, including notations like '2+1' or '2, +1' where the number after + is free, else 0), " +
-      "loose (loose single units when the quantity is written as 'packs,units' without a plus sign, e.g. '0,1' means 0 packs and 1 loose unit; else 0), " +
-      "qtyText (the exact text printed in the quantity cell, copied as is), " +
-      "unit (unit word printed for the quantity such as pcs, box, strip, carton, bottle, else null), " +
-      "rate (price of ONE pack before discount: columns like Rate, T.P, Trade Price, Price, Unit Price), " +
-      "mrp (retail price of ONE pack: columns like MRP, M.R.P, Retail, R.P), " +
-      "disc (discount percent of that row as a number, 0 if none), " +
-      "amount (net amount of that row: Amount, Net, Value, Total of the row), " +
-      "packUnits (tablets / capsules / ml in ONE pack ONLY if explicitly printed, else null), " +
-      "batch (only if a batch / lot column exists, else null), " +
-      "expiry (YYYY-MM-DD only if an expiry column exists; if only month and year, use the LAST day of that month; else null). " +
-      "Rules: include medicines AND other goods (sprays, condoms, supplements, devices, baby items). Skip header rows, sub-totals, tax / discount summary rows, signatures and stray handwriting. " +
-      "Numbers must be plain numbers without commas or currency symbols. A row's numbers sit on the same line or on the line(s) directly under its name; never mix them with the next row. " +
-      "Read every row down to the bottom edge; skip a row only if it is physically cut off. If the photo is a continuation without the header, set supplier / invoiceNo / date to null. " +
-      "If you are unsure about the layout, still return every product with at least name and qty.";
+      "qty (number of packs/units billed in the Qty column, NOT including bonus), " +
+      "bonus (free / bonus quantity, 0 if none), " +
+      "packUnits (tablets/capsules/ml in ONE pack if printed, e.g. 'Pack 10x10' -> 100, '20s' -> 20; null if not printed), " +
+      "rate (price of ONE billed unit before discount: columns like 'Rate', 'T.P', 'Trade Price', 'Price'), " +
+      "mrp (retail price per pack if printed: 'M.R.P', 'Retail'), " +
+      "amount (the net amount of that line after discount / tax: 'Net Amount', 'Amount', 'Value'), " +
+      "batch (Batch / B.No / Lot), " +
+      "expiry (YYYY-MM-DD; if only month and year are printed use the LAST day of that month). " +
+      "Rules: skip header rows, sub-totals, tax rows and signatures. Numbers must be plain numbers without commas or currency. " +
+      "If a row wraps onto two lines, merge it into one item. If the photo is a continuation page without a header, set supplier / invoiceNo / date to null.";
     const raw = await askVision(sys, [img], prompt, { timeoutMs: 28000, maxModels: 2, maxTokens: 6000 });
     const d = parseJsonLoose(raw);
     if (!d || typeof d !== "object") throw new Error("Bill samajh nahi aaya, dobara saaf photo lein");
     const items = (Array.isArray(d.items) ? d.items : []).slice(0, 80).filter(x => x && x.name).map(x => ({
       name: String(x.name).slice(0, 120), generic: x.generic ? String(x.generic).slice(0, 120) : null, category: x.category ? String(x.category).slice(0, 60) : null,
-      company: x.company ? String(x.company).slice(0, 60) : null, qtyText: x.qtyText ? String(x.qtyText).slice(0, 30) : null, unit: x.unit ? String(x.unit).slice(0, 20) : null, qty: x.qty, loose: x.loose, bonus: x.bonus, packUnits: x.packUnits, rate: x.rate, mrp: x.mrp, disc: x.disc, amount: x.amount,
+      qty: x.qty, bonus: x.bonus, packUnits: x.packUnits, rate: x.rate, mrp: x.mrp, amount: x.amount,
       batch: x.batch ? String(x.batch).slice(0, 40) : null, expiry: x.expiry ? String(x.expiry).slice(0, 10) : null
     }));
     res.json({ ok: true, data: { supplier: d.supplier || null, invoiceNo: d.invoiceNo || null, date: d.date || null, grandTotal: d.grandTotal, items } });
