@@ -504,6 +504,27 @@ function fmtDate(iso){if(!iso)return"";const p=iso.split("-");return p.length===
 function fmtTime(t){if(!t)return"";const p=t.split(":");let h=parseInt(p[0],10);const m=p[1]||"00";const ap=h>=12?"PM":"AM";h=h%12||12;return String(h).padStart(2,"0")+":"+m+" "+ap}
 function fmtMoney(n){return (Number.isFinite(n)?n:0).toLocaleString("en-US",{maximumFractionDigits:0})}
 function num(v){const n=parseFloat(String(v==null?"":v).replace(/,/g,""));return Number.isFinite(n)?n:0}
+/* GS1 DataMatrix / QR (DRAP track & trace) se GTIN, batch, expiry nikalna */
+function parseGS1(raw){
+  let s=String(raw||"").replace(/^\](d2|Q3|C1)/,""),o={};
+  if(/\(\d{2,4}\)/.test(s)){const re=/\((\d{2,4})\)([^(]*)/g;let m;while((m=re.exec(s)))o[m[1]]=m[2].trim()}
+  else{
+    const fixed={"00":18,"01":14,"02":14,"11":6,"13":6,"15":6,"16":6,"17":6,"20":2},vari={"10":1,"21":1,"22":1,"30":1,"37":1,"240":1,"241":1,"250":1,"251":1,"253":1};
+    let i=0;
+    while(i<s.length){
+      if(s[i]==="\x1d"){i++;continue}
+      const a2=s.substr(i,2),a3=s.substr(i,3);
+      if(fixed[a2]){o[a2]=s.substr(i+2,fixed[a2]);i+=2+fixed[a2]}
+      else if(vari[a3]){let j=s.indexOf("\x1d",i+3);if(j<0)j=s.length;o[a3]=s.substring(i+3,j);i=j}
+      else if(vari[a2]){let j=s.indexOf("\x1d",i+2);if(j<0)j=s.length;o[a2]=s.substring(i+2,j);i=j}
+      else break;
+    }
+  }
+  const dt=v=>{v=String(v||"");if(!/^\d{6}$/.test(v))return "";const y=2000+(+v.slice(0,2)),m=v.slice(2,4);let d=v.slice(4,6);
+    if(+m<1||+m>12)return "";if(d==="00")d=String(new Date(y,+m,0).getDate()).padStart(2,"0");return y+"-"+m+"-"+d};
+  const g={gtin:(o["01"]||"").replace(/\D/g,""),expiry:dt(o["17"]),mfg:dt(o["11"]),batch:o["10"]||"",serial:o["21"]||""};
+  return (g.gtin||g.expiry||g.batch)?g:null;
+}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 function padMr(mr){if(!mr)return"";if(!/\d/.test(mr))return mr;const m=mr.match(/(\d{4})\/(\d+)/);if(m)return m[1]+"/"+m[2].padStart(4,"0");const yr=new Date().getFullYear();const dg=mr.replace(/\D/g,"");return yr+"/"+dg.padStart(4,"0")}
 function mrDigits(mr){const m=mr.match(/\/(\d+)/);return m?m[1]:mr.replace(/\D/g,"")}
@@ -1966,11 +1987,11 @@ async function pageMedicalStore(){
       };
       bindStockButtons();
     }else if(tab==="purchase"){
-      panel.innerHTML='<div class="flex jb fw aic mb"><div><b>Purchase History</b><div class="hint">Purchases increase medicine stock automatically.</div></div><button class="btn btn-success" id="med-purchase-new">＋ NEW PURCHASE</button></div>'+
+      panel.innerHTML='<div class="flex jb fw aic mb"><div><b>Purchase History</b><div class="hint">Purchases increase medicine stock automatically.</div></div><div class="flex gap fw"><button class="btn btn-outline" id="med-bill-scan">📷 SCAN BILL</button><button class="btn btn-success" id="med-purchase-new">＋ NEW PURCHASE</button></div></div>'+
       '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Supplier</th><th>Invoice</th><th>Items</th><th>Total</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead><tbody>'+
       purchases.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).map(x=>'<tr><td>'+fmtDate(x.date)+'</td><td>'+esc(x.supplier)+'</td><td>'+esc(x.invoice||"—")+'</td><td>'+x.items.length+'</td><td>'+money(x.total)+'</td><td>'+money(x.paid)+'</td><td>'+money(num(x.total)-num(x.paid))+'</td><td><button class="btn btn-danger sm" data-pur-del="'+esc(x.id)+'">Delete</button></td></tr>').join("")+
       (purchases.length?"":'<tr class="empty-row"><td colspan="8">No purchase records yet</td></tr>')+'</tbody></table></div>';
-      el("med-purchase-new").onclick=()=>purchaseModal();
+      el("med-purchase-new").onclick=()=>purchaseModal();el("med-bill-scan").onclick=()=>billScanModal();
       panel.querySelectorAll("[data-pur-del]").forEach(b=>b.onclick=()=>deletePurchase(b.dataset.purDel));
     }else if(tab==="sale"){
       panel.innerHTML='<div class="grid" style="grid-template-columns:1fr 1fr">'+
@@ -2118,14 +2139,15 @@ async function pageMedicalStore(){
     {const camBtn=ov.querySelector("#mm-scan-cam");
     if(camBtn){
       const msg=ov.querySelector("#mm-scan-msg"),f1=ov.querySelector("#mm-scan-file"),gal=ov.querySelector("#mm-scan-gal"),nat=ov.querySelector("#mm-scan-native"),moreBtn=ov.querySelector("#mm-scan-more");
-      const shots=[];let codes=[];
+      const shots=[];let codes=[],gs1s=[];
       const setMsg=(t,c)=>{msg.textContent=t;msg.style.color=c||""};
       const shrink=file=>new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();
         img.onload=async()=>{try{
-          const M=1280,k=Math.min(1,M/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+          const M=1800,k=Math.min(1,M/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
           cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
-          let found=[];if("BarcodeDetector" in window){try{const det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128","itf"]});found=(await det.detect(cv)).map(b=>String(b.rawValue||"").replace(/\D/g,"")).filter(x=>x.length>=8)}catch(e){}}
-          URL.revokeObjectURL(url);res({data:cv.toDataURL("image/jpeg",0.75).split(",")[1],mime:"image/jpeg",codes:found})}catch(e){rej(e)}};
+          let found=[],gs1=[];if("BarcodeDetector" in window){try{const det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128","itf","data_matrix","qr_code"]});
+            for(const b of await det.detect(cv)){const raw=String(b.rawValue||"");if(b.format==="data_matrix"||b.format==="qr_code"){const g=parseGS1(raw);if(g)gs1.push(g)}else{const dg=raw.replace(/\D/g,"");if(dg.length>=8)found.push(dg)}}}catch(e){}}
+          URL.revokeObjectURL(url);res({data:cv.toDataURL("image/jpeg",0.85).split(",")[1],mime:"image/jpeg",codes:found,gs1:gs1})}catch(e){rej(e)}};
         img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("Photo khul nahi saki"))};img.src=url});
       const setv=(sel,v)=>{if(v===null||v===undefined||v==="")return false;const e=ov.querySelector(sel);if(e){e.value=v;e.dispatchEvent(new Event("input"));return true}return false};
       const normName=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
@@ -2136,6 +2158,7 @@ async function pageMedicalStore(){
         const pu=Math.round(num(d.packUnits));if(pu>0){setv("#mm-strip-size",pu);setv("#mm-box-strips",1)}
         if(num(d.mrp)>0)setv("#mm-sale-box",num(d.mrp));
         if(d.category){const sel=ov.querySelector("#mm-category");const o=Array.from(sel.options).find(x=>x.value&&x.value.toLowerCase()===String(d.category).toLowerCase());if(o)sel.value=o.value}
+        const g=gs1s[0];if(g){if(g.batch)setv("#mm-batch",g.batch);if(g.expiry)setv("#mm-expiry",g.expiry);if(g.gtin&&!codes[0])setv("#mm-barcode",g.gtin.replace(/^0(?=\d{13}$)/,""))}
       };
       const findExisting=d=>{const code=codes[0]||String(d.barcode||"").replace(/\D/g,"");const n=normName(d.name);
         return products.find(x=>(code&&x.barcode&&String(x.barcode).replace(/\D/g,"")===code)||(n&&normName(x.name)===n&&(!d.batch||!x.batch||String(x.batch).toLowerCase()===String(d.batch).toLowerCase())))};
@@ -2154,13 +2177,13 @@ async function pageMedicalStore(){
         }catch(e){setMsg("❌ "+(e.message||"Scan fail"),"var(--danger,#b91c1c)");moreBtn.style.display=shots.length?"":"none"}
         camBtn.disabled=false;moreBtn.disabled=false;
       };
-      const take=async(file)=>{if(!file)return;try{setMsg("⏳ Photo tayyar ho rahi hai…");const s=await shrink(file);shots.push(s);codes=codes.concat(s.codes);await run()}catch(e){setMsg("❌ "+e.message,"var(--danger,#b91c1c)")}};
+      const take=async(file)=>{if(!file)return;try{setMsg("⏳ Photo tayyar ho rahi hai…");const s=await shrink(file);shots.push(s);codes=codes.concat(s.codes);gs1s=gs1s.concat(s.gs1||[]);await run()}catch(e){setMsg("❌ "+e.message,"var(--danger,#b91c1c)")}};
       const BAD="var(--danger,#b91c1c)";
       const openLive=async(append)=>{
-        if(!append){shots.length=0;codes=[]}
+        if(!append){shots.length=0;codes=[];gs1s=[]}
         if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setMsg("ℹ️ Live camera available nahi — phone ka camera khul raha hai…");nat.click();return}
         let stream;
-        try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false})}
+        try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:2560},height:{ideal:1440}},audio:false})}
         catch(e){setMsg("ℹ️ Live camera ki ijazat nahi mili ("+(e.name||"error")+") — phone ka camera khul raha hai. (Hamesha live camera ke liye: iPhone Settings → Safari → Camera → Allow, phir page refresh.)");nat.click();return}
         const wrap=document.createElement("div");
         wrap.style.cssText="position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;font-family:sans-serif";
@@ -2174,22 +2197,22 @@ async function pageMedicalStore(){
         const vid=wrap.querySelector("video"),hint=wrap.querySelector("#lv-hint"),done=wrap.querySelector("#lv-done"),shot=wrap.querySelector("#lv-shot");
         const stop=()=>{try{stream.getTracks().forEach(t=>t.stop())}catch(e){}wrap.remove()};
         const upd=()=>{const n=shots.length;
-          hint.textContent=n===0?"1) Pehle NAAM wali side (front) ki photo lein":n===1?"2) Ab PRICE / BATCH / EXPIRY wali side ki photo lein, phir ✔ SCAN dabayein":"Photos: "+n+" — ✔ SCAN dabayein";
+          hint.textContent=n===0?"1) Pehle NAAM wali side (front) ki photo lein":n===1?"2) Ab PRICE / BATCH / EXPIRY wali side ki photo QAREEB se lein (taake likha saaf aaye), phir ✔ SCAN dabayein":"Photos: "+n+" — ✔ SCAN dabayein";
           done.disabled=n===0;done.style.opacity=n===0?".4":"1";done.textContent=n?"✔ SCAN ("+n+")":"✔ SCAN"};
         upd();vid.srcObject=stream;vid.setAttribute("playsinline","");vid.muted=true;try{await vid.play()}catch(e){}
         wrap.querySelector("#lv-x").onclick=()=>{stop();if(shots.length)setMsg("Camera band. "+shots.length+" photo li hui hain — 'Dusri side' ya dobara SCAN dabayein.")};
         let busy=false;
         shot.onclick=()=>{if(busy)return;if(!vid.videoWidth){hint.textContent="⚠️ Camera abhi tayyar nahi (black screen?). 1-2 second ruk kar dobara dabayein, ya ✕ dabakar 'PHOTO CHUNEIN' use karein.";return}
           busy=true;const cv=document.createElement("canvas");cv.width=vid.videoWidth;cv.height=vid.videoHeight;cv.getContext("2d").drawImage(vid,0,0);
-          cv.toBlob(async blob=>{try{const s=await shrink(blob);shots.push(s);codes=codes.concat(s.codes);upd();shot.style.background="#9f9";setTimeout(()=>shot.style.background="#fff",200)}catch(e){hint.textContent="❌ "+e.message}busy=false},"image/jpeg",0.92)};
+          cv.toBlob(async blob=>{try{const s=await shrink(blob);shots.push(s);codes=codes.concat(s.codes);gs1s=gs1s.concat(s.gs1||[]);upd();shot.style.background="#9f9";setTimeout(()=>shot.style.background="#fff",200)}catch(e){hint.textContent="❌ "+e.message}busy=false},"image/jpeg",0.92)};
         done.onclick=()=>{if(!shots.length)return;stop();run()};
       };
       f1.onchange=async()=>{const files=Array.from(f1.files||[]).slice(0,3);f1.value="";if(!files.length)return;
-        try{setMsg("⏳ Photo tayyar ho rahi hai…");shots.length=0;codes=[];for(const f of files){const s=await shrink(f);shots.push(s);codes=codes.concat(s.codes)}await run()}catch(e){setMsg("❌ "+e.message,BAD)}};
+        try{setMsg("⏳ Photo tayyar ho rahi hai…");shots.length=0;codes=[];gs1s=[];for(const f of files){const s=await shrink(f);shots.push(s);codes=codes.concat(s.codes);gs1s=gs1s.concat(s.gs1||[])}await run()}catch(e){setMsg("❌ "+e.message,BAD)}};
       camBtn.onclick=()=>openLive(false);
       gal.onclick=()=>f1.click();
       nat.onchange=async()=>{const f=nat.files&&nat.files[0];nat.value="";if(f)await take(f)};
-      moreBtn.onclick=()=>openLive(true);
+      moreBtn.onclick=()=>{setMsg("📷 Ab dusri side (batch / expiry / price wali) ki photo bilkul qareeb se, roshni mein, focus karke lein.");nat.click()};
       if(opts.autoScan)setTimeout(()=>openLive(false),0);
     }}
     ov.querySelector("#mm-save").onclick=async()=>{
@@ -2218,6 +2241,182 @@ async function pageMedicalStore(){
       await qPut("inventory",Object.assign({},product,{stock:num(product.stock)+baseQty,updatedAt:new Date().toISOString()}));
       await qPut("inventory",purchase);await audit(app.user.username,"CREATE","inventory",purchase.id,"Purchase "+product.name+" x "+qty+" "+unit+" ("+baseQty+" base units)");
       ov.remove();await pageMedicalStore();tab="purchase";renderTab();toast("Purchase saved and stock updated");
+    };
+  };
+
+  /* ===== SCAN BILL (supplier bill ki photos -> purchase + stock auto) ===== */
+  const billScanModal=()=>{
+    const pages=[];
+    const BAD="var(--danger,#b91c1c)",OKC="var(--success,#15803d)";
+    const ov=openModal("Bill Scan — Auto Purchase",
+      '<div class="info-tile mb"><b>🧾 Supplier ka bill scan karein</b>'+
+      '<div class="hint" id="bs-msg">Bill ki saaf photo lein (seedhi, roshni mein). Bill lamba ho to hisse karke kai photos lein — har photo mein table ki lines poori nazar aayen. Phir "BILL PADHEIN" dabayen.</div>'+
+      '<div class="flex gap fw" style="margin-top:12px"><button type="button" class="btn btn-success sm" id="bs-cam">📷 PHOTO LEIN</button><button type="button" class="btn btn-outline sm" id="bs-gal">🖼 GALLERY SE</button></div>'+
+      '<div class="flex gap fw" id="bs-thumbs" style="margin-top:12px"></div>'+
+      '<button type="button" class="btn btn-success mt" id="bs-go" disabled>BILL PADHEIN</button>'+
+      '<input type="file" id="bs-f-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="bs-f-gal" accept="image/*" multiple style="display:none"></div>'+
+      '<div id="bs-review"></div>',
+      '<button class="btn btn-neutral" data-close>Close</button>',true);
+    ov.querySelector("[data-close]").onclick=()=>ov.remove();
+    const q=s=>ov.querySelector(s);
+    const msg=q("#bs-msg"),thumbs=q("#bs-thumbs"),goBtn=q("#bs-go"),review=q("#bs-review");
+    const setMsg=(t,c)=>{msg.textContent=t;msg.style.color=c||""};
+    const shrink=file=>new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();
+      img.onload=()=>{try{const M=2000,k=Math.min(1,M/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+        cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(url);res({data:cv.toDataURL("image/jpeg",0.8).split(",")[1],mime:"image/jpeg"})}catch(e){rej(e)}};
+      img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("Photo khul nahi saki"))};img.src=url});
+    const drawThumbs=()=>{
+      thumbs.innerHTML=pages.map((p,i)=>'<div style="position:relative"><img alt="" src="data:image/jpeg;base64,'+p.data+'" style="width:64px;height:84px;object-fit:cover;border-radius:8px;border:1px solid #cbd5e1"><button type="button" data-rm="'+i+'" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#b91c1c;color:#fff;font-size:13px;line-height:1">✕</button></div>').join("");
+      thumbs.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{pages.splice(+b.dataset.rm,1);drawThumbs()});
+      goBtn.disabled=!pages.length;goBtn.textContent=pages.length?"BILL PADHEIN ("+pages.length+" photo)":"BILL PADHEIN"};
+    const addFiles=async files=>{
+      try{setMsg("⏳ Photo tayyar ho rahi hai…");
+        for(const f of files){if(pages.length>=12){setMsg("Ek bill ki zyada se zyada 12 photos.",BAD);break}pages.push(await shrink(f))}
+        drawThumbs();setMsg(pages.length+" photo ho gayi. Bill ka aur hissa ho to ek aur photo lein, warna \"BILL PADHEIN\" dabayen.")}
+      catch(e){setMsg("❌ "+e.message,BAD)}};
+    const fc=q("#bs-f-cam"),fg=q("#bs-f-gal");
+    q("#bs-cam").onclick=()=>fc.click();q("#bs-gal").onclick=()=>fg.click();
+    fc.onchange=async()=>{const f=Array.from(fc.files||[]);fc.value="";if(f.length)await addFiles(f)};
+    fg.onchange=async()=>{const f=Array.from(fg.files||[]);fg.value="";if(f.length)await addFiles(f)};
+
+    /* ---- dawai ka naam match karna (stock mein pehle se hai ya nayi) ---- */
+    const normKey=s=>String(s||"").toLowerCase().replace(/\b(tablets?|tabs?|capsules?|caps?|syrup|syp|suspension|susp|injection|inj|drops?|cream|gel|ointment|oint)\b/g,"").replace(/[^a-z0-9]/g,"");
+    const digitsOf=s=>(String(s||"").match(/\d+(\.\d+)?/g)||[]).join("|");
+    const findProd=name=>{const k=normKey(name);if(!k)return null;const d=digitsOf(name);
+      const exact=products.find(p=>normKey(p.name)===k);if(exact)return exact;
+      return products.find(p=>{const pk=normKey(p.name);return pk&&Math.min(pk.length,k.length)>=4&&(pk.includes(k)||k.includes(pk))&&digitsOf(p.name)===d})||null};
+    const r2=n=>Math.round(num(n)*100)/100;
+    const factorOf=p=>Math.max(1,num(p.boxStrips)||1)*Math.max(1,num(p.stripSize)||1);
+    let rows=[],totalTouched=false,hdr={};
+
+    const mkRow=it=>{
+      const p=findProd(it.name),qty=Math.max(0,num(it.qty)),loose=Math.max(0,num(it.loose)),disc=Math.min(100,Math.max(0,num(it.disc))),amount=num(it.amount);
+      let cost=num(it.rate)>0?num(it.rate)*(1-disc/100):0;
+      if(!(cost>0)&&amount>0&&qty>0)cost=amount/qty;
+      let den=0;                                   /* khule units: 1 pack mein kitne (bill ke amount se andaza) */
+      if(loose>0&&cost>0&&amount>0){const fr=amount-qty*cost;if(fr>0.5)den=Math.round(loose*cost/fr)}
+      const pu=Math.round(num(it.packUnits))||(p?factorOf(p):(den||1));
+      return {on:true,qtyText:it.qtyText||"",pid:p?p.id:"",name:String(it.name||"").trim(),company:it.company||"",generic:it.generic||"",category:it.category||"",qty,loose,den,bonus:num(it.bonus),pu,rate:r2(cost),mrp:r2(it.mrp),batch:it.batch||"",
+        expiry:/^\d{4}-\d{2}-\d{2}$/.test(it.expiry||"")?it.expiry:"",amount}};
+    const looseUnits=r=>num(r.loose)>0?num(r.loose)*Math.max(1,num(r.pu)||1)/Math.max(1,r.den||num(r.pu)||1):0;
+    const baseQty=r=>Math.max(0,Math.round((num(r.qty)+num(r.bonus))*Math.max(1,num(r.pu)||1)+looseUnits(r)));
+    const lineTotal=r=>num(r.qty)*num(r.rate)+(num(r.loose)>0?num(r.loose)*num(r.rate)/Math.max(1,r.den||num(r.pu)||1):0);
+    const catOpts=cur=>catOptions(cur).replace(/<option value="__new__">[^<]*<\/option>/,"");
+
+    const rowHTML=(r,i)=>{
+      const opts='<option value="">🆕 Nayi dawai banayein</option>'+products.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(p=>'<option value="'+esc(p.id)+'"'+(p.id===r.pid?" selected":"")+'>'+esc(p.name)+' (stock '+fmtMoney(num(p.stock))+')</option>').join("");
+      const f=(k,label,type,val,extra)=>'<div class="field"><label>'+label+'</label><input class="inp" data-k="'+k+'" type="'+type+'" '+(extra||"")+' value="'+esc(val)+'"></div>';
+      return '<div class="bs-row" data-i="'+i+'" style="border:1px solid var(--border,#d9e2ec);border-radius:12px;padding:10px;margin-bottom:10px;background:#fff">'+
+        '<div class="flex jb aic" style="margin-bottom:6px"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-k="on" '+(r.on?"checked":"")+'><b>#'+(i+1)+'</b></label><span class="bs-badge" style="font-weight:700;font-size:13px"></span></div>'+
+        f("name","Dawai ka naam","text",r.name)+
+        '<div class="field"><label>Stock mein wali dawai (agar pehle se hai)</label><select class="inp" data-k="pid">'+opts+'</select></div>'+
+        '<div class="grid g2">'+f("qty","Quantity (packs)","number",r.qty,'min="0" step="1" inputmode="decimal"')+f("bonus","Bonus / free","number",r.bonus,'min="0" step="1" inputmode="decimal"')+'</div>'+
+        (r.qtyText?'<div class="hint">Bill par likha tha: <b>'+esc(r.qtyText)+'</b></div>':'')+
+        '<details style="margin-top:6px"><summary style="cursor:pointer;font-weight:700;color:#1d4ed8">Aur tafseel (price, batch, expiry…)</summary>'+
+        '<div class="field bs-cat" style="margin-top:8px"><label>Category (nayi dawai ke liye)</label><select class="inp" data-k="category">'+catOpts(r.category)+'</select></div>'+
+        '<div class="grid g2">'+
+        f("loose","Khule units (jaise 0,1 wali line)","number",r.loose,'min="0" step="1" inputmode="decimal"')+f("pu","Tablets/units per pack","number",r.pu,'min="1" step="1" inputmode="numeric"')+
+        f("rate","Cost per pack (Rs., discount ke baad)","number",r.rate,'min="0" step="0.01" inputmode="decimal"')+f("mrp","MRP per pack (Rs.)","number",r.mrp,'min="0" step="0.01" inputmode="decimal"')+
+        f("company","Company","text",r.company)+f("batch","Batch (bill par ho to)","text",r.batch)+f("expiry","Expiry","date",r.expiry)+'</div></details>'+
+        '<div class="hint bs-sum" style="margin-top:6px"></div></div>'};
+    const sumTotal=()=>rows.filter(r=>r.on).reduce((a,r)=>a+lineTotal(r),0);
+    const refreshRow=i=>{
+      const r=rows[i],card=review.querySelector('.bs-row[data-i="'+i+'"]');if(!card)return;
+      const p=r.pid?products.find(x=>x.id===r.pid):null;
+      card.querySelector(".bs-badge").innerHTML=p?'<span style="color:#15803d">✅ Stock mein hai</span>':'<span style="color:#b45309">🆕 Nayi dawai add hogi</span>';
+      card.querySelector(".bs-cat").style.display=p?"none":"";
+      card.style.opacity=r.on?"1":".45";
+      card.querySelector(".bs-sum").textContent="Stock mein +"+fmtMoney(baseQty(r))+" units jayenge"+(p?" (abhi "+fmtMoney(num(p.stock))+")":"")+" • Line: Rs. "+fmtMoney(lineTotal(r))+(r.mrp<=0&&!p?" • ⚠️ MRP likhein warna sale price 0 rahegi":"")};
+    const refreshTotal=()=>{const t=q("#bs-total");if(t&&!totalTouched)t.value=r2(sumTotal())};
+    const showReview=(d,failed,dups)=>{
+      hdr=d;rows=(d.items||[]).map(mkRow);totalTouched=false;
+      review.innerHTML=
+        '<div class="card" style="padding:12px;margin-bottom:10px"><b>✅ '+rows.length+' dawaiyan mili</b>'+(failed?'<div class="hint" style="color:'+BAD+'">⚠️ '+failed+' photo padhi nahi gayi — us hisse ki dawaiyan missing ho sakti hain. Dobara "BILL PADHEIN" dabayen.</div>':"")+(dups?'<div class="hint">Overlap wali '+dups+' same line hata di gayi.</div>':"")+
+        '<div class="hint">Neeche har line check karein, galat ho to theek kar lein. Jo line nahi chahiye uska tick hata dein. Bill par ek pack mein tablets kitni hain ye nahi likha hota — nayi dawai mein \"Tablets/units per pack\" nahi likhenge to ek pack ko 1 unit ginenge (sale bhi pack ke hisaab se hogi).</div></div>'+
+        '<div class="grid g2"><div class="field"><label>Supplier *</label><input class="inp" id="bs-supplier" value="'+esc(d.supplier||"")+'"></div><div class="field"><label>Invoice No.</label><input class="inp" id="bs-invoice" value="'+esc(d.invoiceNo||"")+'"></div>'+
+        '<div class="field"><label>Date</label><input class="inp" type="date" id="bs-date" value="'+(/^\d{4}-\d{2}-\d{2}$/.test(d.date||"")?d.date:today())+'"></div>'+
+        '<div class="field"><label>Bill Total (Rs.)</label><input class="inp" type="number" min="0" step="0.01" id="bs-total" inputmode="decimal" value=""></div>'+
+        '<div class="field"><label>Abhi diye gaye paise (Paid)</label><input class="inp" type="number" min="0" step="0.01" id="bs-paid" inputmode="decimal" value="0"></div></div>'+
+        '<div id="bs-rows">'+rows.map(rowHTML).join("")+'</div>'+
+        '<button type="button" class="btn btn-success" id="bs-save" style="width:100%;margin-top:6px">✔ SAVE PURCHASE &amp; STOCK UPDATE KAREIN</button>';
+      rows.forEach((r,i)=>refreshRow(i));
+      const tv=num(d.grandTotal);q("#bs-total").value=tv>0?r2(tv):r2(sumTotal());totalTouched=tv>0;
+      q("#bs-total").oninput=()=>{totalTouched=true};
+      const rowsEl=q("#bs-rows");
+      const onEdit=e=>{
+        const inp=e.target.closest("[data-k]"),card=e.target.closest(".bs-row");if(!inp||!card)return;
+        const i=+card.dataset.i,r=rows[i],k=inp.dataset.k;
+        if(k==="on")r.on=inp.checked;
+        else if(["qty","loose","bonus","pu","rate","mrp"].includes(k))r[k]=num(inp.value);
+        else r[k]=inp.value;
+        if(k==="pid"){const p=products.find(x=>x.id===r.pid);if(p&&!r.mrp)r.mrp=r2(num(p.salePrice)*factorOf(p))}
+        refreshRow(i);refreshTotal()};
+      rowsEl.addEventListener("input",onEdit);rowsEl.addEventListener("change",onEdit);
+      q("#bs-save").onclick=save;
+      review.scrollIntoView({behavior:"smooth",block:"start"});
+    };
+
+    const save=async()=>{
+      const btn=q("#bs-save"),supplier=q("#bs-supplier").value.trim();
+      const use=rows.filter(r=>r.on);
+      if(!supplier){toast("Supplier ka naam likhein","error");return}
+      if(!use.length){toast("Kam az kam ek line select karein","error");return}
+      const badIdx=rows.findIndex(r=>r.on&&(!r.name.trim()||baseQty(r)<=0));
+      if(badIdx>=0){toast("Line #"+(badIdx+1)+" mein naam aur quantity likhein (ya uska tick hata dein)","error");const c=review.querySelector('.bs-row[data-i="'+badIdx+'"]');if(c){c.style.borderColor="#b91c1c";c.scrollIntoView({behavior:"smooth",block:"center"})}return}
+      const invoice=q("#bs-invoice").value.trim();
+      if(invoice&&purchases.some(x=>String(x.supplier||"").toLowerCase()===supplier.toLowerCase()&&String(x.invoice||"").toLowerCase()===invoice.toLowerCase())&&!confirm("Ye invoice ("+invoice+") is supplier ka pehle save ho chuka hai. Phir bhi dobara save karein? (stock dobara barhega)"))return;
+      btn.disabled=true;btn.textContent="⏳ Save ho raha hai…";
+      try{
+        const now=new Date().toISOString(),latest={},created={},items=[];let added=0,newCount=0;
+        for(const r of use){
+          const bq=baseQty(r),pu=Math.max(1,Math.round(num(r.pu))||1);
+          let p=r.pid?(latest[r.pid]||products.find(x=>x.id===r.pid)):null;
+          if(!p){const ck=normKey(r.name)+"|"+digitsOf(r.name);if(created[ck])p=created[ck]}
+          let obj;
+          if(p){
+            obj=Object.assign({},p,{stock:num(p.stock)+bq,updatedAt:now});if(!p.company&&r.company)obj.company=r.company;
+            if(r.rate>0)obj.purchasePrice=r.rate/pu;
+            if(r.mrp>0)obj.salePrice=r.mrp/pu;
+            if(r.batch&&r.expiry&&(!p.expiry||r.expiry<p.expiry)){obj.batch=r.batch;obj.expiry=r.expiry}
+            else if(r.batch&&!p.batch&&!p.expiry){obj.batch=r.batch}
+          }else{
+            obj={id:id("med"),kind:"product",name:r.name.trim(),generic:r.generic||"",category:r.category||"",stripSize:pu,boxStrips:1,company:r.company||"",batch:r.batch||"",expiry:r.expiry||"",
+              purchasePrice:r.rate>0?r.rate/pu:0,salePrice:r.mrp>0?r.mrp/pu:0,stock:bq,reorderLevel:5,barcode:"",createdAt:now,updatedAt:now};
+            created[normKey(r.name)+"|"+digitsOf(r.name)]=obj;newCount++;
+          }
+          latest[obj.id]=obj;await qPut("inventory",obj);added+=bq;
+          items.push({productId:obj.id,name:obj.name,qty:num(r.qty),loose:num(r.loose),bonus:num(r.bonus),unit:"box",baseQty:bq,cost:num(r.rate),batch:r.batch||"",expiry:r.expiry||""});
+        }
+        const total=num(q("#bs-total").value)||sumTotal();
+        const purchase={id:id("pur"),kind:"purchase",supplier,invoice,date:q("#bs-date").value||today(),items,total,paid:num(q("#bs-paid").value),source:"bill-scan",createdAt:now};
+        await qPut("inventory",purchase);
+        await audit(app.user.username,"CREATE","inventory",purchase.id,"Bill scan purchase "+supplier+" "+invoice+" — "+items.length+" lines, "+newCount+" new, "+added+" units");
+        ov.remove();await pageMedicalStore();tab="purchase";renderTab();
+        toast("Purchase save: "+items.length+" lines ("+newCount+" nayi dawai), "+fmtMoney(added)+" units stock mein add");
+      }catch(e){btn.disabled=false;btn.textContent="✔ SAVE PURCHASE & STOCK UPDATE KAREIN";toast("Save nahi hua: "+(e.message||e),"error")}
+    };
+
+    goBtn.onclick=async()=>{
+      goBtn.disabled=true;review.innerHTML="";
+      const cats=PRESET_CATS.reduce((a,g)=>a.concat(g[1]),[]).concat(customCats.map(c=>c.name));
+      const out=new Array(pages.length);let done=0;
+      const runOne=async i=>{try{const r=await api("POST","/api/scan-bill",{image:pages[i],categories:cats},{timeout:90000});out[i]=r.data||{items:[]}}catch(e){out[i]={__err:e.message||"Scan fail"}}
+        done++;setMsg("⏳ Bill padha ja raha hai… "+done+"/"+pages.length+" photo (har photo 10-30 second)")};
+      setMsg("⏳ Bill padha ja raha hai… 0/"+pages.length+" photo (har photo 10-30 second)");
+      for(let i=0;i<pages.length;i+=2)await Promise.all([runOne(i)].concat(i+1<pages.length?[runOne(i+1)]:[]));
+      const okp=out.filter(x=>!x.__err),failed=out.length-okp.length;
+      if(!okp.length){setMsg("❌ "+out[0].__err,BAD);goBtn.disabled=false;return}
+      const m={supplier:null,invoiceNo:null,date:null,grandTotal:null,items:[]};let dups=0,prevKeys=new Set();
+      const keyOf=it=>[normKey(it.name).slice(0,6),num(it.qty),num(it.loose),Math.round(num(it.amount)||num(it.rate))].join("|");
+      for(const d of okp){
+        ["supplier","invoiceNo","date"].forEach(k=>{if(!m[k]&&d[k])m[k]=d[k]});
+        if(d.grandTotal!==null&&d.grandTotal!==undefined&&num(d.grandTotal)>0)m.grandTotal=d.grandTotal;
+        const cur=new Set();
+        for(const it of (d.items||[])){const key=keyOf(it);cur.add(key);if(prevKeys.has(key)){dups++;continue}m.items.push(it)}
+        prevKeys=cur}
+      if(!m.items.length){setMsg("❌ Bill mein koi dawai line nahi mili. Zyada saaf aur qareeb se photo lein.",BAD);goBtn.disabled=false;return}
+      setMsg("✅ Bill padh liya. Neeche check karke SAVE dabayen.",OKC);
+      showReview(m,failed,dups);goBtn.disabled=false;
     };
   };
   const saleModal=()=>{
