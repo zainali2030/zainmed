@@ -2769,6 +2769,21 @@ mount('<div style="display:flex;min-height:100vh;align-items:center;justify-cont
 boot();
 </script>
 
+<style>#pwa-install{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9998;display:none;align-items:center;gap:6px;border:0;border-radius:999px;padding:11px 16px;background:linear-gradient(135deg,#1e3a8a,#0891b2);color:#fff;font:700 14px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}#pwa-install.show{display:flex}#pwa-hint{position:fixed;left:12px;right:12px;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:9999;display:none;background:#fff;color:#111;border-radius:14px;padding:14px 16px;font:14px/1.5 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.35)}</style>
+<button id="pwa-install" type="button">📲 Install App</button><div id="pwa-hint"></div>
+<script>(function(){
+  var b=document.getElementById("pwa-install"),hint=document.getElementById("pwa-hint"),dp=null;
+  var standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
+  if(standalone||!b)return;
+  var ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
+  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();dp=e;b.classList.add("show")});
+  window.addEventListener("appinstalled",function(){b.classList.remove("show");hint.style.display="none";dp=null});
+  if(ios)b.classList.add("show");
+  b.onclick=function(){
+    if(dp){dp.prompt();dp.userChoice.finally(function(){dp=null;b.classList.remove("show")});return}
+    hint.innerHTML=ios?"iPhone par install: Safari mein neeche <b>Share</b> (⬆️) dabayein → <b>Add to Home Screen</b> chunein.":"Browser menu (⋮) mein <b>Install app</b> ya <b>Add to Home screen</b> chunein.";
+    hint.style.display="block";setTimeout(function(){hint.style.display="none"},7000)};
+})();</script>
 <script>if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("/sw.js").catch(function(){});</script>
 <script>
 /* Lamp login enhancement — visual only; login logic untouched */
