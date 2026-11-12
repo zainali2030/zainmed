@@ -478,7 +478,7 @@ fetch() API calls ke zariye. Saara design/features wohi hain.
 ============================================================ */
 "use strict";
 /* ================= CONSTANTS ================= */
-const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff"];
+const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff","reports"];
 let CLINIC=(function(){try{return localStorage.getItem("mcms_clinic")||""}catch(e){return ""}})();let CLINIC_INFO=null;
 const ADMIN_ID="usr_faheem_admin",ADMIN_USER="Faheem",ADMIN_PASS="Faheem786";
 const ALL_PERMS=["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
@@ -514,7 +514,7 @@ printSize:"80",currency:"Rs.",defaultOpdFee:500,patientIdPrefix:"",slipFontSize:
 dutyStaffName:"",shifts:["Morning","Evening","Night"],
 paymentMethods:["Cash","Card","Easypaisa","JazzCash","Bank Transfer","Credit / Due"],
 expenseCategories:["Salary","Utilities","Medicines","Lab Supplies","Maintenance","Rent","Doctor Payout","Miscellaneous"],
-backupReminderDays:3,lastBackupAt:"",autoPrintAfterSave:true,
+backupReminderDays:3,lastBackupAt:"",autoPrintAfterSave:true,reportThermalSize:"80",
 msName:"",msAddress:"",msPhone:"",msFooter:"",
 devFooter:"Software developed by ZainMed\n03702906075 / 03192061690\nzainaliofficial343@gmail.com"};
 function devFooterHTML(s){const t=(s&&s.devFooter!==undefined&&s.devFooter!==null)?s.devFooter:DEFAULT_SETTINGS.devFooter;return String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(esc).join("<br>")}
@@ -758,20 +758,20 @@ if(OB.length&&netOK()){await flushOutbox();return}
 if(!OB.length&&NET.state==="off"&&navigator.onLine!==false&&Date.now()>=NET.offlineUntil-1){try{await api("GET","/api/ping",undefined,{force:true,timeout:5000});setNetState()}catch(e){}}
 else setNetState()},15000);
 /* ================= APP STATE ================= */
-const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
+const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],reports:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
 async function audit(user,action,entity,entityId,details){
 await qPut("audit",{id:id("log"),ts:new Date().toISOString(),user:user,action:action,entity:entity,entityId:entityId,details:details||""});
 }
 async function loadData(){
-const [p,v,d,t,pay,ex,u,au,s]=await Promise.all([
+const [p,v,d,t,pay,ex,u,au,s,reps]=await Promise.all([
 qGetAll("patients"),qGetAll("visits"),qGetAll("doctors"),qGetAll("tests"),qGetAll("payments"),
-qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app")]);
+qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app"),qGetAll("reports")]);
 app.patients=p.sort((a,b)=>a.patientId<b.patientId?1:-1);
 app.visits=v.sort((a,b)=>a.createdAt<b.createdAt?1:-1);
 app.doctors=d.sort((a,b)=>a.name.localeCompare(b.name));
 app.tests=t.sort((a,b)=>a.name.localeCompare(b.name));
 app.payments=pay;app.expenses=ex.sort((a,b)=>a.date<b.date?1:-1);
-app.users=u;app.audit=au.sort((a,b)=>a.ts<b.ts?1:-1).slice(0,600);
+app.users=u;app.audit=au.sort((a,b)=>a.ts<b.ts?1:-1).slice(0,600);app.reports=(reps||[]).sort((a,b)=>(a.updatedAt||a.createdAt||"")<(b.updatedAt||b.createdAt||"")?1:-1);
 app.settings=Object.assign({},DEFAULT_SETTINGS,s||{});
 try{document.title=(app.settings.clinicName||"Clinic")+" • ZainMed"}catch(e){}
 }
@@ -1485,7 +1485,18 @@ summary:[["Total Visits",String(vs.length)],["Total Billed",s.currency+" "+fmtMo
 if(cv)cv.onclick=()=>downloadCSV("history_"+(pid||"patient")+".csv",
 ["Date","Time","Token","Doctor","OPD","Lab","Ultrasound","Other","Discount","Total","Received","Due","Status","Diagnosis","Prescription","Notes"],
 vs.map(v=>[v.date,v.time,v.token,v.doctorName,v.opdFee,v.labTotal,v.ultraTotal,v.otherTotal,v.discount,v.total,v.received,v.due,v.status,v.diagnosis,v.prescription,v.notes]));
+if(p){
+const patientReports=app.reports.filter(x=>x.patientId===p.patientId).sort((a,b)=>(a.date||"")<(b.date||"")?1:-1);
+const reportCard='<div class="card"><div class="card-h"><div><h2>Ultrasound & Lab Report History</h2><div class="sub">Saved reports linked to MR Number '+esc(padMr(p.patientId))+'</div></div><div class="flex g8"><button class="btn btn-outline sm" id="emr-new-us">+ Ultrasound</button><button class="btn btn-outline sm" id="emr-new-lab">+ Lab Report</button></div></div><div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Type</th><th>Doctor</th><th>Actions</th></tr></thead><tbody>'+(patientReports.length?patientReports.map(x=>'<tr><td>'+esc(x.date||"")+'</td><td>'+esc(x.reportTypeName||x.reportType||x.kind)+'</td><td>'+esc(x.doctorName||"-")+'</td><td><div class="flex g8"><button class="btn btn-outline sm" data-emr-r-view="'+x.id+'">View</button><button class="btn btn-neutral sm" data-emr-r-edit="'+x.id+'">Edit</button><button class="btn btn-primary sm" data-emr-r-print="'+x.id+'">Print</button></div></td></tr>').join(''):'<tr class="empty-row"><td colspan="4">No reports saved for this patient yet.</td></tr>')+'</tbody></table></div></div></div>';
+$("#emr-body").insertAdjacentHTML('beforeend',reportCard);
+$("#emr-new-us").onclick=()=>reportEditor('ultrasound',null,{patientId:p.patientId,patientName:p.name,age:p.age+' '+(p.ageUnit||''),gender:p.gender});
+$("#emr-new-lab").onclick=()=>reportEditor('lab',null,{patientId:p.patientId,patientName:p.name,age:p.age+' '+(p.ageUnit||''),gender:p.gender});
+$$('[data-emr-r-view]').forEach(b=>b.onclick=()=>{const x=app.reports.find(r=>r.id===b.dataset.emrRView);if(x)reportViewModal(x)});
+$$('[data-emr-r-edit]').forEach(b=>b.onclick=()=>{const x=app.reports.find(r=>r.id===b.dataset.emrREdit);if(x)reportEditor(x.kind,x.visitId,x)});
+$$('[data-emr-r-print]').forEach(b=>b.onclick=()=>{const x=app.reports.find(r=>r.id===b.dataset.emrRPrint);if(x)printSavedReport(x,'A4')});
+}
 };
+
 const openNotes=v=>{
 const ov=openModal("Clinical Notes — Visit "+fmtDate(v.date)+" (Token "+v.token+")",
 '<div class="grid g3"><div class="field"><label>Diagnosis</label><textarea class="inp" id="nt-dx">'+esc(v.diagnosis||"")+'</textarea></div><div class="field"><label>Prescription</label><textarea class="inp" id="nt-rx">'+esc(v.prescription||"")+'</textarea></div><div class="field"><label>Notes</label><textarea class="inp" id="nt-n">'+esc(v.notes||"")+"</textarea></div></div>",
@@ -1621,14 +1632,23 @@ if(its.length)rows.push({visitId:v.id,patientId:v.patientId,name:v.patientName,t
 items:its.map(i=>i.description+(i.qty>1?" x"+i.qty:"")),amount:its.reduce((a,b)=>a+b.amount,0)})});
 return rows.sort((a,b)=>(a.date+a.time)<(b.date+b.time)?1:-1);
 };
+const bindReportButtons=()=>{
+$$('[data-r-new]').forEach(b=>b.onclick=()=>reportEditor(isUS?'ultrasound':'lab',b.dataset.rNew,null));
+$$('[data-r-view]').forEach(b=>b.onclick=()=>{const r=app.reports.find(x=>x.id===b.dataset.rView);if(r)reportViewModal(r)});
+$$('[data-r-edit]').forEach(b=>b.onclick=()=>{const r=app.reports.find(x=>x.id===b.dataset.rEdit);if(r)reportEditor(r.kind,r.visitId,r)});
+$$('[data-r-print-a4]').forEach(b=>b.onclick=()=>{const r=app.reports.find(x=>x.id===b.dataset.rPrintA4);if(r)printSavedReport(r,'A4')});
+$$('[data-r-print-thermal]').forEach(b=>b.onclick=()=>{const r=app.reports.find(x=>x.id===b.dataset.rPrintThermal);if(r)printSavedReport(r,app.settings.reportThermalSize||'80')});
+$$('[data-r-del]').forEach(b=>b.onclick=()=>{const r=app.reports.find(x=>x.id===b.dataset.rDel);if(r)deleteReportRecord(r)});
+};
 const drawWork=()=>{
 const rows=workList(),total=rows.reduce((a,b)=>a+b.amount,0);
 $("#tm-count").textContent=rows.length;$("#tm-amt").textContent=s.currency+" "+fmtMoney(total);
-$("#tm-wrows").innerHTML=rows.length?rows.map(r=>
-'<tr><td style="font-size:12px;white-space:nowrap">'+fmtDate(r.date)+'<div style="color:var(--slate-500)">'+fmtTime(r.time)+"</div></td>"+
-'<td><span class="tok">'+r.token+'</span></td><td class="mr">'+esc(padMr(r.patientId))+'</td><td style="font-weight:600">'+esc(r.name)+'</td><td style="font-size:12px">'+esc(r.doctor||"-")+"</td>"+
-'<td style="font-size:12px">'+esc(r.items.join(", "))+'</td><td style="font-weight:700;white-space:nowrap">'+s.currency+" "+fmtMoney(r.amount)+"</td></tr>").join(""):
-'<tr class="empty-row"><td colspan="7">No patients in this period</td></tr>';
+$("#tm-wrows").innerHTML=rows.length?rows.map(r=>{
+const kind=isUS?'ultrasound':'lab',rep=(isUS||type==='lab')?app.reports.filter(x=>x.kind===kind&&x.visitId===r.visitId).sort((a,b)=>(a.updatedAt||'')<(b.updatedAt||'')?1:-1)[0]:null;
+const actions=(isUS||type==='lab')?(rep?'<button class="btn btn-outline sm" data-r-view="'+rep.id+'">View</button><button class="btn btn-neutral sm" data-r-edit="'+rep.id+'">Edit</button><button class="btn btn-primary sm" data-r-print-a4="'+rep.id+'">A4</button><button class="btn btn-outline sm" data-r-print-thermal="'+rep.id+'">Thermal</button><button class="btn btn-danger sm" data-r-del="'+rep.id+'">Delete</button>':'<button class="btn btn-success sm" data-r-new="'+r.visitId+'">New Report</button>'):'—';
+return '<tr><td style="font-size:12px;white-space:nowrap">'+fmtDate(r.date)+'<div style="color:var(--slate-500)">'+fmtTime(r.time)+'</div></td><td><span class="tok">'+r.token+'</span></td><td class="mr">'+esc(padMr(r.patientId))+'</td><td style="font-weight:600">'+esc(r.name)+'</td><td style="font-size:12px">'+esc(r.doctor||'-')+'</td><td style="font-size:12px">'+esc(r.items.join(', '))+'</td><td style="font-weight:700;white-space:nowrap">'+s.currency+' '+fmtMoney(r.amount)+'</td><td><div class="flex g8 fw">'+actions+'</div></td></tr>';
+}).join(''):'<tr class="empty-row"><td colspan="8">No patients in this period</td></tr>';
+bindReportButtons();
 };
 const listCount=app.tests.filter(t=>t.type===type).length;
 $("#page").innerHTML=
@@ -1637,16 +1657,16 @@ $("#page").innerHTML=
 '<div class="mini-stat" style="background:var(--green-bg);border-color:var(--green-bd);color:#065f46"><div class="lbl">Patients in Period</div><div class="val" id="tm-count">0</div></div>'+
 '<div class="mini-stat" style="background:var(--violet-bg);border-color:#ddd6fe;color:#5b21b6"><div class="lbl">Collection in Period</div><div class="val" id="tm-amt">—</div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory Test")+' Price List</h2><div class="sub">Prices are added to the patient bill automatically when selected at the counter</div></div>'+
-'<div class="flex g8"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+(isUS?'<button class="btn btn-primary sm" id="tm-report">🩻 CREATE ULTRASOUND REPORT</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
+'<div class="flex g8"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+((isUS||type==="lab")?'<button class="btn btn-primary sm" id="tm-report">'+(isUS?'🩻 CREATE ULTRASOUND REPORT':'🧪 CREATE LAB REPORT')+'</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
 '<div class="card-b"><input class="inp mb" id="tm-q" placeholder="🔍 Search test / category…"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tm-rows"></tbody></table></div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory")+' Work List</h2><div class="sub">Patients who have been charged for these services</div></div>'+
 '<div class="flex g8 fw"><input class="inp" type="date" id="tm-from" style="width:150px" value="'+from+'"><input class="inp" type="date" id="tm-to" style="width:150px" value="'+to+'">'+
 '<button class="btn btn-outline sm" id="tm-wcsv">⬇ CSV</button><button class="btn btn-dark sm" id="tm-print">🖨 PRINT</button></div></div>'+
-'<div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date / Time</th><th>Token</th><th>MR No</th><th>Patient</th><th>Doctor</th><th>'+(isUS?"Study":isINJ?"Injection / Drip":"Tests")+'</th><th>Amount</th></tr></thead><tbody id="tm-wrows"></tbody></table></div></div></div>';
+'<div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date / Time</th><th>Token</th><th>MR No</th><th>Patient</th><th>Doctor</th><th>'+(isUS?"Study":isINJ?"Injection / Drip":"Tests")+'</th><th>Amount</th><th>Report Actions</th></tr></thead><tbody id="tm-wrows"></tbody></table></div></div></div>';
 $("#tm-q").addEventListener("input",drawList);
 $("#tm-from").addEventListener("change",e=>{from=e.target.value;drawWork()});
 $("#tm-to").addEventListener("change",e=>{to=e.target.value;drawWork()});
-$("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":isINJ?"Injection":"Haematology",type:type,price:0,active:true},type);if(isUS)$("#tm-report").onclick=ultrasoundReportModal;
+$("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":isINJ?"Injection":"Haematology",type:type,price:0,active:true},type);if(isUS||type==="lab")$("#tm-report").onclick=isUS?ultrasoundReportModal:labReportModal;
 $("#tm-csv").onclick=()=>downloadCSV(type+"_price_list.csv",["Name","Category","Price","Status"],app.tests.filter(t=>t.type===type).map(t=>[t.name,t.category,t.price,t.active?"Active":"Inactive"]));
 $("#tm-wcsv").onclick=()=>downloadCSV(type+"_worklist_"+from+"_"+to+".csv",["Date","Time","Token","MR No","Patient","Doctor","Items","Amount"],workList().map(r=>[r.date,r.time,r.token,padMr(r.patientId),r.name,r.doctor,r.items.join(" | "),r.amount]));
 $("#tm-print").onclick=()=>{const rows=workList();
@@ -1658,8 +1678,7 @@ summary:[[isUS?"Total Ultrasound Studies":isINJ?"Total Injection / Drip Patients
 drawList();drawWork();
 }
 
-function ultrasoundReportModal(){
-const types=[
+const US_REPORT_TYPES=[
 {id:"abd",name:"Ultrasound Whole Abdomen",sections:[
 ["LIVER",["Liver is normal in size, shape and homogeneous texture with regular margin.","No intra-hepatic mass or biliary duct dilatation seen.","CBD, portal vein, IVC and hepatic veins are normal."]],
 ["GALL BLADDER",["Gall bladder is normal in size, shape and walls.","No stone, sludge or growth seen."]],
@@ -1673,22 +1692,74 @@ const types=[
 ["RIGHT OVARY",["Right ovary is normal in size.","No focal mass seen.","No cyst seen."]],
 ["LEFT OVARY",["Left ovary is normal in size.","No focal mass seen.","No cyst seen."]],
 ["FLUID IN CUL-DE-SAC",["No free fluid seen in cul-de-sac."]]]},
-{id:"fwb",name:"Ultrasound Pelvis for FWB (Fetal Wellbeing)",sections:[
+{id:"fwb",name:"Ultrasound Pelvis for FWB",sections:[
 ["GESTATION",["Single pregnancy.","Multiple pregnancy.","Fetal movement present.","Cardiac activity present."]],
 ["PRESENTATION / LIE",["Cephalic presentation.","Breech presentation.","Longitudinal lie.","Transverse lie.","Oblique lie."]],
 ["AMNIOTIC FLUID",["Amniotic fluid is normal.","Oligohydramnios.","Polyhydramnios."]],
-["PLACENTA",["Placenta anterior wall.","Placenta posterior wall.","Placenta upper uterine segment.","Placenta corpus.","Placenta fundal.","Placenta lower uterine segment.","Placenta previa — marginal.","Placenta previa — partial.","Placenta previa — total."]]]}
+["PLACENTA",["Placenta anterior wall.","Placenta posterior wall.","Placenta upper uterine segment.","Placenta corpus.","Placenta fundal.","Placenta lower uterine segment.","Placenta previa — marginal.","Placenta previa — partial.","Placenta previa — total."]],
+["FETAL BIOMETRY",["BPD:","HC:","AC:","FL:","Estimated fetal weight:","Gestational age:","Expected date of delivery:"]]]}
 ];
-const ov=openModal("Create Ultrasound Report",'<div class="grid g2 mb"><div class="field"><label>Report Type</label><select class="inp" id="ur-type">'+types.map(t=>'<option value="'+t.id+'">'+t.name+'</option>').join("")+'</select></div><div class="field"><label>Date</label><input class="inp" type="date" id="ur-date" value="'+today()+'"></div><div class="field"><label>Patient Name</label><input class="inp" id="ur-name"></div><div class="field"><label>Age</label><input class="inp" id="ur-age"></div><div class="field"><label>Ref By</label><input class="inp" id="ur-ref"></div><div class="field"><label>Para</label><input class="inp" id="ur-para"></div><div class="field"><label>LMP</label><input class="inp" id="ur-lmp"></div></div><div id="ur-fields"></div><div class="field mt"><label>Additional Findings / Remarks</label><textarea class="inp" id="ur-remarks" rows="3"></textarea></div><p class="hint">Tick only the findings to include. Unticked findings will not appear in the printed report. Enter measurements/details in the boxes beside each finding.</p>','<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="ur-print">🖨 PRINT REPORT</button>');
-const render=()=>{const t=types.find(x=>x.id===$("#ur-type").value);$("#ur-fields").innerHTML=t.sections.map((sec,si)=>'<div class="card mb"><div class="card-h"><b>'+sec[0]+'</b></div><div class="card-b">'+sec[1].map((v,vi)=>'<label style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #e5e7eb;font-size:13px"><input type="checkbox" data-sec="'+si+'" data-idx="'+vi+'" style="margin-top:3px"><span style="flex:1">'+v+'</span><input class="inp" data-detail="'+si+'-'+vi+'" placeholder="Size / detail" style="max-width:170px;padding:6px"></label>').join("")+'</div></div>').join("")};
-$("#ur-type").onchange=render;render();ov.querySelector("[data-close]").onclick=()=>ov.remove();
-$("#ur-print").onclick=()=>{const t=types.find(x=>x.id===$("#ur-type").value),f=Number(app.settings.reportFontSize||12),ls=Number(app.settings.logoSize||56);
-const escv=x=>esc(x||"");const chosen=t.sections.map((sec,si)=>({name:sec[0],items:sec[1].map((v,vi)=>{const cb=ov.querySelector('[data-sec="'+si+'"][data-idx="'+vi+'"]'),d=ov.querySelector('[data-detail="'+si+'-'+vi+'"]');return cb.checked?v+(d.value.trim()?" — "+d.value.trim():""):null}).filter(Boolean)})).filter(x=>x.items.length);
-const rows=chosen.map(x=>'<tr><td style="width:25%;font-weight:800;vertical-align:top;padding:7px;border-bottom:1px solid #bbb">'+escv(x.name)+'</td><td style="padding:7px;border-bottom:1px solid #bbb">'+x.items.map(escv).join("<br>")+'</td></tr>').join("");
-const remarks=$("#ur-remarks").value.trim();
-const html='<div style="font-family:Arial,sans-serif;color:#111;font-size:'+f+'px"><div style="display:flex;align-items:center;gap:14px;border-bottom:2px solid #1d4ed8;padding-bottom:10px">'+(app.settings.logoDataUrl?'<img src="'+app.settings.logoDataUrl+'" style="width:'+ls+'px;height:'+ls+'px;object-fit:contain">':shieldSVG(ls,"#1d4ed8"))+'<div><div style="font-size:'+(f+8)+'px;font-weight:800">'+escv(app.settings.clinicName)+'</div><div>'+escv(app.settings.address)+' '+escv(app.settings.phone)+'</div></div></div><h2 style="text-align:center;text-decoration:underline;margin:16px 0">'+t.name+'</h2><table style="width:100%;font-size:'+f+'px;margin-bottom:14px"><tr><td><b>Date:</b> '+escv($("#ur-date").value)+'</td><td><b>Ref By:</b> '+escv($("#ur-ref").value)+'</td></tr><tr><td><b>Patient Name:</b> '+escv($("#ur-name").value)+'</td><td><b>Age:</b> '+escv($("#ur-age").value)+'</td></tr><tr><td><b>Para:</b> '+escv($("#ur-para").value)+'</td><td><b>LMP:</b> '+escv($("#ur-lmp").value)+'</td></tr></table><table style="width:100%;border-collapse:collapse;font-size:'+f+'px">'+rows+'</table>'+(remarks?'<p><b>Remarks:</b> '+escv(remarks)+'</p>':"")+'<div style="display:flex;justify-content:flex-end;margin-top:55px"><div style="border-top:1px solid #111;width:210px;text-align:center;padding-top:6px">Sign. Sonologist</div></div><p style="text-align:center;font-size:10px;margin-top:20px">'+escv(app.settings.footerText)+'</p></div>';
-printHTML(html,"A4")};
+function reportPatient(report){return app.patients.find(p=>p.patientId===(report&&report.patientId))||null}
+function reportPrintHTML(r,size){
+const s=app.settings||DEFAULT_SETTINGS,thermal=size!=="A4",fs=Number(s.reportFontSize||12),logoSize=Number(s.logoSize||56),width=size==="58"?"54mm":size==="80"?"74mm":"100%";
+const escv=x=>esc(x==null?"":String(x));
+const logo=s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="width:'+Math.min(logoSize,size==="58"?38:size==="80"?46:logoSize)+'px;height:'+Math.min(logoSize,size==="58"?38:size==="80"?46:logoSize)+'px;object-fit:contain">':shieldSVG(size==="A4"?logoSize:36,"#1d4ed8");
+const patient='<table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:'+fs+'px"><tr><td><b>Patient:</b> '+escv(r.patientName)+'</td><td><b>MR No:</b> '+escv(r.patientId)+'</td></tr><tr><td><b>Age:</b> '+escv(r.age)+'</td><td><b>Gender:</b> '+escv(r.gender)+'</td></tr><tr><td><b>Date:</b> '+escv(r.date)+'</td><td><b>Doctor:</b> '+escv(r.doctorName)+'</td></tr></table>';
+let body="";
+if(r.kind==="ultrasound"){
+body='<h2 style="text-align:center;margin:12px 0;text-decoration:underline">'+escv(r.reportTypeName||r.reportType)+'</h2>';
+const groups=(r.findings||[]).filter(g=>g.items&&g.items.length);
+body+='<table style="width:100%;border-collapse:collapse;font-size:'+fs+'px">'+groups.map(g=>'<tr><td style="width:26%;vertical-align:top;font-weight:800;padding:6px 5px;border-bottom:1px solid #aaa">'+escv(g.section)+'</td><td style="padding:6px 5px;border-bottom:1px solid #aaa">'+g.items.map(x=>escv(x.text)+(x.detail?' — '+escv(x.detail):'')).join('<br>')+'</td></tr>').join('')+'</table>';
+if(r.measurements)body+='<p style="margin-top:10px"><b>Measurements:</b><br>'+escv(r.measurements).replace(/\n/g,'<br>')+'</p>';
+}else{
+body='<h2 style="text-align:center;margin:12px 0;text-decoration:underline">LABORATORY TEST REPORT</h2>';
+const rows=(r.labItems||[]).filter(x=>x.include!==false).map(x=>'<tr><td style="padding:6px;border:1px solid #999">'+escv(x.name)+'</td><td style="padding:6px;border:1px solid #999">'+escv(x.result)+'</td><td style="padding:6px;border:1px solid #999">'+escv(x.unit)+'</td><td style="padding:6px;border:1px solid #999">'+escv(x.reference)+'</td><td style="padding:6px;border:1px solid #999">'+escv(x.flag)+'</td></tr>').join('');
+body+='<table style="width:100%;border-collapse:collapse;font-size:'+fs+'px"><thead><tr>'+['Test','Result','Unit','Reference Range','Flag'].map(x=>'<th style="padding:5px;border:1px solid #999">'+x+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table>';
 }
+if(r.remarks)body+='<p style="margin-top:12px"><b>Remarks:</b> '+escv(r.remarks).replace(/\n/g,'<br>')+'</p>';
+const clinic='<div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid #1d4ed8;padding-bottom:8px">'+logo+'<div style="min-width:0"><div style="font-size:'+(fs+6)+'px;font-weight:800">'+escv(s.clinicName)+'</div><div style="font-size:'+Math.max(9,fs-2)+'px">'+escv(s.address)+' '+escv(s.phone)+'</div></div></div>';
+return '<div style="font-family:Arial,Helvetica,sans-serif;color:#111;font-size:'+fs+'px;width:'+width+';max-width:100%;margin:0 auto;padding:'+(thermal?'0':'8px')+';line-height:'+(thermal?'1.25':'1.45')+'">'+clinic+patient+body+'<div style="margin-top:'+(thermal?'22px':'48px')+';display:flex;justify-content:flex-end"><div style="width:180px;text-align:center;border-top:1px solid #111;padding-top:5px">'+(r.kind==="ultrasound"?"Sonologist":"Authorized Signature")+'</div></div><p style="text-align:center;font-size:9px;margin-top:14px">'+escv(s.footerText)+'</p></div>';
+}
+function printSavedReport(r,size){printHTML(reportPrintHTML(r,size),size)}
+function reportViewModal(r){
+const isUS=r.kind==="ultrasound",groups=(r.findings||[]).filter(g=>g.items&&g.items.length);
+const body='<div class="grid g2 mb"><div><b>Patient:</b> '+esc(r.patientName||"")+'</div><div><b>MR No:</b> '+esc(r.patientId||"")+'</div><div><b>Report:</b> '+esc(r.reportTypeName||"Laboratory Test Report")+'</div><div><b>Date:</b> '+esc(r.date||"")+'</div></div>'+
+(isUS?groups.map(g=>'<div class="card mb"><div class="card-h"><b>'+esc(g.section)+'</b></div><div class="card-b">'+g.items.map(x=>'<div>'+esc(x.text)+(x.detail?' — '+esc(x.detail):'')+'</div>').join('')+'</div></div>').join(''):'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference</th><th>Flag</th></tr></thead><tbody>'+(r.labItems||[]).filter(x=>x.include!==false).map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.result)+'</td><td>'+esc(x.unit)+'</td><td>'+esc(x.reference)+'</td><td>'+esc(x.flag)+'</td></tr>').join('')+'</tbody></table></div>')+
+(r.measurements?'<p><b>Measurements:</b> '+esc(r.measurements)+'</p>':'')+(r.remarks?'<p class="mt"><b>Remarks:</b> '+esc(r.remarks)+'</p>':'');
+const ov=openModal("View Report",body,'<button class="btn btn-neutral" data-close>Close</button><button class="btn btn-outline" id="rv-edit">Edit</button><button class="btn btn-primary" id="rv-a4">Print A4</button><button class="btn btn-outline" id="rv-thermal">Print '+(app.settings.reportThermalSize||"80")+'mm</button>',true);
+ov.querySelector('[data-close]').onclick=()=>ov.remove();ov.querySelector('#rv-edit').onclick=()=>{ov.remove();reportEditor(r.kind,r.visitId,r)};ov.querySelector('#rv-a4').onclick=()=>printSavedReport(r,"A4");ov.querySelector('#rv-thermal').onclick=()=>printSavedReport(r,app.settings.reportThermalSize||"80");
+}
+function reportEditor(kind,visitId,existing){
+const visit=app.visits.find(v=>v.id===visitId)||app.visits.find(v=>v.id===existing?.visitId)||null;
+const patient=reportPatient(existing)|| (visit?app.patients.find(p=>p.patientId===visit.patientId):null);
+const r=existing||{};const isUS=kind==="ultrasound";
+const typeOpts=isUS?US_REPORT_TYPES:[{id:"lab",name:"Laboratory Test Report"}];
+const labSource=visit?(visit.items||[]).filter(i=>i.category==="lab").map(i=>({name:i.description,include:true,result:"",unit:"",reference:"",flag:""})):
+app.tests.filter(t=>t.type==="lab"&&t.active).map(t=>({name:t.name,include:false,result:"",unit:"",reference:"",flag:""}));
+const initialLabs=(r.labItems&&r.labItems.length)?r.labItems:labSource;
+const selectedType=r.reportType||typeOpts[0].id;
+const patientOptions=app.patients.map(p=>'<option value="'+esc(p.patientId)+'" '+(p.patientId===(r.patientId||(patient&&patient.patientId)||"")?'selected':'')+'>'+esc(p.name)+' — '+esc(padMr(p.patientId))+'</option>').join('');
+const ov=openModal((existing?"Edit ":"New ")+(isUS?"Ultrasound":"Laboratory")+" Report",
+'<div class="grid g2 mb"><div class="field"><label>Patient <span class="req">*</span></label><select class="inp" id="rp-patient"><option value="">Select patient</option>'+patientOptions+'</select></div><div class="field"><label>Report Date</label><input class="inp" id="rp-date" type="date" value="'+esc(r.date||today())+'"></div><div class="field"><label>Patient Name</label><input class="inp" id="rp-name" value="'+esc(r.patientName||(patient&&patient.name)||visit?.patientName||"")+'"></div><div class="field"><label>MR Number</label><input class="inp" id="rp-mr" value="'+esc(r.patientId||(patient&&patient.patientId)||visit?.patientId||"")+'" readonly></div><div class="field"><label>Age</label><input class="inp" id="rp-age" value="'+esc(r.age||(patient?(patient.age+" "+(patient.ageUnit||"")):visit?(visit.age+" "+(visit.ageUnit||"")):"") )+'"></div><div class="field"><label>Gender</label><select class="inp" id="rp-gender"><option value="">Select</option>'+["Male","Female","Other"].map(g=>'<option '+((r.gender||(patient&&patient.gender)||visit?.gender)===g?'selected':'')+'>'+g+'</option>').join('')+'</select></div><div class="field"><label>Doctor Name</label><input class="inp" id="rp-doctor" value="'+esc(r.doctorName||(visit&&visit.doctorName)||"")+'"></div>'+(isUS?'<div class="field"><label>Report Type</label><select class="inp" id="rp-type">'+typeOpts.map(t=>'<option value="'+t.id+'" '+(selectedType===t.id?'selected':'')+'>'+t.name+'</option>').join('')+'</select></div>':'')+'</div>'+
+(isUS?'<div id="rp-findings"></div><div class="field mt"><label>Measurements</label><textarea class="inp" id="rp-measurements" rows="3" placeholder="Enter organ measurements, BPD, HC, AC, FL, EFW, GA, etc.">'+esc(r.measurements||"")+'</textarea></div>':'<div class="card mb"><div class="card-h"><b>Lab Test Results</b><span class="sub">Select tests and enter results</span></div><div class="card-b" id="rp-labs"></div></div>')+
+'<div class="field mt"><label>Remarks</label><textarea class="inp" id="rp-remarks" rows="3">'+esc(r.remarks||"")+'</textarea></div>',
+'<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="rp-save">Save Report</button><button class="btn btn-primary" id="rp-a4">Save & Print A4</button><button class="btn btn-outline" id="rp-thermal">Save & Print '+(app.settings.reportThermalSize||"80")+'mm</button>',true);
+const $r=id=>ov.querySelector('#'+id);
+const fillPatient=()=>{const p=app.patients.find(x=>x.patientId===$r('rp-patient').value);if(!p)return;$r('rp-name').value=p.name;$r('rp-mr').value=p.patientId;$r('rp-age').value=(p.age||'')+' '+(p.ageUnit||'');$r('rp-gender').value=p.gender||''};
+$r('rp-patient').addEventListener('change',fillPatient);$r('rp-name').addEventListener('change',()=>{const p=app.patients.find(x=>x.name.toLowerCase()===$r('rp-name').value.trim().toLowerCase());if(p){$r('rp-patient').value=p.patientId;fillPatient()}});
+if(isUS){const renderFindings=()=>{const t=US_REPORT_TYPES.find(x=>x.id===$r('rp-type').value)||US_REPORT_TYPES[0],old=r.findings||[];$r('rp-findings').innerHTML=t.sections.map((sec,si)=>{const prev=old.find(g=>g.section===sec[0]);return '<div class="card mb"><div class="card-h"><b>'+esc(sec[0])+'</b></div><div class="card-b">'+sec[1].map((v,vi)=>{const found=prev&&prev.items.find(x=>x.text===v);return '<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #e5e7eb"><input type="checkbox" data-us-sec="'+si+'" data-us-idx="'+vi+'" '+(found?'checked':'')+' style="margin-top:3px"><span style="flex:1">'+esc(v)+'</span><input class="inp" data-us-detail="'+si+'-'+vi+'" value="'+esc(found&&found.detail||"")+'" placeholder="Measurement / detail" style="max-width:175px;padding:6px"></label>'}).join('')+'</div></div>'}).join('')};$r('rp-type').addEventListener('change',renderFindings);renderFindings();}
+else{$r('rp-labs').innerHTML=initialLabs.length?initialLabs.map((x,i)=>'<div class="grid mb" style="grid-template-columns:28px minmax(120px,1.4fr) minmax(90px,1fr) minmax(60px,.6fr) minmax(90px,1fr) minmax(80px,.7fr);gap:6px;align-items:center"><input type="checkbox" data-lab-check="'+i+'" '+(x.include!==false?'checked':'')+'><b style="font-size:12px">'+esc(x.name)+'</b><input class="inp" data-lab-result="'+i+'" placeholder="Result" value="'+esc(x.result||"")+'"><input class="inp" data-lab-unit="'+i+'" placeholder="Unit" value="'+esc(x.unit||"")+'"><input class="inp" data-lab-ref="'+i+'" placeholder="Reference" value="'+esc(x.reference||"")+'"><select class="inp" data-lab-flag="'+i+'"><option value="">Flag</option>'+['Normal','High','Low','Critical'].map(f=>'<option '+(x.flag===f?'selected':'')+'>'+f+'</option>').join('')+'</select></div>').join(''):'<p class="hint">No lab tests are on this visit. Select a patient and add the needed test in the Lab / Tests price list first.</p>';}
+ov.querySelector('[data-close]').onclick=()=>ov.remove();
+const collect=()=>{const patientId=$r('rp-patient').value;if(!patientId){toast('Please select a patient','error');return null}const p=app.patients.find(x=>x.patientId===patientId);let findings=[],labItems=[];let reportType=isUS?$r('rp-type').value:'lab';
+if(isUS){const t=US_REPORT_TYPES.find(x=>x.id===reportType);findings=t.sections.map((sec,si)=>({section:sec[0],items:sec[1].map((v,vi)=>{const cb=ov.querySelector('[data-us-sec="'+si+'"][data-us-idx="'+vi+'"]'),d=ov.querySelector('[data-us-detail="'+si+'-'+vi+'"]');return cb&&cb.checked?{text:v,detail:d?d.value.trim():''}:null}).filter(Boolean)})).filter(g=>g.items.length);}
+else{labItems=initialLabs.map((x,i)=>({name:x.name,include:!!ov.querySelector('[data-lab-check="'+i+'"]')?.checked,result:ov.querySelector('[data-lab-result="'+i+'"]')?.value.trim()||'',unit:ov.querySelector('[data-lab-unit="'+i+'"]')?.value.trim()||'',reference:ov.querySelector('[data-lab-ref="'+i+'"]')?.value.trim()||'',flag:ov.querySelector('[data-lab-flag="'+i+'"]')?.value||''}));}
+return Object.assign({},r,{id:r.id||id('rpt'),kind:kind,reportType:reportType,reportTypeName:isUS?(US_REPORT_TYPES.find(t=>t.id===reportType)||{}).name:'Laboratory Test Report',visitId:visit?visit.id:(r.visitId||''),token:visit?visit.token:(r.token||''),patientId:patientId,patientName:$r('rp-name').value.trim()||(p&&p.name)||'',age:$r('rp-age').value.trim(),gender:$r('rp-gender').value,doctorName:$r('rp-doctor').value.trim(),date:$r('rp-date').value||today(),findings:findings,measurements:isUS?$r('rp-measurements').value.trim():'',labItems:labItems,remarks:$r('rp-remarks').value.trim(),updatedAt:new Date().toISOString(),createdAt:r.createdAt||new Date().toISOString(),createdBy:r.createdBy||app.user?.username||''});};
+const save=async(printSize)=>{const obj=collect();if(!obj)return;try{await qPut('reports',obj);await audit(app.user.username,r.id?'UPDATE':'CREATE','reports',obj.id,obj.reportTypeName+' — '+obj.patientName);await loadData();toast(r.id?'Report updated':'Report saved');ov.remove();if(printSize)printSavedReport(obj,printSize);else if(app.route==='ultrasound'||app.route==='lab')pageTestModule(app.route);}catch(e){toast('Could not save report: '+(e.message||e),'error')}};
+$r('rp-save').onclick=()=>save(null);$r('rp-a4').onclick=()=>save('A4');$r('rp-thermal').onclick=()=>save(app.settings.reportThermalSize||'80');
+}
+function ultrasoundReportModal(){reportEditor('ultrasound',null,null)}
+function labReportModal(){reportEditor('lab',null,null)}
+function deleteReportRecord(r){return confirmBox({title:'Delete Report',message:'Delete this '+(r.kind==='ultrasound'?'ultrasound':'laboratory')+' report for '+r.patientName+'?',danger:true,confirmText:'DELETE',requireText:'DELETE'}).then(async ok=>{if(!ok)return;await qDel('reports',r.id);await audit(app.user.username,'DELETE','reports',r.id,r.patientName);await loadData();toast('Report deleted','info');if(app.route==='ultrasound'||app.route==='lab')pageTestModule(app.route);});}
 
 function testModal(t,type){
 const cats=Array.from(new Set(app.tests.filter(x=>x.type===type).map(x=>x.category)));
@@ -2835,6 +2906,7 @@ $("#page").innerHTML='<div class="grid" style="grid-template-columns:2fr 1fr;ali
 '<div class="field"><label>Slip Font Size (Standard: 13)</label><div class="flex g12 aic"><input type="range" id="st-font" min="9" max="26" step="0.5" value="'+s.slipFontSize+'" style="flex:1;accent-color:var(--blue-700)"><span id="st-fontv" style="font-weight:700;color:var(--blue-800);width:48px;text-align:center">'+s.slipFontSize+"px</span></div></div>"+
 '<div class="field"><label>Report Font Size</label><div class="flex g12 aic"><input type="range" id="st-rfont" min="9" max="22" step="0.5" value="'+(s.reportFontSize||12)+'" style="flex:1"><span id="st-rfontv">'+(s.reportFontSize||12)+'px</span></div></div>'+
 '<div class="field"><label>Logo Size on Reports</label><div class="flex g12 aic"><input type="range" id="st-logosize" min="24" max="120" step="2" value="'+(s.logoSize||56)+'" style="flex:1"><span id="st-logosizev">'+(s.logoSize||56)+'px</span></div></div>'+
+'<div class="field"><label>Report Thermal Paper Size</label><select class="inp" id="st-report-thermal"><option value="58" '+((s.reportThermalSize||"80")==="58"?"selected":"")+'>58mm Thermal</option><option value="80" '+((s.reportThermalSize||"80")==="80"?"selected":"")+'>80mm Thermal</option></select></div>'+
 '<div class="field"><label>Duty Staff Name (shown on slip)</label><input class="inp" id="st-duty" value="'+esc(s.dutyStaffName||"")+'" placeholder="e.g. Ali, Hamza — blank = logged-in user"></div>'+
 '<div class="field"><label>Show MR Number on Slip</label><div class="flex g12 aic"><button id="st-mr" style="border:2px solid '+(s.showMrOnSlip?"var(--blue-600)":"var(--slate-300)")+';background:'+(s.showMrOnSlip?"var(--blue-600)":"var(--slate-200)")+';width:52px;height:28px;border-radius:99px;position:relative;transition:.2s"><span style="position:absolute;top:2px;'+(s.showMrOnSlip?"left:26px":"left:2px")+';width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:.2s"></span></button><span id="st-mrtxt" style="font-size:13px;font-weight:600">'+(s.showMrOnSlip?"ON — slip par MR number aayega":"OFF — slip par MR number nahi aayega")+"</span></div></div>"+
 '<div class="field"><label>Backup Reminder (days)</label><input class="inp" id="st-bk" inputmode="numeric" value="'+s.backupReminderDays+'"></div>'+
@@ -2876,7 +2948,7 @@ const obj=Object.assign({},s,{clinicName:$("#st-name").value.trim()||s.clinicNam
 phone:$("#st-phone").value,phone2:$("#st-phone2").value,email:$("#st-email").value,timing:$("#st-timing").value,
 slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,msName:$("#st-msname").value.trim(),msAddress:$("#st-msaddr").value.trim(),msPhone:$("#st-msphone").value.trim(),msFooter:$("#st-msfoot").value.trim(),devFooter:$("#st-dev").value,
 logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
-slipFontSize:parseFloat($("#st-font").value),reportFontSize:parseFloat($("#st-rfont").value),logoSize:parseInt($("#st-logosize").value,10),dutyStaffName:$("#st-duty").value,showMrOnSlip:showMr,
+slipFontSize:parseFloat($("#st-font").value),reportFontSize:parseFloat($("#st-rfont").value),logoSize:parseInt($("#st-logosize").value,10),reportThermalSize:$("#st-report-thermal").value,dutyStaffName:$("#st-duty").value,showMrOnSlip:showMr,
 backupReminderDays:num($("#st-bk").value),shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
 await saveSettingsObj(obj);
 await audit(app.user.username,"UPDATE","settings","app","Clinic settings updated");
