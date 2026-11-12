@@ -297,6 +297,43 @@ html,body{background:#fff!important;margin:0!important;padding:0!important}
 .medical-store-ui .btn{border-radius:11px;box-shadow:0 5px 14px rgba(30,64,175,.09)}
 .medical-store-ui .btn-neutral,.medical-store-ui .btn-outline{background:rgba(255,255,255,.64);backdrop-filter:blur(8px)}
 .medical-store-ui .stat .ico{border-radius:14px}
+.medical-store-ui{background:linear-gradient(160deg,rgba(4,16,38,.78),rgba(10,52,102,.58) 52%,rgba(6,86,92,.55)),url(login-bg.jpg) center/cover no-repeat!important;border:1px solid rgba(251,191,36,.42);box-shadow:0 24px 64px rgba(2,10,28,.5),inset 0 0 0 1px rgba(255,255,255,.07);min-height:72vh}
+.ms-hero{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;margin-bottom:14px;border-radius:18px;background:linear-gradient(110deg,rgba(7,24,52,.84),rgba(14,80,120,.72));border:1px solid rgba(251,191,36,.45);box-shadow:0 10px 30px rgba(0,0,0,.28);color:#fff}
+.ms-hero-t{font-size:19px;font-weight:800;letter-spacing:.3px}.ms-hero-s{font-size:12px;opacity:.82;margin-top:2px}
+.ms-vip{background:linear-gradient(135deg,#fde68a,#f59e0b);color:#451a03;font-weight:800;font-size:11px;letter-spacing:1.2px;padding:7px 13px;border-radius:999px;box-shadow:0 4px 14px rgba(245,158,11,.45);white-space:nowrap}
+.medical-store-ui table.tbl thead tr{background:linear-gradient(110deg,#0b2a55,#0e7490)}
+.medical-store-ui .card-h h2{color:#0b2a55}
+.ms-filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+@media(max-width:760px){.ms-filters{grid-template-columns:1fr 1fr}.ms-filters #med-search{grid-column:1/-1}.ms-hero-t{font-size:16px}}
+.ms-pos .modal{max-width:min(1240px,97vw)!important}
+.pos-wrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:start}
+@media(max-width:900px){.pos-wrap{grid-template-columns:1fr}}
+.pos-bar{display:grid;grid-template-columns:1fr 160px;gap:8px}
+.pos-meta{display:flex;justify-content:space-between;align-items:center;margin:8px 0;font-size:12px;color:#475569;gap:8px}
+.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px;max-height:58vh;overflow:auto;padding:2px}
+.pos-card{position:relative;text-align:left;background:rgba(255,255,255,.94);border:1px solid #dbe5f3;border-radius:14px;padding:10px 10px 36px;cursor:pointer;display:flex;flex-direction:column;gap:3px;box-shadow:0 4px 12px rgba(30,64,175,.07);transition:.12s}
+.pos-card:hover{transform:translateY(-2px);border-color:#38bdf8}.pos-card.out{opacity:.5}
+.pos-card b{font-size:13px;line-height:1.25}.pos-card .g{font-size:11px;color:#64748b}.pos-card .pr{font-weight:800;color:#0b2a55;font-size:14px;margin-top:3px}
+.pos-card .add{position:absolute;right:8px;bottom:8px;width:28px;height:28px;border-radius:9px;border:0;background:#2563eb;color:#fff;font-size:18px;line-height:1;pointer-events:none}
+.pos-card .stk{position:absolute;left:10px;bottom:10px}
+.pos-right{background:rgba(248,250,252,.92);border:1px solid #dbe5f3;border-radius:16px;padding:12px}
+.pos-h{font-weight:800;color:#0b2a55;margin-bottom:8px}
+.pos-line{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px 10px;margin-bottom:8px}
+.pos-line-t{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:13px;align-items:center}
+.pos-line-c{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.pos-line-c input,.pos-line-c select{height:34px;padding:0 6px;font-size:13px}
+.pos-step{display:inline-flex;align-items:center;border:1px solid #cbd5e1;border-radius:9px;overflow:hidden;background:#fff}
+.pos-step button{width:30px;height:34px;border:0;background:#eef2f7;font-size:16px;font-weight:700;cursor:pointer}
+.pos-step input{width:46px;text-align:center;border:0!important;background:transparent!important}
+.pos-seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+.pos-seg button{padding:9px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-weight:700;font-size:13px;cursor:pointer}
+.pos-seg button.on{background:#2563eb;color:#fff;border-color:#2563eb}
+.pos-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}
+.pos-quick button{padding:8px 0;border-radius:9px;border:1px solid #cbd5e1;background:#fff;font-weight:700;font-size:12px;cursor:pointer}
+.pos-tot{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.pos-right .pos-tot{margin-bottom:6px}
+@media(max-width:600px){.ms-pos .modal-f{flex-wrap:wrap;gap:6px}.ms-pos .modal-f>div:first-child{width:100%;margin:0 0 2px!important}.ms-pos .modal-f .btn{flex:1;padding:10px 4px;font-size:12px}}
+.pos-tot.big{font-size:17px;font-weight:800;color:#0b2a55;border-top:1px dashed #94a3b8;margin-top:4px;padding-top:7px}
 @media(max-width:760px){.medical-store-ui{padding:8px;border-radius:16px}.medical-store-ui .grid.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.medical-store-ui .stat{padding:10px}.medical-store-ui .stat .val{font-size:17px}}
 
 
@@ -1925,20 +1962,25 @@ async function pageMedicalStore(){
     customCats=all.filter(x=>x.kind==="category");
   };
   const stockOf=(p)=>products.filter(x=>x.id===p.id).reduce((a)=>a,0) + num(p.stock||0);
-  const stockRows=()=>products.map(p=>{
-    const qty=num(p.stock), low=qty<=num(p.reorderLevel||5);
-    return '<tr><td><b>'+esc(p.name)+'</b><div class="hint">'+esc(p.generic||"")+'</div></td>'+
-      '<td>'+esc(p.category||"—")+'<div class="hint">'+esc(p.company||"—")+'</div></td><td>'+esc(p.batch||"—")+'</td><td>'+esc(p.expiry||"—")+'</td>'+
+  const expState=p=>{if(!p.expiry)return"";if(p.expiry<today())return"expired";return p.expiry<=new Date(Date.now()+90*86400000).toISOString().slice(0,10)?"soon":"ok"};
+  const stockRowHTML=p=>{
+    const qty=num(p.stock),low=qty<=num(p.reorderLevel||5),ex=expState(p);
+    const ss=Math.max(1,num(p.stripSize)||1),per=Math.max(1,num(p.boxStrips)||1)*ss;
+    const brk=p.stripSize>1?(Math.floor(qty/per)+' boxes, '+Math.floor((qty%per)/ss)+' strips, '+(qty%ss)+' tablets'):'units';
+    return '<tr><td><b>'+esc(p.name)+'</b>'+(p.rx?' <span class="badge violet">Rx</span>':'')+'<div class="hint">'+esc(p.generic||"")+(p.rack?' · 📍 '+esc(p.rack):'')+'</div></td>'+
+      '<td>'+esc(p.category||"—")+'<div class="hint">'+esc(p.company||"—")+'</div></td><td>'+esc(p.batch||"—")+'</td>'+
+      '<td>'+(p.expiry?'<span class="badge '+(ex==="expired"?"red":ex==="soon"?"amber":"green")+'">'+esc(p.expiry)+'</span>':'—')+'</td>'+
       '<td>'+money(p.purchasePrice)+'</td><td><b>'+money(p.salePrice)+'</b></td>'+
-      '<td><span class="badge '+(qty<=0?"red":low?"amber":"green")+'">'+fmtMoney(qty)+'</span><div class="hint">'+(p.stripSize>1?(Math.floor(qty/(Math.max(1,num(p.boxStrips)||1)*p.stripSize))+' boxes, '+Math.floor((qty%(Math.max(1,num(p.boxStrips)||1)*p.stripSize))/p.stripSize)+' strips, '+(qty%p.stripSize)+' tablets'):'units')+'</div></td>'+
+      '<td><span class="badge '+(qty<=0?"red":low?"amber":"green")+'">'+fmtMoney(qty)+'</span><div class="hint">'+brk+'</div></td>'+
       '<td><button class="btn btn-outline sm" data-med-edit="'+esc(p.id)+'">Edit</button> '+
       '<button class="btn btn-neutral sm" data-med-buy="'+esc(p.id)+'">Add Stock</button> <button class="btn btn-danger sm" data-med-del="'+esc(p.id)+'">Delete</button></td></tr>';
-  }).join("");
+  };
+  const stockRows=(list)=>(list||products).map(stockRowHTML).join("");
   const MS_SECTIONS={dashboard:["🏪","Dashboard","Overview of stock, sales and alerts"],stock:["📦","Stock","Medicine inventory"],purchase:["🛒","Purchase","Buy stock from suppliers"],sale:["🧾","New Sale / Bill","Create customer bills and print receipts"],customers:["👥","Customers","Customer records and purchase history"],reports:["📈","Reports","Sales, profit and expiry"]};
   const shell=()=>{
     tab=app.msTab||"dashboard";const sec=MS_SECTIONS[tab]||MS_SECTIONS.dashboard;
     el("page").innerHTML=
-      '<div class="medical-store-ui">'+(tab==="dashboard"?'<div class="grid g4 mb">'+
+      '<div class="medical-store-ui"><div class="ms-hero"><div><div class="ms-hero-t">💊 '+esc(app.settings.msName||storeTitle(app.settings.clinicName))+'</div><div class="ms-hero-s">Pharmacy Management · '+fmtDate(today())+'</div></div><span class="ms-vip">★ PREMIUM</span></div>'+(tab==="dashboard"?'<div class="grid g4 mb">'+
       '<div class="stat"><div class="ico blue-g">💊</div><div><div class="lbl">Medicine Items</div><div class="val">'+products.length+'</div></div></div>'+
       '<div class="stat"><div class="ico green-g">📦</div><div><div class="lbl">Tablets / Units in Stock</div><div class="val">'+fmtMoney(products.reduce((a,p)=>a+num(p.stock),0))+'</div></div></div>'+
       '<div class="stat"><div class="ico violet-g">🧾</div><div><div class="lbl">Total Sales</div><div class="val">'+sales.length+'</div></div></div>'+
@@ -1975,17 +2017,40 @@ async function pageMedicalStore(){
       el("d-bill").onclick=()=>go("ms_sale");el("d-buy").onclick=()=>purchaseModal();el("d-stock").onclick=()=>go("ms_stock");
       panel.querySelectorAll("[data-med-print]").forEach(b=>b.onclick=()=>{const x=sales.find(v=>v.id===b.dataset.medPrint);if(x)printSale(x)});
     }else if(tab==="stock"){
-      panel.innerHTML='<div class="field"><input class="inp" id="med-search" placeholder="Search medicine name, company or batch..."></div>'+
-      '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Medicine</th><th>Category / Company</th><th>Batch</th><th>Expiry</th><th>Purchase</th><th>Sale</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="med-stock-rows">'+stockRows()+'</tbody></table></div>';
-      el("med-search").oninput=e=>{
-        const q=e.target.value.toLowerCase();
-        el("med-stock-rows").innerHTML=products.filter(p=>(p.name+" "+p.company+" "+p.batch).toLowerCase().includes(q)).map(p=>{
-          const low=num(p.stock)<=num(p.reorderLevel||5);
-          return '<tr><td><b>'+esc(p.name)+'</b><div class="hint">'+esc(p.generic||"")+'</div></td><td>'+esc(p.category||"—")+' · '+esc(p.company||"—")+'</td><td>'+esc(p.batch||"—")+'</td><td>'+esc(p.expiry||"—")+'</td><td>'+money(p.purchasePrice)+'</td><td>'+money(p.salePrice)+'</td><td><span class="badge '+(num(p.stock)<=0?"red":low?"amber":"green")+'">'+fmtMoney(p.stock)+'</span></td><td><button class="btn btn-outline sm" data-med-edit="'+esc(p.id)+'">Edit</button> <button class="btn btn-neutral sm" data-med-buy="'+esc(p.id)+'">Add Stock</button> <button class="btn btn-danger sm" data-med-del="'+esc(p.id)+'">Delete</button></td></tr>';
-        }).join("")||'<tr class="empty-row"><td colspan="8">No matching medicines</td></tr>';
+      const cats=[...new Set(products.map(p=>p.category).filter(Boolean))].sort();
+      panel.innerHTML='<div class="ms-filters"><input class="inp" id="med-search" placeholder="🔍 Search name, generic, company, batch, barcode, rack...">'+
+        '<select class="inp" id="med-f-cat"><option value="">All Categories</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join("")+'</select>'+
+        '<select class="inp" id="med-f-status"><option value="">All Status</option><option value="in">In Stock</option><option value="low">Low Stock</option><option value="out">Out of Stock</option><option value="soon">Expiring within 90 days</option><option value="expired">Expired</option></select>'+
+        '<select class="inp" id="med-f-rx"><option value="">Rx + OTC</option><option value="rx">Rx only</option><option value="otc">OTC only</option></select></div>'+
+        '<div class="flex jb fw aic mb"><span class="hint" id="med-count"></span><div class="flex gap fw"><button class="btn btn-outline sm" id="med-csv">⬇ Export CSV</button><button class="btn btn-outline sm" id="med-printlist">🖨 Print List</button></div></div>'+
+        '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Medicine</th><th>Category / Company</th><th>Batch</th><th>Expiry</th><th>Purchase</th><th>Sale</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="med-stock-rows"></tbody></table></div>';
+      let cur=[];
+      const apply=()=>{
+        const q=el("med-search").value.trim().toLowerCase(),cat=el("med-f-cat").value,st=el("med-f-status").value,rx=el("med-f-rx").value;
+        cur=products.filter(p=>{
+          if(q&&!((p.name||"")+" "+(p.generic||"")+" "+(p.company||"")+" "+(p.batch||"")+" "+(p.barcode||"")+" "+(p.rack||"")).toLowerCase().includes(q))return false;
+          if(cat&&p.category!==cat)return false;
+          const n=num(p.stock),lo=n<=num(p.reorderLevel||5);
+          if(st==="in"&&!(n>0&&!lo))return false;if(st==="low"&&!(n>0&&lo))return false;if(st==="out"&&n>0)return false;
+          if(st==="soon"&&expState(p)!=="soon")return false;if(st==="expired"&&expState(p)!=="expired")return false;
+          if(rx==="rx"&&!p.rx)return false;if(rx==="otc"&&p.rx)return false;
+          return true;
+        });
+        el("med-stock-rows").innerHTML=stockRows(cur)||'<tr class="empty-row"><td colspan="8">No matching medicines</td></tr>';
+        el("med-count").textContent=cur.length+" of "+products.length+" medicines";
         bindStockButtons();
       };
-      bindStockButtons();
+      ["med-search","med-f-cat","med-f-status","med-f-rx"].forEach(i=>{el(i).oninput=apply;el(i).onchange=apply});
+      el("med-csv").onclick=()=>{
+        const cell=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+        const rows=[["Medicine","Generic","Category","Company","Batch","Expiry","Rx/OTC","Rack","Stock (units)","Purchase / unit","Sale / unit"]].concat(cur.map(p=>[p.name,p.generic,p.category,p.company,p.batch,p.expiry,p.rx?"Rx":"OTC",p.rack,num(p.stock),num(p.purchasePrice),num(p.salePrice)]));
+        download("medicines-"+today()+".csv","\ufeff"+rows.map(r=>r.map(cell).join(",")).join("\n"),"text/csv");
+      };
+      el("med-printlist").onclick=()=>{
+        const rows=cur.map(p=>'<tr><td>'+esc(p.name)+(p.rx?' (Rx)':'')+'</td><td>'+esc(p.category||"")+'</td><td>'+esc(p.company||"")+'</td><td>'+esc(p.batch||"")+'</td><td>'+esc(p.expiry||"")+'</td><td>'+esc(p.rack||"")+'</td><td>'+fmtMoney(p.stock)+'</td><td>'+fmtMoney(p.salePrice)+'</td></tr>').join("");
+        printHTML('<div style="font-family:Arial,sans-serif;color:#111"><h2>'+esc(app.settings.msName||storeTitle(app.settings.clinicName))+' — Stock List</h2><p>'+fmtDate(today())+' · '+cur.length+' items</p><table style="width:100%;border-collapse:collapse;font-size:12px" border="1" cellpadding="5"><thead><tr><th>Medicine</th><th>Category</th><th>Company</th><th>Batch</th><th>Expiry</th><th>Rack</th><th>Stock</th><th>Sale / unit</th></tr></thead><tbody>'+rows+'</tbody></table></div>',"A4");
+      };
+      apply();
     }else if(tab==="purchase"){
       panel.innerHTML='<div class="flex jb fw aic mb"><div><b>Purchase History</b><div class="hint">Purchases increase medicine stock automatically.</div></div><div class="flex gap fw"><button class="btn btn-outline" id="med-bill-scan">📷 SCAN BILL</button><button class="btn btn-success" id="med-purchase-new">＋ NEW PURCHASE</button></div></div>'+
       '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Supplier</th><th>Invoice</th><th>Items</th><th>Total</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead><tbody>'+
@@ -2114,7 +2179,9 @@ async function pageMedicalStore(){
       '<div class="field"><label>Calculated Purchase / Tablet</label><input class="inp" id="mm-buy-unit" disabled value="'+num(p.purchasePrice)+'"></div>'+
       '<div class="field"><label>Calculated Sale / Tablet</label><input class="inp" id="mm-sale-unit" disabled value="'+num(p.salePrice)+'"></div>'+
       '<div class="field"><label>Low Stock Alert At</label><input class="inp" type="number" min="0" id="mm-reorder" value="'+num(p.reorderLevel||5)+'"></div>'+
-      '<div class="field"><label>Barcode</label><input class="inp" id="mm-barcode" inputmode="numeric" value="'+esc(p.barcode||"")+'"></div></div>',
+      '<div class="field"><label>Barcode</label><input class="inp" id="mm-barcode" inputmode="numeric" value="'+esc(p.barcode||"")+'"></div>'+
+      '<div class="field"><label>Rack / Location</label><input class="inp" id="mm-rack" placeholder="e.g. R-01 Front Counter" value="'+esc(p.rack||"")+'"></div>'+
+      '<div class="field"><label>Prescription (Rx)</label><label style="display:flex;gap:8px;align-items:center;font-weight:600;text-transform:none"><input type="checkbox" id="mm-rx" '+(p.rx?"checked":"")+' style="width:18px;height:18px"> Rx required (doctor prescription ke saath)</label></div></div>',
       '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="mm-save">SAVE MEDICINE</button>',true);
     ov.querySelector("[data-close]").onclick=()=>ov.remove();
     {const catSel=ov.querySelector("#mm-category");let lastCat=catSel.value;
@@ -2217,7 +2284,7 @@ async function pageMedicalStore(){
     }}
     ov.querySelector("#mm-save").onclick=async()=>{
       const name=ov.querySelector("#mm-name").value.trim();if(!name){toast("Medicine name is required","error");return}
-      const obj={...p,id:p.id||id("med"),kind:"product",name,generic:ov.querySelector("#mm-generic").value.trim(),category:ov.querySelector("#mm-category").value.trim(),stripSize:Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1),boxStrips:Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1),company:ov.querySelector("#mm-company").value.trim(),batch:ov.querySelector("#mm-batch").value.trim(),expiry:ov.querySelector("#mm-expiry").value,purchasePrice:num(ov.querySelector("#mm-buy-box").value)/(Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1)*Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)),salePrice:num(ov.querySelector("#mm-sale-box").value)/(Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1)*Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)),stock:p.id?num(p.stock):num(ov.querySelector("#mm-stock").value)*(ov.querySelector("#mm-stock-unit").value==="box"?Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)*Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1):ov.querySelector("#mm-stock-unit").value==="strip"?Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1):1),reorderLevel:num(ov.querySelector("#mm-reorder").value),barcode:ov.querySelector("#mm-barcode").value.trim(),updatedAt:new Date().toISOString()};
+      const obj={...p,id:p.id||id("med"),kind:"product",name,rx:ov.querySelector("#mm-rx").checked,rack:ov.querySelector("#mm-rack").value.trim(),generic:ov.querySelector("#mm-generic").value.trim(),category:ov.querySelector("#mm-category").value.trim(),stripSize:Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1),boxStrips:Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1),company:ov.querySelector("#mm-company").value.trim(),batch:ov.querySelector("#mm-batch").value.trim(),expiry:ov.querySelector("#mm-expiry").value,purchasePrice:num(ov.querySelector("#mm-buy-box").value)/(Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1)*Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)),salePrice:num(ov.querySelector("#mm-sale-box").value)/(Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1)*Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)),stock:p.id?num(p.stock):num(ov.querySelector("#mm-stock").value)*(ov.querySelector("#mm-stock-unit").value==="box"?Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)*Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1):ov.querySelector("#mm-stock-unit").value==="strip"?Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1):1),reorderLevel:num(ov.querySelector("#mm-reorder").value),barcode:ov.querySelector("#mm-barcode").value.trim(),updatedAt:new Date().toISOString()};
       await qPut("inventory",obj);await audit(app.user.username,p.id?"UPDATE":"CREATE","inventory",obj.id,"Medicine "+name);ov.remove();await pageMedicalStore();
     };
   };
@@ -2419,52 +2486,210 @@ async function pageMedicalStore(){
       showReview(m,failed,dups);goBtn.disabled=false;
     };
   };
+  const HELD_KEY="zm_ms_held_v1";
+  const getHeld=()=>{try{return JSON.parse(localStorage.getItem(HELD_KEY)||"[]")}catch(e){return[]}};
+  const setHeld=a=>{try{localStorage.setItem(HELD_KEY,JSON.stringify(a))}catch(e){}};
   const saleModal=()=>{
     if(!products.length){toast("Please add medicines before making a sale","error");return}
-    let cart=[];
-    const ov=openModal("Medical Store — Customer Bill",
-      '<div class="grid g2"><div class="field"><label>Customer Name *</label><input class="inp" id="ms-name" placeholder="Customer name"></div><div class="field"><label>Mobile Number</label><input class="inp" id="ms-mobile" placeholder="03xxxxxxxxx"><div class="hint" id="ms-customer-history">Enter mobile to find previous customer history.</div></div><div class="field"><label>Address</label><input class="inp" id="ms-address" placeholder="Customer address"></div><div class="field"><label>Payment Method</label><select class="inp" id="ms-method"><option>Cash</option><option>Card</option><option>Easypaisa</option><option>JazzCash</option><option>Bank Transfer</option><option>Credit / Due</option></select></div></div>'+
-      '<div class="grid" style="grid-template-columns:2fr 1fr 1fr 1fr auto;align-items:end"><div class="field"><label>Medicine</label><select class="inp" id="ms-product">'+products.filter(p=>num(p.stock)>0).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+' — Stock '+num(p.stock)+'</option>').join("")+'</select></div><div class="field"><label>Qty</label><input class="inp" type="number" min="1" id="ms-qty" value="1"></div><div class="field"><label>Sell as</label><select class="inp" id="ms-unit"><option value="tablet">Tablet / Unit</option><option value="strip">Strip</option><option value="box">Box</option></select></div><div class="field"><label>Unit Price</label><input class="inp" type="number" id="ms-price" value="'+num(products.find(p=>num(p.stock)>0)?.salePrice)+'"></div><button class="btn btn-outline" id="ms-add">ADD</button></div>'+
-      '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Medicine</th><th>Qty</th><th>Price</th><th>Amount</th><th></th></tr></thead><tbody id="ms-cart"></tbody></table></div>'+
-      '<div class="grid g3 mt"><div class="field"><label>Discount</label><input class="inp" type="number" min="0" id="ms-discount" value="0"></div><div class="field"><label>Paid Amount</label><input class="inp" type="number" min="0" id="ms-paid" value="0"></div><div class="sum-box"><div class="sum-row"><b>Subtotal</b><strong id="ms-sub">0</strong></div><div class="sum-row"><b>Grand Total</b><strong id="ms-total">0</strong></div><div class="sum-row"><b>Due</b><strong id="ms-due">0</strong></div></div></div>',
-      '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="ms-save">SAVE BILL & PRINT</button>',true);
     const unitFactor=(p,u)=>u==="box"?Math.max(1,num(p.boxStrips)||1)*Math.max(1,num(p.stripSize)||1):u==="strip"?Math.max(1,num(p.stripSize)||1):1;
-    const drawCart=()=>{
-      const sub=cart.reduce((a,x)=>a+x.qty*x.price,0),discount=Math.min(sub,num(ov.querySelector("#ms-discount").value)),total=sub-discount,paid=num(ov.querySelector("#ms-paid").value);
-      ov.querySelector("#ms-cart").innerHTML=cart.map((x,i)=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+' '+esc(x.unit||'unit')+'</td><td>'+money(x.price)+'</td><td>'+money(x.qty*x.price)+'</td><td><button class="btn btn-danger sm" data-ms-remove="'+i+'">×</button></td></tr>').join("")||'<tr class="empty-row"><td colspan="5">Add medicine to this bill</td></tr>';
-      ov.querySelector("#ms-sub").textContent=money(sub);ov.querySelector("#ms-total").textContent=money(total);ov.querySelector("#ms-due").textContent=money(Math.max(0,total-paid));
-      ov.querySelectorAll("[data-ms-remove]").forEach(b=>b.onclick=()=>{cart.splice(+b.dataset.msRemove,1);drawCart()});
+    const prod=pid=>products.find(x=>x.id===pid);
+    const r2=n=>Math.round(num(n)*100)/100;
+    const netP=x=>r2(num(x.price)*(1-Math.min(100,Math.max(0,num(x.disc)))/100));
+    let cart=[],saleType="walk",paidTouched=false,shown=[];
+    const cats=[...new Set(products.map(p=>p.category).filter(Boolean))].sort();
+    const ov=openModal("🧾 Medical Store — POS Bill",
+      '<div class="pos-wrap"><div class="pos-left">'+
+        '<div class="pos-bar"><input class="inp" id="pos-q" placeholder="🔍 Scan barcode / search medicine (Enter = add)" autocomplete="off"><select class="inp" id="pos-cat"><option value="">All Categories</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join("")+'</select></div>'+
+        '<div class="pos-meta"><span id="pos-count"></span><button type="button" class="btn btn-outline sm" id="pos-held">⏸ Held (0)</button></div>'+
+        '<div class="pos-grid" id="pos-grid"></div></div>'+
+      '<div class="pos-right"><div class="pos-h">🛒 Current Sale</div><div id="pos-cart"></div>'+
+        '<div class="pos-seg"><button type="button" data-st="walk" class="on">🚶 Walk-in</button><button type="button" data-st="credit">📒 Credit / Udhaar</button></div>'+
+        '<div class="grid g2"><div class="field"><label>Mobile</label><input class="inp" id="ms-mobile" inputmode="tel" placeholder="03xxxxxxxxx"></div><div class="field"><label>Customer Name</label><input class="inp" id="ms-name" placeholder="Walk-in Customer"></div></div>'+
+        '<div class="hint" id="ms-customer-history" style="margin:-4px 0 8px"></div>'+
+        '<div class="field"><label>Address (optional)</label><input class="inp" id="ms-address"></div>'+
+        '<div class="grid g2" id="pos-rx" style="display:none"><div class="field"><label>Doctor Name (Rx)</label><input class="inp" id="ms-doctor" placeholder="Prescriber"></div><div class="field"><label>Prescription No</label><input class="inp" id="ms-rxno" placeholder="Rx reference"></div></div>'+
+        '<div class="pos-tot"><span>Subtotal</span><b id="ms-sub">0</b></div>'+
+        '<div class="grid g2"><div class="field"><label>Extra Discount (Rs.)</label><input class="inp" type="number" min="0" id="ms-discount" value="0"></div><div class="field"><label>Payment Method</label><select class="inp" id="ms-method"><option>Cash</option><option>Card</option><option>Easypaisa</option><option>JazzCash</option><option>Bank Transfer</option><option>Credit / Due</option></select></div></div>'+
+        '<div class="pos-tot big"><span>Grand Total</span><b id="ms-total">0</b></div>'+
+        '<div class="field" style="margin-top:8px"><label>Paid Amount</label><input class="inp" type="number" min="0" id="ms-paid" placeholder="0"></div>'+
+        '<div class="pos-quick"><button type="button" data-quick="exact">Exact</button><button type="button" data-quick="500">500</button><button type="button" data-quick="1000">1000</button><button type="button" data-quick="2000">2000</button></div>'+
+        '<div class="pos-tot"><span>Change</span><b id="ms-change" style="color:#15803d">0</b></div><div class="pos-tot"><span>Due</span><b id="ms-due" style="color:#b45309">0</b></div><div class="pos-tot"><span>Status</span><span id="ms-status"></span></div>'+
+      '</div></div>',
+      '<div style="margin-right:auto;font-weight:800;font-size:16px;color:#0b2a55">Total: <span id="pos-foot-total">'+money(0)+'</span></div><button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-outline" id="pos-clear">🗑 Clear</button><button class="btn btn-outline" id="pos-hold">⏸ Hold</button><button class="btn btn-success" id="ms-save">✔ COMPLETE SALE (F9)</button>',true);
+    ov.classList.add("ms-pos");
+    const Q=s=>ov.querySelector(s);
+    const usedBase=(pid,skip)=>cart.reduce((a,x)=>a+(x!==skip&&x.productId===pid?x.qty*unitFactor(prod(pid),x.unit):0),0);
+    const setQty=(line,n)=>{
+      const p=prod(line.productId),f=unitFactor(p,line.unit);n=Math.max(1,Math.floor(num(n))||1);
+      const max=Math.floor((num(p.stock)-usedBase(line.productId,line))/f);
+      if(max<1){toast("Itna stock maujood nahi","error");return false}
+      if(n>max){n=max;toast("Sirf "+max+" available hai","error")}
+      line.qty=n;return true;
     };
-    const updateSalePrice=()=>{const p=products.find(x=>x.id===ov.querySelector("#ms-product").value),u=ov.querySelector("#ms-unit").value;ov.querySelector("#ms-price").value=p?num(p.salePrice)*unitFactor(p,u):0};
-    ov.querySelector("#ms-mobile").oninput=()=>{const m=ov.querySelector("#ms-mobile").value.trim(),c=customers.find(x=>m&&x.mobile===m),hint=ov.querySelector("#ms-customer-history");if(c){ov.querySelector("#ms-name").value=c.name;ov.querySelector("#ms-address").value=c.address||"";const old=sales.filter(x=>x.customerId===c.id);hint.innerHTML="Existing customer — "+old.length+" previous bills. <button type=\"button\" id=\"ms-show-history\">View history</button>";ov.querySelector("#ms-show-history").onclick=e=>{e.preventDefault();customerHistory(c)}}else{hint.textContent="New customer — no previous history found."}};
-    ov.querySelector("#ms-product").onchange=updateSalePrice;ov.querySelector("#ms-unit").onchange=updateSalePrice;
-    ov.querySelector("#ms-add").onclick=()=>{
-      const p=products.find(x=>x.id===ov.querySelector("#ms-product").value),qty=num(ov.querySelector("#ms-qty").value),unit=ov.querySelector("#ms-unit").value,baseQty=p?qty*unitFactor(p,unit):0,price=num(ov.querySelector("#ms-price").value);
-      if(!p||qty<=0||baseQty>num(p.stock)){toast("Check medicine and available stock","error");return}
-      const existing=cart.find(x=>x.productId===p.id&&x.unit===unit);if(existing){if(existing.baseQty+baseQty>num(p.stock)){toast("Not enough stock","error");return}existing.qty+=qty;existing.baseQty+=baseQty}else cart.push({productId:p.id,name:p.name,qty,unit,baseQty,price});
+    const calc=()=>{const sub=r2(cart.reduce((a,x)=>a+x.qty*netP(x),0)),disc=Math.min(sub,Math.max(0,num(Q("#ms-discount").value)));return{sub,disc,total:r2(sub-disc)}};
+    const updateTotals=()=>{
+      const t=calc();
+      if(!paidTouched)Q("#ms-paid").value=(saleType==="walk"&&t.total)?t.total:"";
+      const paid=num(Q("#ms-paid").value);
+      Q("#ms-sub").textContent=money(t.sub);Q("#ms-total").textContent=money(t.total);Q("#pos-foot-total").textContent=money(t.total);
+      Q("#ms-change").textContent=money(Math.max(0,paid-t.total));Q("#ms-due").textContent=money(Math.max(0,t.total-paid));
+      Q("#ms-status").innerHTML=!t.total?'—':paid>=t.total?'<span class="badge green">Paid</span>':paid>0?'<span class="badge amber">Partial</span>':'<span class="badge red">Unpaid</span>';
+      Q("#pos-rx").style.display=cart.some(x=>x.rx)?"":"none";
+      cart.forEach((x,i)=>{const a=Q("#pos-amt-"+i);if(a)a.textContent=money(x.qty*netP(x))});
+    };
+    const lineHTML=(x,i)=>{
+      const p=prod(x.productId),ss=Math.max(1,num(p.stripSize)||1),hasStrip=ss>1,hasBox=hasStrip||Math.max(1,num(p.boxStrips)||1)>1;
+      return '<div class="pos-line"><div class="pos-line-t"><span>'+esc(x.name)+(x.rx?' <span class="badge violet">Rx</span>':'')+'</span><button type="button" class="btn btn-danger sm" data-rm="'+i+'">×</button></div><div class="pos-line-c">'+
+        '<span class="pos-step"><button type="button" data-dec="'+i+'">−</button><input type="number" min="1" inputmode="numeric" data-q="'+i+'" value="'+x.qty+'"><button type="button" data-inc="'+i+'">+</button></span>'+
+        '<select class="inp" data-u="'+i+'" style="width:auto"><option value="tablet"'+(x.unit==="tablet"?" selected":"")+'>Unit</option>'+(hasStrip?'<option value="strip"'+(x.unit==="strip"?" selected":"")+'>Strip</option>':'')+(hasBox?'<option value="box"'+(x.unit==="box"?" selected":"")+'>Box</option>':'')+'</select>'+
+        '<input class="inp" type="number" min="0" step="0.01" data-p="'+i+'" value="'+x.price+'" style="width:84px" title="Price">'+
+        '<input class="inp" type="number" min="0" max="100" data-d="'+i+'" value="'+(x.disc?x.disc:"")+'" placeholder="Disc %" style="width:70px" title="Discount %"><span style="font-size:12px;color:#64748b">%</span>'+
+        '<b id="pos-amt-'+i+'" style="margin-left:auto">'+money(x.qty*netP(x))+'</b></div></div>';
+    };
+    let drawing=false;
+    const drawCart=()=>{
+      drawing=true;
+      Q("#pos-cart").innerHTML=cart.length?cart.map(lineHTML).join(""):'<div class="hint" style="text-align:center;padding:18px 0">Koi item nahi — left se medicine chunein ya barcode scan karein</div>';
+      drawing=false;updateTotals();
+    };
+    const addProduct=pid=>{
+      const p=prod(pid);if(!p)return;if(num(p.stock)<=0){toast("Stock khatam hai","error");return}
+      const line=cart.find(x=>x.productId===pid&&x.unit==="tablet");
+      if(line){if(!setQty(line,line.qty+1))return}
+      else{if(usedBase(pid)+1>num(p.stock)){toast("Itna stock maujood nahi","error");return}cart.push({productId:pid,name:p.name,rx:!!p.rx,qty:1,unit:"tablet",price:num(p.salePrice),disc:0})}
       drawCart();
     };
-    ["ms-discount","ms-paid"].forEach(id=>ov.querySelector("#"+id).oninput=drawCart);
-    ov.querySelector("[data-close]").onclick=()=>ov.remove();drawCart();
-    ov.querySelector("#ms-save").onclick=async()=>{
-      const name=ov.querySelector("#ms-name").value.trim(),mobile=ov.querySelector("#ms-mobile").value.trim();
-      if(!name||!cart.length){toast("Customer name and at least one medicine are required","error");return}
-      for(const item of cart){const p=products.find(x=>x.id===item.productId);if(!p||num(p.stock)<(item.baseQty||item.qty)){toast("Stock changed; refresh and try again","error");return}}
-      const subtotal=cart.reduce((a,x)=>a+x.qty*x.price,0),discount=Math.min(subtotal,num(ov.querySelector("#ms-discount").value)),total=subtotal-discount,paid=Math.min(total,num(ov.querySelector("#ms-paid").value));
-      let customer=customers.find(x=>mobile&&x.mobile===mobile);
-      if(!customer){customer={id:id("cust"),kind:"customer",name,mobile,address:ov.querySelector("#ms-address").value.trim(),createdAt:new Date().toISOString()}}
-      else customer=Object.assign({},customer,{name,address:ov.querySelector("#ms-address").value.trim(),updatedAt:new Date().toISOString()});
-      const bill={id:id("sale"),kind:"sale",billNo:"MS-"+today().replace(/-/g,"")+"-"+String(sales.length+1).padStart(4,"0"),date:today(),time:timeNow(),customerId:customer.id,customerName:name,mobile,address:ov.querySelector("#ms-address").value.trim(),method:ov.querySelector("#ms-method").value,items:cart.map(x=>({...x,cost:num(products.find(p=>p.id===x.productId)?.purchasePrice),baseQty:x.baseQty||x.qty})),subtotal,discount,total,paid,due:Math.max(0,total-paid),createdAt:new Date().toISOString(),createdBy:app.user.username};
-      await qPut("inventory",customer);
-      for(const item of cart){const p=products.find(x=>x.id===item.productId);await qPut("inventory",Object.assign({},p,{stock:num(p.stock)-(item.baseQty||item.qty),updatedAt:new Date().toISOString()}))}
-      await qPut("inventory",bill);await audit(app.user.username,"CREATE","inventory",bill.id,"Medical sale "+bill.billNo+" total "+total);
-      ov.remove();await pageMedicalStore();printSale(bill);toast("Medical bill saved; customer and sale record stored");
+    const drawGrid=()=>{
+      const q=Q("#pos-q").value.trim().toLowerCase(),cat=Q("#pos-cat").value;
+      shown=products.filter(p=>(!cat||p.category===cat)&&(!q||((p.name||"")+" "+(p.generic||"")+" "+(p.company||"")+" "+(p.batch||"")+" "+(p.barcode||"")).toLowerCase().includes(q)));
+      shown.sort((a,b)=>((num(b.stock)>0)-(num(a.stock)>0))||String(a.name).localeCompare(String(b.name)));
+      Q("#pos-count").textContent=shown.length+" medicine"+(shown.length===1?"":"s")+(shown.length>60?" (pehle 60 — search se chhota karein)":"");
+      Q("#pos-grid").innerHTML=shown.slice(0,60).map(p=>{
+        const st=num(p.stock),low=st<=num(p.reorderLevel||5),ss=Math.max(1,num(p.stripSize)||1);
+        return '<div class="pos-card'+(st<=0?" out":"")+'" data-add="'+esc(p.id)+'"><b>'+esc(p.name)+'</b>'+(p.rx?'<span class="badge violet" style="width:max-content">Rx</span>':'')+
+          '<span class="g">'+esc(p.generic||p.category||"")+'</span>'+(p.rack?'<span class="g">📍 '+esc(p.rack)+'</span>':'')+
+          '<span class="pr">'+money(p.salePrice)+'<span class="g"> /unit</span></span>'+(ss>1?'<span class="g">Strip: '+money(num(p.salePrice)*ss)+'</span>':'')+
+          '<span class="stk badge '+(st<=0?"red":low?"amber":"green")+'">'+fmtMoney(st)+' in stock</span><button type="button" class="add" tabindex="-1">+</button></div>';
+      }).join("")||'<div class="hint" style="grid-column:1/-1;text-align:center;padding:20px">Koi medicine nahi mili</div>';
     };
+    const refreshHeldBtn=()=>{Q("#pos-held").textContent="⏸ Held ("+getHeld().length+")"};
+    /* ---- search ---- */
+    Q("#pos-q").oninput=drawGrid;Q("#pos-cat").onchange=drawGrid;
+    Q("#pos-q").onkeydown=e=>{
+      if(e.key!=="Enter")return;e.preventDefault();
+      const v=Q("#pos-q").value.trim();if(!v)return;const digits=v.replace(/\D/g,"");
+      const exact=digits.length>=8?products.find(p=>p.barcode&&String(p.barcode).replace(/\D/g,"")===digits):null;
+      const hit=exact||(shown.length===1?shown[0]:null);
+      if(hit){addProduct(hit.id);Q("#pos-q").value="";drawGrid()}
+      else toast(shown.length?"Kai medicine milin — card par click karein":"Medicine nahi mili","error");
+    };
+    Q("#pos-grid").onclick=e=>{const c=e.target.closest("[data-add]");if(c)addProduct(c.dataset.add)};
+    /* ---- cart ---- */
+    const cartEl=Q("#pos-cart");
+    cartEl.onclick=e=>{
+      const t=e.target.closest("button");if(!t)return;
+      if(t.dataset.rm!==undefined){cart.splice(+t.dataset.rm,1);drawCart()}
+      else if(t.dataset.dec!==undefined){const l=cart[+t.dataset.dec];if(l.qty>1){l.qty--;drawCart()}}
+      else if(t.dataset.inc!==undefined){const l=cart[+t.dataset.inc];if(setQty(l,l.qty+1))drawCart()}
+    };
+    cartEl.oninput=e=>{
+      if(drawing)return;const t=e.target;
+      if(t.dataset.q!==undefined)cart[+t.dataset.q].qty=Math.max(1,Math.floor(num(t.value))||1);
+      else if(t.dataset.p!==undefined)cart[+t.dataset.p].price=num(t.value);
+      else if(t.dataset.d!==undefined)cart[+t.dataset.d].disc=Math.min(100,Math.max(0,num(t.value)));
+      else return;
+      updateTotals();
+    };
+    cartEl.onchange=e=>{
+      if(drawing)return;const t=e.target;
+      if(t.dataset.q!==undefined){const l=cart[+t.dataset.q];setQty(l,l.qty);drawCart()}
+      else if(t.dataset.u!==undefined){const l=cart[+t.dataset.u],p=prod(l.productId);l.unit=t.value;l.price=num(p.salePrice)*unitFactor(p,l.unit);setQty(l,l.qty);drawCart()}
+    };
+    /* ---- customer / payment ---- */
+    ov.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{
+      saleType=b.dataset.st;ov.querySelectorAll("[data-st]").forEach(x=>x.classList.toggle("on",x===b));
+      Q("#ms-method").value=saleType==="credit"?"Credit / Due":"Cash";paidTouched=false;updateTotals();
+    });
+    Q("#ms-mobile").oninput=()=>{
+      const m=Q("#ms-mobile").value.trim(),c=customers.find(x=>m&&x.mobile===m),hint=Q("#ms-customer-history");
+      if(c){Q("#ms-name").value=c.name;Q("#ms-address").value=c.address||"";
+        const old=sales.filter(x=>x.customerId===c.id),due=old.reduce((a,x)=>a+Math.max(0,num(x.total)-num(x.paid)),0);
+        hint.innerHTML="Existing customer — "+old.length+" bills"+(due>0?' · <b style="color:#b45309">Purani baqaya: '+money(due)+'</b>':'')+' <button type="button" id="ms-show-history" class="btn btn-outline sm">History</button>';
+        Q("#ms-show-history").onclick=()=>customerHistory(c);
+      }else hint.textContent="";
+    };
+    Q("#ms-discount").oninput=updateTotals;
+    Q("#ms-paid").oninput=()=>{paidTouched=true;updateTotals()};
+    ov.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>{
+      Q("#ms-paid").value=b.dataset.quick==="exact"?calc().total:num(b.dataset.quick);paidTouched=true;updateTotals();
+    });
+    /* ---- hold / clear ---- */
+    const snap=()=>({cart:JSON.parse(JSON.stringify(cart)),saleType,f:{name:Q("#ms-name").value,mobile:Q("#ms-mobile").value,address:Q("#ms-address").value,doctor:Q("#ms-doctor").value,rxNo:Q("#ms-rxno").value,method:Q("#ms-method").value,discount:Q("#ms-discount").value,paid:Q("#ms-paid").value,paidTouched}});
+    const load=s=>{
+      cart=s.cart||[];saleType=s.saleType||"walk";const f=s.f||{};paidTouched=!!f.paidTouched;
+      ov.querySelectorAll("[data-st]").forEach(x=>x.classList.toggle("on",x.dataset.st===saleType));
+      Q("#ms-name").value=f.name||"";Q("#ms-mobile").value=f.mobile||"";Q("#ms-address").value=f.address||"";Q("#ms-doctor").value=f.doctor||"";Q("#ms-rxno").value=f.rxNo||"";Q("#ms-method").value=f.method||"Cash";Q("#ms-discount").value=f.discount||0;
+      drawCart();if(f.paid!==undefined&&paidTouched)Q("#ms-paid").value=f.paid;updateTotals();
+    };
+    const clearAll=()=>{load({cart:[],saleType:"walk",f:{}});Q("#ms-method").value="Cash"};
+    Q("#pos-clear").onclick=async()=>{if(!cart.length)return;if(await confirmBox({title:"Clear bill",message:"Current bill ke saare items hata dein?",confirmText:"CLEAR"}))clearAll()};
+    Q("#pos-hold").onclick=()=>{
+      if(!cart.length){toast("Hold karne ke liye pehle items add karein","error");return}
+      const s=snap(),t=calc(),h=getHeld();
+      h.push({id:id("hold"),at:Date.now(),label:(s.f.name||"Walk-in")+" · "+cart.length+" items · "+money(t.total),state:s});setHeld(h);
+      clearAll();refreshHeldBtn();toast("Bill hold ho gaya — Held se wapas khol sakte hain","info");
+    };
+    Q("#pos-held").onclick=()=>{
+      const h=getHeld();
+      const o2=openModal("⏸ Held Bills",h.length?h.map(x=>'<div class="pos-line"><div class="pos-line-t"><span>'+esc(x.label)+'</span></div><div class="pos-line-c"><span class="hint">'+new Date(x.at).toLocaleString()+'</span><span style="margin-left:auto;display:flex;gap:6px"><button type="button" class="btn btn-success sm" data-res="'+esc(x.id)+'">Resume</button><button type="button" class="btn btn-danger sm" data-hdel="'+esc(x.id)+'">Delete</button></span></div></div>').join(""):'<p class="hint">Koi held bill nahi.</p>',"",false);
+      o2.querySelectorAll("[data-res]").forEach(b=>b.onclick=()=>{
+        if(cart.length){toast("Pehle current bill hold ya clear karein","error");return}
+        const all=getHeld(),x=all.find(v=>v.id===b.dataset.res);if(!x)return;
+        setHeld(all.filter(v=>v.id!==x.id));load(x.state);refreshHeldBtn();o2.remove();
+      });
+      o2.querySelectorAll("[data-hdel]").forEach(b=>b.onclick=()=>{setHeld(getHeld().filter(v=>v.id!==b.dataset.hdel));refreshHeldBtn();o2.remove()});
+    };
+    /* ---- save ---- */
+    let saving=false;
+    const save=async()=>{
+      if(saving)return;
+      if(!cart.length){toast("Bill mein kam az kam ek medicine add karein","error");return}
+      for(const x of cart){const p=prod(x.productId);if(!p||usedBase(x.productId)>num(p.stock)){toast("Stock badal gaya — dobara check karein","error");return}}
+      const t=calc(),subtotal=t.sub,discount=t.disc,total=t.total,paid=Math.min(total,num(Q("#ms-paid").value)),due=Math.max(0,r2(total-paid));
+      const nameRaw=Q("#ms-name").value.trim(),mobile=Q("#ms-mobile").value.trim(),address=Q("#ms-address").value.trim();
+      if((saleType==="credit"||due>0)&&(!nameRaw||!mobile)){toast("Udhaar / baqaya ke liye customer ka naam aur mobile zaroori hai","error");return}
+      const doctor=Q("#ms-doctor").value.trim(),rxNo=Q("#ms-rxno").value.trim();
+      if(cart.some(x=>x.rx)&&!doctor){
+        if(!await confirmBox({title:"Prescription (Rx)",message:"Is bill mein Rx wali dawai hai lekin doctor ka naam nahi likha. Phir bhi save karein?",confirmText:"SAVE ANYWAY"}))return;
+      }
+      saving=true;Q("#ms-save").disabled=true;
+      try{
+        const name=nameRaw||"Walk-in Customer";let customer=null;
+        if(nameRaw||mobile){
+          customer=customers.find(x=>mobile&&x.mobile===mobile);
+          if(!customer)customer={id:id("cust"),kind:"customer",name,mobile,address,createdAt:new Date().toISOString()};
+          else customer=Object.assign({},customer,{name,address,updatedAt:new Date().toISOString()});
+        }
+        const bill={id:id("sale"),kind:"sale",billNo:"MS-"+today().replace(/-/g,"")+"-"+String(sales.length+1).padStart(4,"0"),date:today(),time:timeNow(),customerId:customer?customer.id:"",customerName:name,mobile,address,method:Q("#ms-method").value,saleType,doctor,rxNo,
+          items:cart.map(x=>{const p=prod(x.productId);return{productId:x.productId,name:x.name,qty:x.qty,unit:x.unit,baseQty:x.qty*unitFactor(p,x.unit),price:netP(x),listPrice:num(x.price),discPct:num(x.disc),rx:!!x.rx,cost:num(p.purchasePrice)}}),
+          subtotal,discount,total,paid,due,createdAt:new Date().toISOString(),createdBy:app.user.username};
+        if(customer)await qPut("inventory",customer);
+        const used={};bill.items.forEach(i=>{used[i.productId]=(used[i.productId]||0)+i.baseQty});
+        for(const pid of Object.keys(used)){const p=prod(pid);await qPut("inventory",Object.assign({},p,{stock:num(p.stock)-used[pid],updatedAt:new Date().toISOString()}))}
+        await qPut("inventory",bill);await audit(app.user.username,"CREATE","inventory",bill.id,"Medical sale "+bill.billNo+" total "+total);
+        ov.remove();await pageMedicalStore();printSale(bill);toast("Medical bill saved; sale record stored");
+      }catch(e){saving=false;Q("#ms-save").disabled=false;toast("Bill save nahi hua: "+(e.message||e),"error")}
+    };
+    Q("#ms-save").onclick=save;
+    ov.addEventListener("keydown",e=>{if(e.key==="F9"){e.preventDefault();save()}});
+    Q("[data-close]").onclick=()=>ov.remove();
+    drawGrid();drawCart();refreshHeldBtn();
+    setTimeout(()=>{try{Q("#pos-q").focus()}catch(e){}},50);
   };
   const printSale=(s)=>{
     const receiptWidth=app.settings.printSize==="58"?"54mm":"74mm";
     const rows=s.items.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+' '+esc(x.unit||'unit')+'</td><td>'+fmtMoney(x.price)+'</td><td>'+fmtMoney(x.qty*x.price)+'</td></tr>').join("");
-    printHTML('<style>@page{size:'+((app.settings.printSize==="58")?"58mm":"80mm")+' auto;margin:2mm}html,body{margin:0;padding:0;width:'+receiptWidth+';font-family:Arial,sans-serif}*{box-sizing:border-box}table{table-layout:fixed;font-size:10px}th,td{overflow-wrap:anywhere;padding:3px!important}h2{font-size:14px}p{font-size:10px;margin:5px 0}</style><div style="font-family:Arial,sans-serif;color:#111;width:'+receiptWidth+';max-width:'+receiptWidth+';margin:0 auto"><h2 style="text-align:center">'+esc(app.settings.msName||storeTitle(app.settings.clinicName))+'</h2><p style="text-align:center">'+esc(app.settings.msAddress||app.settings.address||"")+' '+esc(app.settings.msPhone||app.settings.phone||"")+'</p><hr><h3>Sales Receipt</h3><p>Bill: '+esc(s.billNo)+' | Date: '+fmtDate(s.date)+' '+esc(s.time)+'</p><p>Customer: '+esc(s.customerName)+' | Mobile: '+esc(s.mobile||"")+'</p><table style="width:100%;border-collapse:collapse" border="1" cellpadding="7"><thead><tr><th>Medicine</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table><p style="text-align:right">Subtotal: '+money(s.subtotal)+'<br>Discount: '+money(s.discount)+'<br><b>Total: '+money(s.total)+'</b><br>Paid: '+money(s.paid)+'<br>Due: '+money(s.due)+'</p><p>Payment: '+esc(s.method)+'</p><p style="text-align:center;margin-top:25px">'+esc(app.settings.msFooter||app.settings.footerText||"Thank you")+'</p><p style="text-align:center;font-size:9px;margin-top:8px;line-height:1.5;word-break:break-all">'+devFooterHTML(app.settings)+'</p></div>',app.settings.printSize||"80");
+    printHTML('<style>@page{size:'+((app.settings.printSize==="58")?"58mm":"80mm")+' auto;margin:2mm}html,body{margin:0;padding:0;width:'+receiptWidth+';font-family:Arial,sans-serif}*{box-sizing:border-box}table{table-layout:fixed;font-size:10px}th,td{overflow-wrap:anywhere;padding:3px!important}h2{font-size:14px}p{font-size:10px;margin:5px 0}</style><div style="font-family:Arial,sans-serif;color:#111;width:'+receiptWidth+';max-width:'+receiptWidth+';margin:0 auto"><h2 style="text-align:center">'+esc(app.settings.msName||storeTitle(app.settings.clinicName))+'</h2><p style="text-align:center">'+esc(app.settings.msAddress||app.settings.address||"")+' '+esc(app.settings.msPhone||app.settings.phone||"")+'</p><hr><h3>Sales Receipt</h3><p>Bill: '+esc(s.billNo)+' | Date: '+fmtDate(s.date)+' '+esc(s.time)+'</p><p>Customer: '+esc(s.customerName)+' | Mobile: '+esc(s.mobile||"")+'</p><table style="width:100%;border-collapse:collapse" border="1" cellpadding="7"><thead><tr><th>Medicine</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table><p style="text-align:right">Subtotal: '+money(s.subtotal)+'<br>Discount: '+money(s.discount)+'<br><b>Total: '+money(s.total)+'</b><br>Paid: '+money(s.paid)+'<br>Due: '+money(s.due)+'</p>'+(s.doctor?'<p>Doctor: '+esc(s.doctor)+(s.rxNo?' | Rx: '+esc(s.rxNo):'')+'</p>':'')+'<p>Payment: '+esc(s.method)+'</p><p style="text-align:center;margin-top:25px">'+esc(app.settings.msFooter||app.settings.footerText||"Thank you")+'</p><p style="text-align:center;font-size:9px;margin-top:8px;line-height:1.5;word-break:break-all">'+devFooterHTML(app.settings)+'</p></div>',app.settings.printSize||"80");
   };
   await records();shell();
 }
@@ -2781,7 +3006,7 @@ boot();
   if(ios)b.classList.add("show");
   b.onclick=function(){
     if(dp){dp.prompt();dp.userChoice.finally(function(){dp=null;b.classList.remove("show")});return}
-    hint.innerHTML=ios?"iPhone par install: Safari mein neeche <b>Share</b> (⬆️) dabayein → <b>Add to Home Screen</b> chunein.":"Browser menu (⋮) mein <b>Install app</b> ya <b>Add to Home screen</b> chunein.";
+    hint.innerHTML=ios?"iPhone par install: <b>Share</b> (⬆️) dabayein → <b>Add to Home Screen</b> chunein.":"Browser menu (⋮) mein <b>Install app</b> ya <b>Add to Home screen</b> chunein.";
     hint.style.display="block";setTimeout(function(){hint.style.display="none"},7000)};
 })();</script>
 <script>if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("/sw.js").catch(function(){});</script>
