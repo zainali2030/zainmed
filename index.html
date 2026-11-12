@@ -279,11 +279,24 @@ footer.app-foot{font-size:10px;padding:10px}
 .ag-typing span:nth-child(2){animation-delay:.15s}.ag-typing span:nth-child(3){animation-delay:.3s}
 @keyframes agb{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
 @media print{
-html,body{background:#fff!important;margin:0!important;padding:0!important}
-#root{display:none!important}
-#print-root{display:block!important;color:#000;width:100%}
-#print-root table{page-break-inside:auto}
-#print-root tr{page-break-inside:avoid}
+  /* Hide the complete application, including modals appended directly to BODY. */
+  html,body{background:#fff!important;margin:0!important;padding:0!important;width:100%!important;height:auto!important;overflow:visible!important}
+  body *{visibility:hidden!important}
+  #root{display:none!important;visibility:hidden!important}
+  /* The print canvas is the only visible content on paper/PDF. */
+  #print-root,
+  #print-root *{visibility:visible!important}
+  #print-root{
+    display:block!important;position:absolute!important;top:0!important;left:0!important;
+    right:auto!important;width:100%!important;max-width:100%!important;min-height:0!important;
+    margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;
+    background:#fff!important;color:#000!important;overflow:visible!important;
+    -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;
+  }
+  #print-root table{page-break-inside:auto;border-collapse:collapse;max-width:100%}
+  #print-root tr{page-break-inside:avoid;break-inside:avoid}
+  #print-root img{max-width:100%!important}
+  #print-root button,#print-root .no-print{display:none!important}
 }
 
 /* Medical Store — scoped frosted-glass interface */
