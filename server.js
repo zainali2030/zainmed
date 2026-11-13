@@ -39,7 +39,7 @@ const TZ          = pick("CLINIC_TZ", "timezone", "Asia/Karachi");
 const DEV_CONTACT = "Zain Ali — 03702906075";
 
 const STORES = ["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters",
-                "appointments","leads","inventory","staff","usreports"];
+                "appointments","leads","inventory","staff","usreports","labreports"];
 const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports",
                    "appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const DEFAULT_CLINIC = "abraj";

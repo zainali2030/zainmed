@@ -478,11 +478,12 @@ fetch() API calls ke zariye. Saara design/features wohi hain.
 ============================================================ */
 "use strict";
 /* ================= CONSTANTS ================= */
-const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff","usreports"];
+const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff","usreports","labreports"];
 let CLINIC=(function(){try{return localStorage.getItem("mcms_clinic")||""}catch(e){return ""}})();let CLINIC_INFO=null;
 const ADMIN_ID="usr_faheem_admin",ADMIN_USER="Faheem",ADMIN_PASS="Faheem786";
 const ALL_PERMS=["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const MEDICAL_STORE_PERMS=["inventory"];
+const LAB_PERMS=["lab"];
 const RECEPTION_PERMS=["dashboard","newvisit","patients","emr","billing","lab","ultrasound","injection"];
 const DOCTOR_PERMS=["dashboard","patients","emr","reports"];
 const NAV=[
@@ -758,19 +759,20 @@ if(OB.length&&netOK()){await flushOutbox();return}
 if(!OB.length&&NET.state==="off"&&navigator.onLine!==false&&Date.now()>=NET.offlineUntil-1){try{await api("GET","/api/ping",undefined,{force:true,timeout:5000});setNetState()}catch(e){}}
 else setNetState()},15000);
 /* ================= APP STATE ================= */
-const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],usreports:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
+const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],usreports:[],labreports:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
 async function audit(user,action,entity,entityId,details){
 await qPut("audit",{id:id("log"),ts:new Date().toISOString(),user:user,action:action,entity:entity,entityId:entityId,details:details||""});
 }
 async function loadData(){
-const [p,v,d,t,pay,ex,u,au,s,usr]=await Promise.all([
+const [p,v,d,t,pay,ex,u,au,s,usr,lbr]=await Promise.all([
 qGetAll("patients"),qGetAll("visits"),qGetAll("doctors"),qGetAll("tests"),qGetAll("payments"),
-qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app"),usGetAll().catch(e=>{console.error("usreports",e);return app.usreports||[]})]);
+qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app"),usGetAll().catch(e=>{console.error("usreports",e);return app.usreports||[]}),lbGetAll().catch(e=>{console.error("labreports",e);return app.labreports||[]})]);
 app.patients=p.sort((a,b)=>a.patientId<b.patientId?1:-1);
 app.visits=v.sort((a,b)=>a.createdAt<b.createdAt?1:-1);
 app.doctors=d.sort((a,b)=>a.name.localeCompare(b.name));
 app.tests=t.sort((a,b)=>a.name.localeCompare(b.name));
 app.usreports=(usr||[]).sort((a,b)=>(a.createdAt||"")<(b.createdAt||"")?1:-1);
+app.labreports=(lbr||[]).sort((a,b)=>(a.createdAt||"")<(b.createdAt||"")?1:-1);
 app.payments=pay;app.expenses=ex.sort((a,b)=>a.date<b.date?1:-1);
 app.users=u;app.audit=au.sort((a,b)=>a.ts<b.ts?1:-1).slice(0,600);
 app.settings=Object.assign({},DEFAULT_SETTINGS,s||{});
@@ -795,7 +797,7 @@ localStorage.setItem(fk,"1")}}catch(e){console.error(e)}
 async function saveRecord(store,obj){await qPut(store,obj);await loadData()}
 async function removeRecord(store,key){await qDel(store,key);await loadData()}
 async function saveSettingsObj(obj){await qPut("settings",Object.assign({},obj,{key:"app"}));app.settings=Object.assign({},DEFAULT_SETTINGS,obj,{key:"app"})}
-function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users"||perm==="settings")return false;if(app.user.role==="medicalstore")return perm==="inventory";if(app.user.role==="admin")return true;return (app.user.permissions||[]).indexOf(perm)>=0}
+function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users"||perm==="settings")return false;if(app.user.role==="medicalstore")return perm==="inventory";if(app.user.role==="lab")return perm==="lab";if(app.user.role==="admin")return true;return (app.user.permissions||[]).indexOf(perm)>=0}
 function backupDue(){const s=app.settings;if(!s.backupReminderDays)return false;
 if(!s.lastBackupAt)return app.visits.length>0;
 return daysBetween(s.lastBackupAt.slice(0,10),today())>=s.backupReminderDays}
@@ -876,8 +878,8 @@ const tr=cells=>'<tr>'+cells+'</tr>';
 const line=(l,val,sz,big)=>'<div style="display:flex;justify-content:space-between;gap:8px;font-size:'+(sz||p)+';font-weight:'+(big?900:800)+';padding:1px 0;line-height:1.25"><span>'+esc(l)+'</span><span>'+esc(val)+'</span></div>';
 const age=(v.age+" "+(v.ageUnit||"")).trim();
 const items=(v.items||[]).map(it=>'<tr><td style="font-size:'+p+';font-weight:800;padding:2px 0;word-break:break-word">'+esc(it.description)+(it.qty>1?" x"+it.qty:"")+'</td>'+(A4?'<td style="font-size:'+p+';font-weight:800;text-align:right;padding:2px 0">'+fmtMoney(it.rate)+'</td>':'')+'<td style="font-size:'+p+';font-weight:900;text-align:right;padding:2px 0 2px 6px;white-space:nowrap">'+fmtMoney(it.amount)+'</td></tr>').join("");
-const logoH=A4?64:size==="58"?36:42;
-const logo=s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="display:block;margin:0 auto 2px;max-height:'+logoH+'px;max-width:70%;object-fit:contain"/></div>':'<div style="text-align:center;line-height:0;margin-bottom:2px">'+shieldSVG(logoH-6)+'</div>';
+const logoH=Math.max(20,Number(s.logoSize)||56);
+const logo=s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="display:block;margin:0 auto 2px;height:'+logoH+'px;width:auto;max-width:100%;object-fit:contain"/></div>':'<div style="text-align:center;line-height:0;margin-bottom:2px">'+shieldSVG(logoH)+'</div>';
 const tokenNo=v.token>0?v.token:"-";
 return '<div style="width:'+width+';margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-weight:700;color:#000;padding:'+(A4?"10px 0":"0")+'">'+(A4?'<div style="border:2px solid #000;padding:12px">':"")+
 logo+
@@ -928,8 +930,8 @@ const rows=labItems.map(it=>'<tr><td style="font-size:'+p+';font-weight:800;padd
 const docMob=slipDocMobile(v);
 const tokenNo=v.token>0?v.token:"-";
 const paid=(Number(v.due)||0)<=0;
-const logoH=A4?56:size==="58"?30:36;
-const logo=s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="display:block;margin:0 auto 2px;max-height:'+logoH+'px;max-width:70%;object-fit:contain"/></div>':'<div style="text-align:center;line-height:0;margin-bottom:2px">'+shieldSVG(logoH-6)+'</div>';
+const logoH=Math.max(20,Number(s.logoSize)||56);
+const logo=s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="display:block;margin:0 auto 2px;height:'+logoH+'px;width:auto;max-width:100%;object-fit:contain"/></div>':'<div style="text-align:center;line-height:0;margin-bottom:2px">'+shieldSVG(logoH)+'</div>';
 return '<div style="width:'+width+';margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-weight:700;color:#000;padding:'+(A4?"10px 0":"0")+'">'+(A4?'<div style="border:2px solid #000;padding:12px">':"")+
 logo+
 '<div style="text-align:center;font-weight:900;font-size:'+(A4?"20px":size==="58"?"14px":"16px")+';line-height:1.15">'+esc(s.clinicName)+'</div>'+
@@ -1009,7 +1011,7 @@ mount('<div class="login-wrap"><div class="login-card">'+
 '<div class="login-right"><div style="margin-bottom:20px" class="mob-brand"><h1 class="lg-cname" style="font-size:20px;font-weight:800">'+esc(cname)+"</h1>"+
 '<p class="lg-caddr" style="font-size:11px;color:var(--slate-500)">'+esc(caddr)+"</p></div>"+
 '<h2 style="font-size:24px;font-weight:800">'+loginTitle+'</h2><p style="font-size:13px;color:var(--slate-500);margin:6px 0 20px">Sign in with your username and password.</p>'+
-'<form id="login-form">'+clinicField+'<div class="field"><label>Login As</label><select class="inp" id="lg-role"><option value="admin">Admin</option><option value="reception">Receptionist</option><option value="doctor">Doctor</option><option value="medicalstore">Medical Store</option></select></div><div class="field"><label>Username <span class="req">*</span></label><input class="inp" id="lg-user" required autocomplete="username"></div>'+
+'<form id="login-form">'+clinicField+'<div class="field"><label>Login As</label><select class="inp" id="lg-role"><option value="admin">Admin</option><option value="reception">Receptionist</option><option value="doctor">Doctor</option><option value="medicalstore">Medical Store</option><option value="lab">Lab</option></select></div><div class="field"><label>Username <span class="req">*</span></label><input class="inp" id="lg-user" required autocomplete="username"></div>'+
 '<div class="field"><label>Password <span class="req">*</span></label><input class="inp" type="password" id="lg-pass" placeholder="••••••••" required></div>'+
 '<div id="lg-err" style="display:none;background:var(--red-bg);border:1px solid var(--red-bd);color:#9f1239;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;margin-bottom:12px"></div>'+
 '<button class="btn btn-primary lg block" id="lg-btn">SIGN IN</button></form>'+
@@ -1097,6 +1099,7 @@ $("#bk-now").onclick=()=>go("backup");
 function go(route){
 if(route==="medicalstore")route="ms_dashboard";
 if(app.user&&app.user.role==="medicalstore"&&String(route).indexOf("ms_")!==0)route="ms_dashboard";
+if(app.user&&app.user.role==="lab")route="lab";
 app.route=route;
 if(!can((NAV.find(n=>n.key===route)||{}).perm||"dashboard")&&route!=="dashboard"){route="dashboard";app.route=route}
 renderShell();
@@ -1473,10 +1476,10 @@ $("#emr-body").innerHTML=!p?
 '<td><div style="display:flex;flex-direction:column;gap:4px"><button class="btn btn-outline sm" data-slip2="'+v.id+'">SLIP</button><button class="btn btn-neutral sm" data-notes="'+v.id+'">NOTES</button></div></td></tr>').join(""):
 '<tr class="empty-row"><td colspan="9">No visits found</td></tr>')+
 "</tbody></table></div></div></div>"+
-usPatientCard(pid)+'<div id="emr-notes-slot"></div></div></div>';
+usPatientCard(pid)+lbPatientCard(pid)+'<div id="emr-notes-slot"></div></div></div>';
 $$("[data-slip2]").forEach(b=>b.onclick=()=>{const v=app.visits.find(x=>x.id===b.dataset.slip2);if(v)printSlip(v)});
 $$("[data-notes]").forEach(b=>b.onclick=()=>{const v=app.visits.find(x=>x.id===b.dataset.notes);openNotes(v)});
-{const _eb=$("#emr-body");if(_eb&&p)usBind(_eb,()=>draw())}
+{const _eb=$("#emr-body");if(_eb&&p){usBind(_eb,()=>draw());lbBind(_eb,()=>draw())}}
 const pr=$("#emr-print"),cv=$("#emr-csv");
 if(pr)pr.onclick=()=>printReport({title:"Patient History / EMR Report",
 subtitle:padMr(p.patientId)+" — "+p.name+" • "+p.age+" "+p.ageUnit+" • "+p.gender+" • "+p.mobile,
@@ -1598,7 +1601,7 @@ await loadData();toast(d.id?"Doctor updated":"Doctor added successfully");ov.rem
 LAB / ULTRASOUND MODULE
 ============================================================ */
 function pageTestModule(type){
-const s=app.settings;const isUS=type==="ultrasound";const isINJ=type==="injection";
+const s=app.settings;const isUS=type==="ultrasound";const isINJ=type==="injection";const isLAB=type==="lab";
 let from=today(),to=today();
 const drawList=()=>{
 const q=$("#tm-q").value.trim().toLowerCase();
@@ -1606,10 +1609,11 @@ const list=app.tests.filter(t=>t.type===type&&(!q||t.name.toLowerCase().includes
 $("#tm-rows").innerHTML=list.length?list.map(t=>
 '<tr><td style="font-weight:600">'+esc(t.name)+'</td><td style="font-size:12px">'+esc(t.category)+'</td><td style="font-weight:700;color:#047857;white-space:nowrap">'+s.currency+" "+fmtMoney(t.price)+"</td>"+
 '<td><span class="badge '+(t.active?"green":"slate")+'">'+(t.active?"Active":"Inactive")+"</span></td>"+
-'<td><div class="flex g8"><button class="btn btn-neutral sm" data-edit="'+t.id+'">✏️</button><button class="btn '+(t.active?"btn-warn":"btn-success")+' sm" data-tog="'+t.id+'">'+(t.active?"OFF":"ON")+"</button>"+
+'<td><div class="flex g8"><button class="btn btn-neutral sm" data-edit="'+t.id+'">✏️</button>'+(type==="lab"?'<button class="btn btn-outline sm" data-fmt="'+t.id+'" title="Report format / Normal ranges">📋</button>':"")+'<button class="btn '+(t.active?"btn-warn":"btn-success")+' sm" data-tog="'+t.id+'">'+(t.active?"OFF":"ON")+"</button>"+
 (can("delete")?'<button class="btn btn-danger sm" data-del="'+t.id+'">🗑</button>':"")+"</div></td></tr>").join(""):
 '<tr class="empty-row"><td colspan="5">No tests</td></tr>';
 $$("[data-edit]").forEach(b=>b.onclick=()=>testModal(app.tests.find(x=>x.id===b.dataset.edit),type));
+$$("[data-fmt]").forEach(b=>b.onclick=()=>lbFormatModal(app.tests.find(x=>x.id===b.dataset.fmt),()=>drawList()));
 $$("[data-tog]").forEach(b=>b.onclick=async()=>{const t=app.tests.find(x=>x.id===b.dataset.tog);await qPut("tests",Object.assign({},t,{active:!t.active}));await loadData();drawList()});
 $$("[data-del]").forEach(b=>b.onclick=async()=>{const t=app.tests.find(x=>x.id===b.dataset.del);
 if(!await confirmBox({title:"Delete Test",message:'Permanently delete "'+t.name+'" from the price list? Existing patient bills will not change.',danger:true,confirmText:"DELETE",requireText:"DELETE"}))return;
@@ -1626,6 +1630,9 @@ items:its.map(i=>i.description+(i.qty>1?" x"+i.qty:"")),amount:its.reduce((a,b)=
 if(isUS){(app.usreports||[]).filter(r=>!r.visitId&&inRange(r.date,from,to)).forEach(r=>rows.push({visitId:"",itemId:"",reportId:r.id,manual:true,patientId:r.patientId,name:r.patientName,token:r.token||"-",date:r.date,time:r.time||"",doctor:r.doctor,items:[r.typeName],amount:0}));
 const stf=(document.getElementById("tm-st")||{}).value||"all";
 if(stf!=="all")return rows.filter(r=>{const has=r.manual||(app.usreports||[]).some(x=>x.visitId===r.visitId&&x.itemId===r.itemId);return stf==="done"?has:!has}).sort(cmpWL)}
+if(isLAB){(app.labreports||[]).filter(r=>!r.visitId&&inRange(r.date,from,to)).forEach(r=>rows.push({visitId:"",reportId:r.id,manual:true,patientId:r.patientId,name:r.patientName,token:r.token||"-",date:r.date,time:r.time||"",doctor:r.refBy||"",items:(r.tests||[]).map(t=>t.name),amount:0}));
+const stl=(document.getElementById("tm-st")||{}).value||"all";
+if(stl!=="all")return rows.filter(r=>{const st=lbStatus(r);return stl==="done"?st==="Reported":stl==="partial"?st==="Partial":st==="Pending"}).sort(cmpWL)}
 return rows.sort(cmpWL);
 };
 const drawUSRows=rows=>{
@@ -1639,6 +1646,16 @@ return '<tr><td style="font-size:12px;white-space:nowrap">'+fmtDate(r.date)+'<di
 "<td>"+(reps.length?reps.map(x=>'<div style="margin-bottom:5px"><div style="font-size:11px;font-weight:700;color:var(--slate-600)">'+esc(x.typeName)+"</div>"+usBtns(x)+"</div>").join("")+(r.manual?"":'<button class="btn btn-outline sm" '+nb+'>➕ Another Report</button>'):'<button class="btn btn-success sm" '+nb+'>➕ New Report</button>')+"</td></tr>"}).join(""):
 '<tr class="empty-row"><td colspan="9">No patients in this period</td></tr>';
 usBind($("#tm-wrows"),()=>drawWork())};
+const drawLabRows=rows=>{
+$("#tm-wrows").innerHTML=rows.length?rows.map(r=>{
+const rep=lbRepOf(r),st=lbStatus(r);
+return '<tr><td style="font-size:12px;white-space:nowrap">'+fmtDate(r.date)+'<div style="color:var(--slate-500)">'+fmtTime(r.time)+"</div></td>"+
+'<td><span class="tok">'+esc(r.token)+'</span></td><td class="mr">'+esc(padMr(r.patientId))+'</td><td style="font-weight:600">'+esc(r.name)+'</td><td style="font-size:12px">'+esc(r.doctor||"-")+"</td>"+
+'<td style="font-size:12px">'+esc(r.items.join(", "))+'</td><td style="font-weight:700;white-space:nowrap">'+s.currency+" "+fmtMoney(r.amount)+"</td>"+
+'<td><span class="badge '+(st==="Reported"?"green":st==="Partial"?"blue":"amber")+'">'+st+"</span></td>"+
+"<td>"+(rep?lbBtns(rep):'<button class="btn btn-success sm" data-lb="new" data-v="'+esc(r.visitId)+'">➕ New Report</button>')+"</td></tr>"}).join(""):
+'<tr class="empty-row"><td colspan="9">No patients in this period</td></tr>';
+lbBind($("#tm-wrows"),()=>drawWork())};
 const drawWork=()=>{
 const rows=workList(),total=rows.reduce((a,b)=>a+b.amount,0);
 $("#tm-count").textContent=rows.length;$("#tm-amt").textContent=s.currency+" "+fmtMoney(total);
@@ -1648,6 +1665,7 @@ $("#tm-wrows").innerHTML=rows.length?rows.map(r=>
 '<td style="font-size:12px">'+esc(r.items.join(", "))+'</td><td style="font-weight:700;white-space:nowrap">'+s.currency+" "+fmtMoney(r.amount)+"</td></tr>").join(""):
 '<tr class="empty-row"><td colspan="7">No patients in this period</td></tr>';
 if(isUS)drawUSRows(rows);
+if(isLAB)drawLabRows(rows);
 };
 const listCount=app.tests.filter(t=>t.type===type).length;
 $("#page").innerHTML=
@@ -1656,17 +1674,17 @@ $("#page").innerHTML=
 '<div class="mini-stat" style="background:var(--green-bg);border-color:var(--green-bd);color:#065f46"><div class="lbl">'+(isUS?"Studies in Period":"Patients in Period")+'</div><div class="val" id="tm-count">0</div></div>'+
 '<div class="mini-stat" style="background:var(--violet-bg);border-color:#ddd6fe;color:#5b21b6"><div class="lbl">Collection in Period</div><div class="val" id="tm-amt">—</div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory Test")+' Price List</h2><div class="sub">Prices are added to the patient bill automatically when selected at the counter</div></div>'+
-'<div class="flex g8"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+(isUS?'<button class="btn btn-primary sm" id="tm-report">➕ NEW REPORT (Manual)</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
+'<div class="flex g8"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+((isUS||isLAB)?'<button class="btn btn-primary sm" id="tm-report">➕ NEW REPORT (Manual)</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
 '<div class="card-b"><input class="inp mb" id="tm-q" placeholder="🔍 Search test / category…"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tm-rows"></tbody></table></div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory")+' Work List</h2><div class="sub">Patients who have been charged for these services</div></div>'+
 '<div class="flex g8 fw"><input class="inp" type="date" id="tm-from" style="width:150px" value="'+from+'"><input class="inp" type="date" id="tm-to" style="width:150px" value="'+to+'">'+
-''+(isUS?'<select class="inp" id="tm-st" style="width:130px"><option value="all">All</option><option value="pending">Pending</option><option value="done">Reported</option></select>':"")+'<button class="btn btn-outline sm" id="tm-wcsv">⬇ CSV</button><button class="btn btn-dark sm" id="tm-print">🖨 PRINT</button></div></div>'+
-'<div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date / Time</th><th>Token</th><th>MR No</th><th>Patient</th><th>Doctor</th><th>'+(isUS?"Study":isINJ?"Injection / Drip":"Tests")+'</th><th>Amount</th>'+(isUS?'<th>Status</th><th style="min-width:270px">Report</th>':"")+'</tr></thead><tbody id="tm-wrows"></tbody></table></div></div></div>';
+''+((isUS||isLAB)?'<select class="inp" id="tm-st" style="width:130px"><option value="all">All</option><option value="pending">Pending</option>'+(isLAB?'<option value="partial">Partial</option>':"")+'<option value="done">Reported</option></select>':"")+'<button class="btn btn-outline sm" id="tm-wcsv">⬇ CSV</button><button class="btn btn-dark sm" id="tm-print">🖨 PRINT</button></div></div>'+
+'<div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date / Time</th><th>Token</th><th>MR No</th><th>Patient</th><th>Doctor</th><th>'+(isUS?"Study":isINJ?"Injection / Drip":"Tests")+'</th><th>Amount</th>'+((isUS||isLAB)?'<th>Status</th><th style="min-width:270px">Report</th>':"")+'</tr></thead><tbody id="tm-wrows"></tbody></table></div></div></div>';
 $("#tm-q").addEventListener("input",drawList);
 $("#tm-from").addEventListener("change",e=>{from=e.target.value;drawWork()});
 $("#tm-to").addEventListener("change",e=>{to=e.target.value;drawWork()});
-if(isUS)$("#tm-st").addEventListener("change",drawWork);
-$("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":isINJ?"Injection":"Haematology",type:type,price:0,active:true},type);if(isUS)$("#tm-report").onclick=ultrasoundReportModal;
+if(isUS||isLAB)$("#tm-st").addEventListener("change",drawWork);
+$("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":isINJ?"Injection":"Haematology",type:type,price:0,active:true},type);if(isUS)$("#tm-report").onclick=ultrasoundReportModal;if(isLAB)$("#tm-report").onclick=()=>lbEditor({},()=>drawWork());
 $("#tm-csv").onclick=()=>downloadCSV(type+"_price_list.csv",["Name","Category","Price","Status"],app.tests.filter(t=>t.type===type).map(t=>[t.name,t.category,t.price,t.active?"Active":"Inactive"]));
 $("#tm-wcsv").onclick=()=>downloadCSV(type+"_worklist_"+from+"_"+to+".csv",["Date","Time","Token","MR No","Patient","Doctor","Items","Amount"],workList().map(r=>[r.date,r.time,r.token,padMr(r.patientId),r.name,r.doctor,r.items.join(" | "),r.amount]));
 $("#tm-print").onclick=()=>{const rows=workList();
@@ -1769,7 +1787,7 @@ return '<div style="font-family:Arial,Helvetica,sans-serif;color:#111;font-size:
 /* ---- Thermal (58 / 80 mm) ---- */
 const w=size==="58"?"54mm":"74mm";
 const f=size==="58"?Math.min(Math.max(base*.85,9),11.5):Math.min(Math.max(base,10),13.5);
-const lg=Math.min(logo,size==="58"?44:64);
+const lg=logo;
 const hr='<div style="border-top:1px dashed #000;margin:5px 0"></div>';
 const li=(l,v)=>v?'<div style="margin:1px 0"><b>'+l+':</b> '+v+'</div>':"";
 const fnd=b.sel.map(x=>'<div style="margin-top:5px;font-weight:900;text-transform:uppercase;border-bottom:1px solid #000">'+E(x.name)+'</div>'+x.items.map(i=>'<div style="margin:2px 0 2px 6px;text-indent:-6px">- '+E(i.d?i.t+" "+i.d:i.t)+'</div>').join("")).join("");
@@ -1912,6 +1930,272 @@ findings:[{name:"GESTATION",items:[{t:"Single pregnancy.",d:""},{t:"Cardiac acti
 measurements:[{label:"BPD (cm)",value:"8.1"},{label:"FL (cm)",value:"6.2"},{label:"GA by US (weeks)",value:"33w 2d"},{label:"FHR (bpm)",value:"144"}],
 remarks:"Sample report — sirf printer / font test ke liye."}}
 
+/* ============================================================
+LAB REPORTS MODULE  (Work List • Result entry with Normal Ranges • View/Edit/Delete • A4 / Thermal print • Patient history)
+Store: "labreports" (server.js STORES mein add). Purana server.js ho to reports "settings" store mein mehfooz (compat) — Unknown store error nahi aata.
+Test ka format (parameters + normal range): test record ke andar `params` mein. Nayi test sirf naam se add karein — format khud ban jata hai.
+============================================================ */
+const LB={mode:"store"};
+/* row = [Parameter, Unit, Normal(common/male), Female(optional), Options "a|b"(optional)]; "#Heading" = section heading */
+const LB_LIB=[
+[/hba1c|glyc(o|a)?sylated|a1c/i,[["HbA1c","%","4.0 - 5.6"],["Estimated Average Glucose","mg/dL","68 - 114"]]],
+[/\bcbc\b|complete blood (count|picture)|blood complete|\bcp\b/i,[["Hemoglobin (Hb)","g/dL","13.0 - 17.0","12.0 - 15.0"],["Total Leucocyte Count (TLC)","x10³/µL","4.0 - 11.0"],["RBC Count","x10⁶/µL","4.5 - 5.5","3.8 - 4.8"],["HCT / PCV","%","40 - 50","36 - 46"],["MCV","fL","83 - 101"],["MCH","pg","27 - 32"],["MCHC","g/dL","31.5 - 34.5"],["Platelet Count","x10³/µL","150 - 410"],["RDW-CV","%","11.6 - 14.0"],["#Differential Count"],["Neutrophils","%","40 - 75"],["Lymphocytes","%","20 - 45"],["Monocytes","%","2 - 10"],["Eosinophils","%","1 - 6"],["Basophils","%","0 - 1"]]],
+[/\besr\b|sedimentation/i,[["ESR (1st Hour)","mm/hr","0 - 15","0 - 20"]]],
+[/^hb\b|h(a)?emoglobin/i,[["Hemoglobin (Hb)","g/dL","13.0 - 17.0","12.0 - 15.0"]]],
+[/blood group|abo/i,[["Blood Group","","","","A|B|AB|O"],["Rh Factor","","","","Positive|Negative"]]],
+[/malaria|\bmp\b|\bmps?\b/i,[["Malaria Parasite (MP)","","Not Seen","","Not Seen|Seen"],["Species","","","","P. vivax|P. falciparum|Mixed"]]],
+[/typhidot|typhoid/i,[["Typhidot IgM","","Negative","","Negative|Positive"],["Typhidot IgG","","Negative","","Negative|Positive"]]],
+[/widal/i,[["S. Typhi O","","< 1:80"],["S. Typhi H","","< 1:80"],["S. Paratyphi AH","","< 1:80"],["S. Paratyphi BH","","< 1:80"]]],
+[/\bcrp\b|c.?reactive/i,[["C-Reactive Protein (CRP)","mg/L","< 6"]]],
+[/dengue/i,[["Dengue NS1 Antigen","","Negative","","Negative|Positive"],["Dengue IgM","","Negative","","Negative|Positive"],["Dengue IgG","","Negative","","Negative|Positive"]]],
+[/sugar.*fast|fast.*sugar|\bfbs\b|fasting.*gluc/i,[["Blood Sugar Fasting","mg/dL","70 - 100"]]],
+[/sugar.*random|random.*sugar|\brbs\b|random.*gluc/i,[["Blood Sugar Random","mg/dL","< 140"]]],
+[/sugar|glucose/i,[["Blood Glucose","mg/dL","70 - 140"]]],
+[/\blft\b|liver function/i,[["Bilirubin Total","mg/dL","0.2 - 1.2"],["Bilirubin Direct","mg/dL","0.0 - 0.3"],["Bilirubin Indirect","mg/dL","0.2 - 0.9"],["ALT (SGPT)","U/L","0 - 40","0 - 33"],["AST (SGOT)","U/L","0 - 40","0 - 32"],["Alkaline Phosphatase (ALP)","U/L","44 - 147"],["GGT","U/L","10 - 71","6 - 42"],["Total Protein","g/dL","6.0 - 8.3"],["Albumin","g/dL","3.5 - 5.2"],["Globulin","g/dL","2.0 - 3.5"]]],
+[/\brft\b|renal function|kidney function|\bkft\b/i,[["Urea","mg/dL","15 - 45"],["Blood Urea Nitrogen (BUN)","mg/dL","7 - 20"],["Creatinine","mg/dL","0.7 - 1.3","0.6 - 1.1"],["Uric Acid","mg/dL","3.5 - 7.2","2.6 - 6.0"],["Sodium (Na)","mmol/L","135 - 145"],["Potassium (K)","mmol/L","3.5 - 5.0"],["Chloride (Cl)","mmol/L","98 - 107"]]],
+[/lipid/i,[["Total Cholesterol","mg/dL","< 200"],["Triglycerides","mg/dL","< 150"],["HDL Cholesterol","mg/dL","> 40","> 50"],["LDL Cholesterol","mg/dL","< 100"],["VLDL Cholesterol","mg/dL","5 - 40"],["Cholesterol / HDL Ratio","","< 5.0"]]],
+[/urine.*(routine|r\/?e|complete|exam)|\burine\b.*\bdr\b|urine r/i,[["#Physical Examination"],["Color","","Pale Yellow","","Pale Yellow|Yellow|Dark Yellow|Red|Brown"],["Appearance","","Clear","","Clear|Slightly Turbid|Turbid"],["Reaction (pH)","","5.0 - 8.0"],["Specific Gravity","","1.005 - 1.030"],["#Chemical Examination"],["Protein / Albumin","","Nil","","Nil|Trace|+|++|+++"],["Glucose (Sugar)","","Nil","","Nil|Trace|+|++|+++"],["Ketones","","Nil","","Nil|Trace|+|++"],["Bilirubin","","Nil","","Nil|Positive"],["Urobilinogen","","Normal","","Normal|Increased"],["Blood","","Nil","","Nil|Trace|+|++|+++"],["Nitrite","","Negative","","Negative|Positive"],["#Microscopic Examination"],["Pus Cells","/HPF","0 - 5"],["Red Blood Cells","/HPF","0 - 2"],["Epithelial Cells","/HPF","Occasional"],["Casts","","Nil","","Nil|Hyaline|Granular"],["Crystals","","Nil","","Nil|Calcium Oxalate|Uric Acid|Triple Phosphate"],["Bacteria","","Nil","","Nil|+|++|+++"]]],
+[/stool.*(routine|r\/?e|complete|exam)|stool r|\bstool\b/i,[["#Macroscopic"],["Color","","Brown","","Brown|Yellow|Green|Black|Red"],["Consistency","","Formed","","Formed|Semi-formed|Loose|Watery"],["Mucus","","Absent","","Absent|Present"],["Blood","","Absent","","Absent|Present"],["#Microscopic"],["Pus Cells","/HPF","0 - 5"],["Red Blood Cells","/HPF","Nil"],["Ova","","Not Seen","","Not Seen|Seen"],["Cysts","","Not Seen","","Not Seen|Seen"],["Parasites","","Not Seen","","Not Seen|Seen"],["Occult Blood","","Negative","","Negative|Positive"]]],
+[/pregnan|\bupt\b|\bhcg\b|beta/i,[["Pregnancy Test (UPT)","","Negative","","Negative|Positive"]]],
+[/hbsag|hepatitis b/i,[["HBsAg","","Non-Reactive","","Non-Reactive|Reactive"]]],
+[/hcv|hepatitis c/i,[["Anti-HCV","","Non-Reactive","","Non-Reactive|Reactive"]]],
+[/\bhiv\b/i,[["Anti-HIV I & II","","Non-Reactive","","Non-Reactive|Reactive"]]],
+[/thyroid|\btft\b|\bt3\b|\btsh\b/i,[["T3 (Triiodothyronine)","ng/mL","0.8 - 2.0"],["T4 (Thyroxine)","µg/dL","5.1 - 14.1"],["TSH","µIU/mL","0.27 - 4.2"]]],
+[/vitamin d|vit.?d/i,[["Vitamin D (25-OH)","ng/mL","30 - 100"]]],
+[/b12/i,[["Vitamin B12","pg/mL","200 - 900"]]],
+[/ferritin/i,[["Serum Ferritin","ng/mL","30 - 400","13 - 150"]]],
+[/\bpt\b|inr|prothrombin/i,[["Prothrombin Time (PT)","sec","11 - 14"],["INR","","0.8 - 1.2"]]],
+[/uric/i,[["Uric Acid","mg/dL","3.5 - 7.2","2.6 - 6.0"]]],
+[/creatinine/i,[["Serum Creatinine","mg/dL","0.7 - 1.3","0.6 - 1.1"]]],
+[/\burea\b/i,[["Blood Urea","mg/dL","15 - 45"]]],
+[/\balt\b|sgpt/i,[["ALT (SGPT)","U/L","0 - 40","0 - 33"]]],
+[/\bast\b|sgot/i,[["AST (SGOT)","U/L","0 - 40","0 - 32"]]],
+[/bilirubin/i,[["Bilirubin Total","mg/dL","0.2 - 1.2"],["Bilirubin Direct","mg/dL","0.0 - 0.3"]]],
+[/electrolyte/i,[["Sodium (Na)","mmol/L","135 - 145"],["Potassium (K)","mmol/L","3.5 - 5.0"],["Chloride (Cl)","mmol/L","98 - 107"]]],
+[/calcium/i,[["Serum Calcium","mg/dL","8.6 - 10.2"]]],
+[/h\.?\s?pylori/i,[["H. Pylori","","Negative","","Negative|Positive"]]],
+[/rheumatoid|\bra\b/i,[["RA Factor","IU/mL","< 14"]]],
+[/\baso\b/i,[["ASO Titre","IU/mL","< 200"]]]
+];
+function lbRaw(test){
+if(test&&Array.isArray(test.params)&&test.params.length)return test.params.map(x=>Object.assign({},x));
+const nm=String((test&&test.name)||"");
+for(const e of LB_LIB){if(e[0].test(nm))return e[1].map(r=>r[0]&&r[0][0]==="#"?{n:r[0].slice(1),h:1}:{n:r[0],u:r[1]||"",r:r[2]||"",rf:r[3]||"",o:r[4]||""})}
+return [{n:nm||"Result",u:"",r:"",rf:"",o:""}]}
+const lbResolve=(row,gender)=>row.h?"":(gender==="Female"&&row.rf?row.rf:(row.r||""));
+const lbParams=(test,gender)=>lbRaw(test).map(x=>x.h?{n:x.n,h:1}:{n:x.n,u:x.u||"",r:lbResolve(x,gender),r0:lbResolve(x,gender),o:x.o||"",v:""});
+function lbFlag(v,r){
+v=String(v==null?"":v).trim();r=String(r==null?"":r).trim();if(!v||!r)return"";
+const num=s=>{const m=String(s).replace(/,/g,"").match(/^[<>]?=?\s*(-?\d+(\.\d+)?)$/);return m?parseFloat(m[1]):NaN};
+const x=num(v);
+if(!isNaN(x)){let m=r.replace(/,/g,"").match(/^(-?\d+(\.\d+)?)\s*(?:-|–|to)\s*(-?\d+(\.\d+)?)$/i);
+if(m){const lo=parseFloat(m[1]),hi=parseFloat(m[3]);return x<lo?"L":x>hi?"H":""}
+m=r.replace(/,/g,"").match(/^(?:<|<=|up to|less than|below)\s*(-?\d+(\.\d+)?)/i);if(m)return x>parseFloat(m[1])?"H":"";
+m=r.replace(/,/g,"").match(/^(?:>|>=|above|more than)\s*(-?\d+(\.\d+)?)/i);if(m)return x<parseFloat(m[1])?"L":"";
+return""}
+if(/^(negative|non[- ]?reactive|absent|nil|normal|not seen|clear)$/i.test(r)&&v.toLowerCase()!==r.toLowerCase())return"A";
+return""}
+/* ---- storage (labreports ya compat) ---- */
+async function lbGetAll(){
+let arr=[];
+if(LB.mode==="store"){try{arr=await qGetAll("labreports")}catch(e){if(/unknown store/i.test(String(e&&e.message)))LB.mode="compat";else throw e}}
+let flag=false;try{flag=!!localStorage.getItem("zm_lb_compat_"+(CLINIC||""))}catch(e){}
+if(LB.mode==="compat"||flag){try{const st=await qGetAll("settings");st.filter(x=>x&&x._lb).forEach(x=>arr.push(Object.assign({},x,{id:String(x.id).replace(/^lbr_/,""),_compat:true})))}catch(e){}}
+return arr}
+async function lbSave(rep){
+const clean=Object.assign({},rep);delete clean._compat;
+if(LB.mode==="store"){try{await qPut("labreports",clean);if(rep._compat){try{await qDel("settings","lbr_"+rep.id)}catch(e){}}return}catch(e){if(/unknown store/i.test(String(e&&e.message)))LB.mode="compat";else throw e}}
+try{localStorage.setItem("zm_lb_compat_"+(CLINIC||""),"1")}catch(e){}
+await qPut("settings",Object.assign({},clean,{id:"lbr_"+clean.id,_lb:1}))}
+async function lbRemove(rep){
+if(LB.mode==="store"&&!rep._compat){try{await qDel("labreports",rep.id);return}catch(e){if(/unknown store/i.test(String(e&&e.message)))LB.mode="compat";else throw e}}
+await qDel("settings","lbr_"+rep.id)}
+const lbReportsOf=pid=>(app.labreports||[]).filter(r=>r.patientId===pid).sort((a,b)=>(a.date+(a.time||""))<(b.date+(b.time||""))?1:-1);
+const lbFilled=t=>(t.rows||[]).filter(r=>!r.h&&String(r.v||"").trim()).length;
+function lbRepOf(row){return row.manual?(app.labreports||[]).find(x=>x.id===row.reportId):(app.labreports||[]).find(x=>x.visitId&&x.visitId===row.visitId)}
+function lbStatus(row){
+const rep=lbRepOf(row);if(!rep)return"Pending";if(row.manual)return"Reported";
+const v=app.visits.find(x=>x.id===row.visitId);const n=v?v.items.filter(i=>i.category==="lab").length:1;
+const m=(rep.tests||[]).filter(t=>lbFilled(t)>0).length;
+return m===0?"Pending":m<n?"Partial":"Reported"}
+/* ---- printable HTML ---- */
+function lbTestsForPrint(r){
+return (r.tests||[]).map(t=>{const out=[];let head=null;
+(t.rows||[]).forEach(x=>{if(x.h){head=x.n;return}if(!String(x.v||"").trim())return;if(head){out.push({h:head});head=null}out.push(x)});
+return {name:t.name,rows:out,remarks:t.remarks||""}}).filter(t=>t.rows.length)}
+function lbReportHTML(r,size){
+const s=app.settings,A4=size==="A4",E=esc;
+const base=Number(s.reportFontSize||12),logo=Number(s.logoSize||56);
+const clinic=E(s.clinicName||""),addr=E([s.address,s.phone,s.phone2].filter(Boolean).join(" • "));
+const ageTxt=E((r.age||"")+(r.age?" "+(r.ageUnit||"Years"):""));
+const tests=lbTestsForPrint(r);
+if(A4){const f=base;
+const logoH=s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="width:'+logo+'px;height:'+logo+'px;object-fit:contain">':shieldSVG(logo,"#1d4ed8");
+const info=[["Patient Name",E(r.patientName)],["MR No",E(padMr(r.patientId)||r.mrNo||"")],["Age / Gender",ageTxt+(r.gender?" / "+E(r.gender):"")],["Date",E(fmtDate(r.date))],["Ref. By",E(r.refBy||"")],["Token",E(r.token||"")]];
+let rows="";for(let i=0;i<info.length;i+=2){const a=info[i],c=info[i+1];rows+='<tr><td style="padding:4px 6px;width:50%"><b>'+a[0]+':</b> '+a[1]+'</td><td style="padding:4px 6px">'+(c?'<b>'+c[0]+':</b> '+c[1]:"")+'</td></tr>'}
+const blocks=tests.map(t=>'<div style="margin-top:12px"><div style="background:#1d4ed8;color:#fff;font-weight:800;padding:5px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;break-after:avoid">'+E(t.name).toUpperCase()+'</div>'+
+'<table style="width:100%;border-collapse:collapse;font-size:'+f+'px"><thead><tr style="background:#eef2ff;-webkit-print-color-adjust:exact;print-color-adjust:exact"><th style="text-align:left;padding:4px 8px;border-bottom:1px solid #999;width:38%">Test</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid #999;width:20%">Result</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid #999;width:14%">Unit</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid #999">Normal Range</th></tr></thead><tbody>'+
+t.rows.map(x=>{if(x.h)return '<tr style="break-inside:avoid"><td colspan="4" style="padding:5px 8px 2px;font-weight:800;text-decoration:underline">'+E(x.h)+'</td></tr>';
+const fl=lbFlag(x.v,x.r);return '<tr style="break-inside:avoid"><td style="padding:4px 8px;border-bottom:1px solid #ddd">'+E(x.n)+'</td><td style="padding:4px 8px;border-bottom:1px solid #ddd;'+(fl?'font-weight:900':'font-weight:700')+'">'+E(x.v)+(fl?' <span style="font-size:'+(f-1)+'px">'+(fl==="A"?"*":fl)+'</span>':"")+'</td><td style="padding:4px 8px;border-bottom:1px solid #ddd">'+E(x.u||"")+'</td><td style="padding:4px 8px;border-bottom:1px solid #ddd">'+E(x.r||"")+'</td></tr>'}).join("")+'</tbody></table>'+
+(t.remarks?'<div style="margin-top:4px"><b>Note:</b> '+E(t.remarks)+'</div>':"")+'</div>').join("");
+return '<div style="font-family:Arial,Helvetica,sans-serif;color:#111;font-size:'+f+'px;line-height:1.4">'+
+'<div style="display:flex;align-items:center;gap:14px;border-bottom:2px solid #1d4ed8;padding-bottom:10px">'+logoH+'<div><div style="font-size:'+(f+8)+'px;font-weight:800">'+clinic+'</div><div style="font-size:'+(f-1)+'px">'+addr+'</div></div></div>'+
+'<h2 style="text-align:center;text-decoration:underline;margin:14px 0 10px;font-size:'+(f+4)+'px">LABORATORY REPORT</h2>'+
+'<table style="width:100%;border:1px solid #999;border-collapse:collapse;font-size:'+f+'px">'+rows+'</table>'+blocks+
+(r.remarks&&r.remarks.trim()?'<div style="margin-top:12px;break-inside:avoid"><b>Remarks:</b><div style="white-space:pre-wrap;margin-top:3px">'+E(r.remarks)+'</div></div>':"")+
+'<div style="font-size:'+(f-2)+'px;margin-top:8px;color:#444">H = High, L = Low, * = Abnormal result</div>'+
+'<div style="display:flex;justify-content:flex-end;margin-top:44px;break-inside:avoid"><div style="border-top:1px solid #111;min-width:220px;text-align:center;padding-top:6px"><b>'+E(r.doctor||"")+'</b><div style="font-size:'+(f-1)+'px">Lab Technologist / Pathologist</div></div></div>'+
+(s.footerText?'<p style="text-align:center;font-size:'+Math.max(9,f-2)+'px;margin-top:16px;color:#444">'+E(s.footerText)+'</p>':"")+'</div>'}
+const w=size==="58"?"54mm":"74mm";
+const f=size==="58"?Math.min(Math.max(base*.85,9),11.5):Math.min(Math.max(base,10),13.5);
+const hr='<div style="border-top:1px dashed #000;margin:5px 0"></div>';
+const li=(l,v)=>v?'<div style="margin:1px 0"><b>'+l+':</b> '+v+'</div>':"";
+const fnd=tests.map(t=>'<div style="margin-top:6px;font-weight:900;text-transform:uppercase;border-bottom:1px solid #000">'+E(t.name)+'</div>'+t.rows.map(x=>{if(x.h)return '<div style="margin-top:3px;font-weight:900;text-decoration:underline">'+E(x.h)+'</div>';
+const fl=lbFlag(x.v,x.r);return '<div style="margin:3px 0"><div style="display:flex;justify-content:space-between;gap:6px"><span>'+E(x.n)+'</span><span style="font-weight:900;white-space:nowrap">'+E(x.v)+(x.u?" "+E(x.u):"")+(fl?" "+(fl==="A"?"*":fl):"")+'</span></div>'+(x.r?'<div style="font-size:'+(f-1.5)+'px;font-weight:600">Normal: '+E(x.r)+'</div>':"")+'</div>'}).join("")+(t.remarks?'<div style="margin-top:2px">Note: '+E(t.remarks)+'</div>':"")).join("");
+return '<div style="width:'+w+';font-family:Arial,Helvetica,sans-serif;color:#000;font-size:'+f+'px;line-height:1.35;font-weight:600;word-break:break-word">'+
+'<div style="text-align:center">'+(s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:'+logo+'px;width:auto;max-width:100%;object-fit:contain;filter:grayscale(1) contrast(1.4)">':"")+'<div style="font-size:'+(f+3)+'px;font-weight:900">'+clinic+'</div><div style="font-size:'+(f-1.5)+'px">'+addr+'</div></div>'+hr+
+'<div style="text-align:center;font-weight:900;font-size:'+(f+1)+'px">LABORATORY REPORT</div>'+hr+
+li("Patient",E(r.patientName))+li("MR No",E(padMr(r.patientId)||r.mrNo||""))+li("Age/Sex",ageTxt+(r.gender?" / "+E(r.gender):""))+li("Date",E(fmtDate(r.date)))+li("Ref By",E(r.refBy||""))+li("Token",E(r.token||""))+hr+
+fnd+
+(r.remarks&&r.remarks.trim()?'<div style="margin-top:5px"><b>Remarks:</b><div style="white-space:pre-wrap">'+E(r.remarks)+'</div></div>':"")+hr+
+'<div style="font-size:'+(f-1.5)+'px">H = High, L = Low, * = Abnormal</div>'+
+'<div style="text-align:center;margin-top:12px"><div style="border-top:1px solid #000;display:inline-block;min-width:60%;padding-top:2px"><b>'+E(r.doctor||"Lab")+'</b></div></div>'+
+(s.footerText?'<div style="text-align:center;font-size:'+(f-1.5)+'px;margin-top:6px">'+E(s.footerText)+'</div>':"")+'<div style="height:8mm"></div></div>'}
+function lbPrint(r,mode){
+if(mode==="A4")printHTML(lbReportHTML(r,"A4"),"A4");
+else{const sz=usThermalSize();printHTML(lbReportHTML(r,sz),sz)}}
+function lbView(r,onChange){
+const ov=openModal("Lab Report — "+r.patientName,
+'<div style="background:#fff;border:1px solid var(--slate-300);border-radius:8px;padding:18px;overflow:auto;max-height:68vh">'+lbReportHTML(r,"A4")+'</div>',
+'<button class="btn btn-neutral" data-close>Close</button><button class="btn btn-outline" id="lbv-edit">✏️ EDIT</button><button class="btn btn-dark" id="lbv-a4">🖨 PRINT A4</button><button class="btn btn-primary" id="lbv-th">🧾 THERMAL '+usThermalSize()+'mm</button>',true);
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+ov.querySelector("#lbv-a4").onclick=()=>lbPrint(r,"A4");
+ov.querySelector("#lbv-th").onclick=()=>lbPrint(r,"TH");
+ov.querySelector("#lbv-edit").onclick=()=>{ov.remove();lbEditor({report:r},onChange)}}
+/* ---- editor ---- */
+function lbEditor(opts,onChange){
+const old=opts.report||null;let visit=opts.visit||null,pat=null;
+if(old)pat=app.patients.find(p=>p.patientId===old.patientId)||null;
+else if(opts.patient)pat=opts.patient;
+else if(visit)pat=app.patients.find(p=>p.patientId===visit.patientId)||null;
+if(old&&old.visitId&&!visit)visit=app.visits.find(v=>v.id===old.visitId)||null;
+const R=old||{};
+const gender0=R.gender||(visit&&visit.gender)||(pat&&pat.gender)||"Male";
+const testOf=it=>app.tests.find(t=>t.id===it.refId)||app.tests.find(t=>t.name===it.description)||null;
+let tests=[];
+if(old){tests=(old.tests||[]).map(t=>({testId:t.testId||"",name:t.name,rows:(t.rows||[]).map(x=>Object.assign({r0:x.r},x)),remarks:t.remarks||"",save:false}))}
+if(visit){visit.items.filter(i=>i.category==="lab").forEach(it=>{
+const te=testOf(it);if(tests.some(t=>(te&&t.testId===te.id)||t.name===it.description))return;
+tests.push({testId:te?te.id:"",name:it.description,rows:lbParams(te||{name:it.description},gender0),remarks:"",save:false})})}
+const docs=app.doctors.filter(d=>d.active!==false);
+const ov=openModal(old?"Edit Lab Report":"New Lab Report",
+'<div class="grid g2 mb">'+
+'<div class="field"><label>Date</label><input class="inp" type="date" id="lbr-date" value="'+esc(R.date||(visit&&visit.date)||today())+'"></div>'+
+'<div class="field"><label>MR No</label><div class="flex g8"><input class="inp" id="lbr-mr" readonly style="background:var(--slate-50);font-weight:700" value="'+esc(pat?padMr(pat.patientId):(R.patientId?padMr(R.patientId):""))+'"><button class="btn btn-outline sm" id="lbr-pick" type="button">🔍 PATIENT</button></div></div>'+
+'<div class="field"><label>Patient Name <span class="req">*</span></label><input class="inp" id="lbr-name" value="'+esc(R.patientName||(pat&&pat.name)||(visit&&visit.patientName)||"")+'"></div>'+
+'<div class="field"><label>Age</label><div class="flex g8"><input class="inp" id="lbr-age" value="'+esc(R.age||(visit&&visit.age)||(pat&&pat.age)||"")+'"><select class="inp" id="lbr-ageunit" style="max-width:100px">'+["Years","Months","Days"].map(u=>'<option '+((R.ageUnit||(visit&&visit.ageUnit)||(pat&&pat.ageUnit)||"Years")===u?"selected":"")+'>'+u+'</option>').join("")+'</select></div></div>'+
+'<div class="field"><label>Gender</label><select class="inp" id="lbr-gender">'+["Male","Female","Other"].map(g=>'<option '+(gender0===g?"selected":"")+'>'+g+'</option>').join("")+'</select></div>'+
+'<div class="field"><label>Lab Technologist / Pathologist</label><input class="inp" id="lbr-doc" list="lbr-docs" value="'+esc(R.doctor||"")+'"><datalist id="lbr-docs">'+docs.map(d=>'<option value="'+esc(d.name)+'"></option>').join("")+'</datalist></div>'+
+'<div class="field"><label>Ref By</label><input class="inp" id="lbr-ref" value="'+esc(R.refBy||(visit&&(visit.doctorName||visit.referredBy))||"")+'"></div></div>'+
+'<div id="lbr-tests"></div>'+
+'<div class="flex g8 fw mb"><select class="inp" id="lbr-addsel" style="max-width:320px"><option value="">— Is report mein aur test shamil karein —</option>'+app.tests.filter(t=>t.type==="lab"&&t.active!==false).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join("")+'</select><button class="btn btn-outline sm" id="lbr-addt" type="button">➕ ADD TEST</button></div>'+
+'<div class="field"><label>Remarks</label><textarea class="inp" id="lbr-remarks" rows="2">'+esc(R.remarks||"")+'</textarea></div>'+
+'<p class="hint">Sirf wohi rows print hongi jin mein Result likha ho. Row add karke "Is test ka format save rakhein" tick rakhein to wo agli dafa bhi isi test mein aayegi.</p>',
+'<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="lbr-save">💾 SAVE</button><button class="btn btn-dark" id="lbr-a4">💾 SAVE + 🖨 A4</button><button class="btn btn-primary" id="lbr-th">💾 SAVE + 🧾 THERMAL</button>',true);
+const $q=s=>ov.querySelector(s);
+const draw=()=>{
+$q("#lbr-tests").innerHTML=tests.map((t,ti)=>'<div class="card mb"><div class="card-h"><b>'+esc(t.name)+'</b><div class="flex g8 aic fw"><label style="font-size:12px;display:flex;gap:5px;align-items:center"><input type="checkbox" data-sv="'+ti+'"'+(t.save?" checked":"")+'> Is test ka format save rakhein</label><button class="btn btn-danger sm" type="button" data-rt="'+ti+'">✕</button></div></div><div class="card-b" style="overflow-x:auto"><table class="tbl"><thead><tr><th>Parameter</th><th style="width:150px">Result</th><th style="width:90px">Unit</th><th style="width:150px">Normal Range</th><th></th></tr></thead><tbody>'+
+t.rows.map((x,ri)=>x.h?'<tr><td colspan="4"><input class="inp" data-t="'+ti+'" data-i="'+ri+'" data-f="n" value="'+esc(x.n)+'" style="font-weight:800"></td><td><button class="btn btn-neutral sm" type="button" data-rr="'+ti+'.'+ri+'">✕</button></td></tr>':
+'<tr><td><input class="inp" data-t="'+ti+'" data-i="'+ri+'" data-f="n" value="'+esc(x.n)+'"></td><td><input class="inp" data-t="'+ti+'" data-i="'+ri+'" data-f="v" value="'+esc(x.v||"")+'"'+(x.o?' list="lbo-'+ti+'-'+ri+'"':'')+' style="font-weight:700"><span data-fl="'+ti+'.'+ri+'" style="font-weight:900;color:#be123c;font-size:12px">'+(lbFlag(x.v,x.r)==="A"?"*":lbFlag(x.v,x.r))+'</span>'+(x.o?'<datalist id="lbo-'+ti+'-'+ri+'">'+x.o.split("|").map(o=>'<option value="'+esc(o)+'"></option>').join("")+'</datalist>':"")+'</td><td><input class="inp" data-t="'+ti+'" data-i="'+ri+'" data-f="u" value="'+esc(x.u||"")+'"></td><td><input class="inp" data-t="'+ti+'" data-i="'+ri+'" data-f="r" value="'+esc(x.r||"")+'"></td><td><button class="btn btn-neutral sm" type="button" data-rr="'+ti+'.'+ri+'">✕</button></td></tr>').join("")+
+'</tbody></table><div class="flex g8 fw mt"><button class="btn btn-outline sm" type="button" data-ar="'+ti+'">➕ ADD ROW</button><button class="btn btn-outline sm" type="button" data-ah="'+ti+'">➕ HEADING</button></div><div class="field mt"><label>Note (is test ka)</label><input class="inp" data-t="'+ti+'" data-f="remarks" value="'+esc(t.remarks||"")+'"></div></div></div>').join("")||'<p class="hint">Koi test nahi. Neeche se test add karein.</p>';
+ov.querySelectorAll("[data-sv]").forEach(c=>c.onchange=()=>{tests[+c.dataset.sv].save=c.checked});
+ov.querySelectorAll("[data-rt]").forEach(b=>b.onclick=()=>{tests.splice(+b.dataset.rt,1);draw()});
+ov.querySelectorAll("[data-rr]").forEach(b=>b.onclick=()=>{const [a,c]=b.dataset.rr.split(".").map(Number);tests[a].rows.splice(c,1);if(tests[a].testId)tests[a].save=true;draw()});
+ov.querySelectorAll("[data-ar]").forEach(b=>b.onclick=()=>{const t=tests[+b.dataset.ar];t.rows.push({n:"",u:"",r:"",r0:"",o:"",v:""});if(t.testId)t.save=true;draw()});
+ov.querySelectorAll("[data-ah]").forEach(b=>b.onclick=()=>{const t=tests[+b.dataset.ah];t.rows.push({n:"",h:1});if(t.testId)t.save=true;draw()});
+};
+$q("#lbr-tests").addEventListener("input",e=>{const el=e.target,ti=el.dataset.t;if(ti===undefined)return;const t=tests[+ti],f=el.dataset.f;
+if(f==="remarks"){t.remarks=el.value;return}
+const x=t.rows[+el.dataset.i];x[f]=el.value;
+if(f==="v"||f==="r"){const sp=ov.querySelector('[data-fl="'+ti+"."+el.dataset.i+'"]');if(sp){const fl=lbFlag(x.v,x.r);sp.textContent=fl==="A"?"*":fl}}
+if(t.testId&&f==="n")t.save=true;
+const cb=ov.querySelector('[data-sv="'+ti+'"]');if(cb&&t.save)cb.checked=true});
+$q("#lbr-gender").onchange=()=>{const g=$q("#lbr-gender").value;tests.forEach(t=>{const te=app.tests.find(x=>x.id===t.testId)||{name:t.name};const raw=lbRaw(te);t.rows.forEach(x=>{if(x.h)return;if(x.r===x.r0){const m=raw.find(y=>y.n===x.n&&!y.h);if(m){const nr=lbResolve(m,g);x.r=nr;x.r0=nr}}})});draw()};
+$q("#lbr-addt").onclick=()=>{const tid=$q("#lbr-addsel").value;if(!tid)return;const te=app.tests.find(t=>t.id===tid);if(!te)return;
+if(tests.some(t=>t.testId===tid)){toast("Ye test pehle se report mein hai","info");return}
+tests.push({testId:te.id,name:te.name,rows:lbParams(te,$q("#lbr-gender").value),remarks:"",save:false});$q("#lbr-addsel").value="";draw()};
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+$q("#lbr-pick").onclick=()=>patientPicker(p=>{pat=p;$q("#lbr-mr").value=padMr(p.patientId);$q("#lbr-name").value=p.name;$q("#lbr-age").value=p.age||"";$q("#lbr-ageunit").value=p.ageUnit||"Years";$q("#lbr-gender").value=p.gender||"Male";$q("#lbr-gender").onchange()});
+draw();
+const build=()=>{
+const name=$q("#lbr-name").value.trim();if(!name){toast("Patient name zaroori hai","error");return null}
+const now=new Date().toISOString(),p=pat;
+const clean=tests.map(t=>({testId:t.testId,name:t.name,remarks:(t.remarks||"").trim(),rows:t.rows.filter(x=>(x.n||"").trim()).map(x=>x.h?{n:x.n.trim(),h:1}:{n:x.n.trim(),u:(x.u||"").trim(),r:(x.r||"").trim(),v:(x.v||"").trim(),o:x.o||""})}));
+return Object.assign({},old||{},{
+id:old?old.id:id("lbr"),
+patientId:p?p.patientId:(old?old.patientId:(visit?visit.patientId:"")),
+mrNo:p?padMr(p.patientId):(old?old.mrNo:(visit?padMr(visit.patientId):"")),
+visitId:old?old.visitId:(visit?visit.id:""),token:old?old.token:(visit?visit.token:""),
+patientName:name,age:$q("#lbr-age").value.trim(),ageUnit:$q("#lbr-ageunit").value,gender:$q("#lbr-gender").value,
+date:$q("#lbr-date").value||today(),time:old?old.time:timeNow(),
+doctor:$q("#lbr-doc").value.trim(),refBy:$q("#lbr-ref").value.trim(),
+tests:clean,remarks:$q("#lbr-remarks").value.trim(),status:"Final",
+createdBy:old?old.createdBy:(app.user&&app.user.username)||"",createdAt:old?old.createdAt:now,updatedAt:now})};
+const saveDefaults=async()=>{
+for(const t of tests){if(!t.save||!t.testId)continue;const te=app.tests.find(x=>x.id===t.testId);if(!te)continue;
+const raw=lbRaw(te);
+const np=t.rows.filter(x=>(x.n||"").trim()).map(x=>{if(x.h)return{n:x.n.trim(),h:1};const m=raw.find(y=>y.n===x.n&&!y.h)||{};const edited=(x.r||"")!==(x.r0||"");
+return{n:x.n.trim(),u:(x.u||"").trim(),r:edited||!m.n?(x.r||"").trim():(m.r||""),rf:edited||!m.n?"":(m.rf||""),o:x.o||m.o||""}});
+if(JSON.stringify(np)!==JSON.stringify(raw.map(y=>y.h?{n:y.n,h:1}:{n:y.n,u:y.u||"",r:y.r||"",rf:y.rf||"",o:y.o||""})))await qPut("tests",Object.assign({},te,{params:np}))}};
+const save=async(pm)=>{
+const r=build();if(!r)return;
+if(!r.tests.some(t=>lbFilled(t)>0)&&!await confirmBox({title:"Koi Result nahi",message:"Kisi test ka result likha nahi gaya. Phir bhi report save karein?",confirmText:"SAVE"}))return;
+const btns=ov.querySelectorAll(".modal-f button");btns.forEach(b=>b.disabled=true);
+try{await saveDefaults();await lbSave(r);await audit(app.user.username,old?"UPDATE":"CREATE","labreports",r.id,"Lab — "+r.patientName);
+await loadData();toast(old?"Lab report update ho gayi":"Lab report save ho gayi");ov.remove();
+if(pm)lbPrint(r,pm);if(onChange)onChange(r)}catch(e){btns.forEach(b=>b.disabled=false);toast("Save nahi hui: "+(e.message||e),"error")}};
+$q("#lbr-save").onclick=()=>save("");$q("#lbr-a4").onclick=()=>save("A4");$q("#lbr-th").onclick=()=>save("TH")}
+async function lbDelete(r,onChange){
+if(!await confirmBox({title:"Delete Lab Report",message:'"'+r.patientName+'" ('+fmtDate(r.date)+") ki lab report hamesha ke liye delete ho jayegi.",danger:true,confirmText:"DELETE",requireText:"DELETE"}))return;
+try{await lbRemove(r);await audit(app.user.username,"DELETE","labreports",r.id,"Lab — "+r.patientName);await loadData();toast("Lab report delete ho gayi","info");if(onChange)onChange()}catch(e){toast("Delete nahi hui: "+(e.message||e),"error")}}
+const lbCanDel=()=>can("delete")||(app.user&&app.user.role==="lab");
+function lbBtns(r){
+return '<div class="flex g8 fw" style="gap:4px"><button class="btn btn-outline sm" data-lb="view" data-r="'+r.id+'">👁 View</button><button class="btn btn-neutral sm" data-lb="edit" data-r="'+r.id+'">✏️ Edit</button><button class="btn btn-dark sm" data-lb="a4" data-r="'+r.id+'">🖨 A4</button><button class="btn btn-primary sm" data-lb="th" data-r="'+r.id+'">🧾 '+usThermalSize()+'mm</button>'+(lbCanDel()?'<button class="btn btn-danger sm" data-lb="del" data-r="'+r.id+'">🗑 Delete</button>':"")+'</div>'}
+function lbBind(root,onChange){
+root.querySelectorAll("[data-lb]").forEach(b=>b.onclick=()=>{
+const act=b.dataset.lb;
+if(act==="new"){const v=b.dataset.v?app.visits.find(x=>x.id===b.dataset.v):null;lbEditor({visit:v||null,patient:b.dataset.p?app.patients.find(p=>p.patientId===b.dataset.p):null},onChange);return}
+const r=(app.labreports||[]).find(x=>x.id===b.dataset.r);if(!r){toast("Report nahi mili","error");return}
+if(act==="view")lbView(r,onChange);else if(act==="edit")lbEditor({report:r},onChange);
+else if(act==="a4")lbPrint(r,"A4");else if(act==="th")lbPrint(r,"TH");else if(act==="del")lbDelete(r,onChange)})}
+function lbPatientCard(pid){
+const list=lbReportsOf(pid);
+return '<div class="card mb"><div class="card-h"><div><h2>🧪 Lab Reports</h2><div class="sub">Is patient ki tamam lab reports</div></div><button class="btn btn-primary sm" data-lb="new" data-p="'+esc(pid)+'">➕ NEW REPORT</button></div><div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Tests</th><th>Token</th><th>Actions</th></tr></thead><tbody>'+
+(list.length?list.map(r=>'<tr><td style="white-space:nowrap;font-size:12px"><b>'+fmtDate(r.date)+'</b></td><td style="font-size:12px">'+esc((r.tests||[]).map(t=>t.name).join(", "))+'</td><td>'+(r.token?'<span class="tok">'+esc(r.token)+'</span>':"—")+'</td><td>'+lbBtns(r)+'</td></tr>').join(""):'<tr class="empty-row"><td colspan="4">Is patient ki koi lab report nahi hai</td></tr>')+'</tbody></table></div></div></div>'}
+/* ---- Test format (parameters + normal ranges) editor ---- */
+function lbFormatModal(test,onDone){
+let rows=lbRaw(test).map(x=>Object.assign({n:"",u:"",r:"",rf:"",o:""},x));
+const ov=openModal("Report Format — "+test.name,'<p class="hint">Yahan is test ke parameters aur Normal Range set hoti hai. Nayi test ke liye ye khud ban jata hai — sirf badalna ho to yahan edit karein.</p><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Parameter</th><th style="width:90px">Unit</th><th style="width:150px">Normal Range</th><th style="width:150px">Female Range (optional)</th><th></th></tr></thead><tbody id="fm-rows"></tbody></table></div><div class="flex g8 fw mt"><button class="btn btn-outline sm" id="fm-add" type="button">➕ ADD ROW</button><button class="btn btn-outline sm" id="fm-addh" type="button">➕ HEADING</button></div>',
+'<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-warn" id="fm-reset">↺ RESET TO DEFAULT</button><button class="btn btn-success" id="fm-save">💾 SAVE</button>',true);
+const draw=()=>{ov.querySelector("#fm-rows").innerHTML=rows.map((x,i)=>x.h?'<tr><td colspan="4"><input class="inp" data-i="'+i+'" data-f="n" value="'+esc(x.n)+'" style="font-weight:800" placeholder="Heading"></td><td><button class="btn btn-neutral sm" data-x="'+i+'">✕</button></td></tr>':
+'<tr><td><input class="inp" data-i="'+i+'" data-f="n" value="'+esc(x.n)+'"></td><td><input class="inp" data-i="'+i+'" data-f="u" value="'+esc(x.u)+'"></td><td><input class="inp" data-i="'+i+'" data-f="r" value="'+esc(x.r)+'"></td><td><input class="inp" data-i="'+i+'" data-f="rf" value="'+esc(x.rf)+'"></td><td><button class="btn btn-neutral sm" data-x="'+i+'">✕</button></td></tr>').join("");
+ov.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>{rows.splice(+b.dataset.x,1);draw()})};
+ov.addEventListener("input",e=>{const el=e.target;if(el.dataset.i===undefined)return;rows[+el.dataset.i][el.dataset.f]=el.value});
+ov.querySelector("#fm-add").onclick=()=>{rows.push({n:"",u:"",r:"",rf:"",o:""});draw()};
+ov.querySelector("#fm-addh").onclick=()=>{rows.push({n:"",h:1});draw()};
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+ov.querySelector("#fm-reset").onclick=async()=>{if(!await confirmBox({title:"Reset Format",message:"Is test ka custom format hata kar default format wapis lagayein?",confirmText:"RESET"}))return;
+const o=Object.assign({},test);delete o.params;await qPut("tests",o);await loadData();toast("Default format wapis laga diya","info");ov.remove();if(onDone)onDone()};
+ov.querySelector("#fm-save").onclick=async()=>{
+const np=rows.filter(x=>(x.n||"").trim()).map(x=>x.h?{n:x.n.trim(),h:1}:{n:x.n.trim(),u:(x.u||"").trim(),r:(x.r||"").trim(),rf:(x.rf||"").trim(),o:x.o||""});
+if(!np.length){toast("Kam az kam ek parameter likhein","error");return}
+await qPut("tests",Object.assign({},test,{params:np}));await audit(app.user.username,"UPDATE","tests",test.id,"Report format — "+test.name);await loadData();toast("Format save ho gaya");ov.remove();if(onDone)onDone()};
+draw()}
+function lbSampleReport(){
+return {id:"sample",patientId:today().slice(0,4)+"/0001",token:8,patientName:"MRS. AYESHA BIBI",age:"28",ageUnit:"Years",gender:"Female",date:today(),doctor:"Lab Technologist",refBy:"Dr. Ahmed Raza",
+tests:[{name:"CBC (Complete Blood Count)",rows:[{n:"Hemoglobin (Hb)",u:"g/dL",r:"12.0 - 15.0",v:"10.2"},{n:"Total Leucocyte Count (TLC)",u:"x10³/µL",r:"4.0 - 11.0",v:"7.4"},{n:"Platelet Count",u:"x10³/µL",r:"150 - 410",v:"240"}]},{name:"Blood Sugar Fasting",rows:[{n:"Blood Sugar Fasting",u:"mg/dL",r:"70 - 100",v:"92"}]}],remarks:"Sample report — printer test."}}
+
+
 function testModal(t,type){
 const cats=Array.from(new Set(app.tests.filter(x=>x.type===type).map(x=>x.category)));
 const ov=openModal(t.id?"Edit — "+t.name:(type==="ultrasound"?"Add Ultrasound Service":type==="injection"?"Add Injection / Drip":"Add Laboratory Test"),
@@ -1926,8 +2210,8 @@ ov.querySelector("[data-close]").onclick=()=>ov.remove();
 ov.querySelector("#tt-save").onclick=async()=>{
 const name=$("#tt-name",ov).value.trim();
 if(!name){toast("Test name is required","error");return}
-const obj={id:t.id||id("tst"),name:name,category:$("#tt-cat",ov).value,type:$("#tt-type",ov).value,
-price:num($("#tt-price",ov).value),active:$("#tt-active",ov).value==="active",createdAt:t.createdAt||new Date().toISOString()};
+const obj=Object.assign({},t,{id:t.id||id("tst"),name:name,category:$("#tt-cat",ov).value,type:$("#tt-type",ov).value,
+price:num($("#tt-price",ov).value),active:$("#tt-active",ov).value==="active",createdAt:t.createdAt||new Date().toISOString()});
 await qPut("tests",obj);await audit(app.user.username,t.id?"UPDATE":"CREATE","tests",obj.id,name+" — "+obj.price);
 await loadData();toast(t.id?"Test updated":"Test added to price list");ov.remove();pageTestModule(type);
 };
@@ -2999,13 +3283,14 @@ const ov=openModal(u.id?"Edit User — "+u.username:"Add New User",
 '<div class="field"><label>Username <span class="req">*</span></label><input class="inp" id="um-user" value="'+esc(u.username)+'" autocomplete="off"></div>'+
 '<div class="field"><label>Password <span class="req">*</span></label><input class="inp" id="um-pass" value="'+esc(u.password)+'" autocomplete="new-password"></div>'+
 '<div class="field"><label>Full Name</label><input class="inp" id="um-name" value="'+esc(u.fullName)+'"></div>'+
-'<div class="field"><label>Role</label><select class="inp" id="um-role"><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option><option value=\"medicalstore\" "+(u.role==="medicalstore"?"selected":"")+">Medical Store — Medical Store only</option></select></div></div>"+
+'<div class="field"><label>Role</label><select class="inp" id="um-role"><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option><option value=\"medicalstore\" "+(u.role==="medicalstore"?"selected":"")+">Medical Store — Medical Store only</option><option value=\"lab\" "+(u.role==="lab"?"selected":"")+">Lab — Lab module only</option></select></div></div>"+
 '<div><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--slate-600);margin-bottom:8px">Module Permissions</p><div id="um-perms"></div></div>',
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="um-save">💾 SAVE USER</button>');
 let role=u.role,perms=u.permissions.slice();
 const drawPerms=()=>{
 const box=$("#um-perms",ov);
 if(role==="medicalstore"){perms=MEDICAL_STORE_PERMS.slice();box.innerHTML='<p style="background:rgba(219,234,254,.65);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:13px;color:#1e40af">This account can access Medical Store only. All clinic modules, users and settings remain hidden.</p>';return}
+if(role==="lab"){perms=LAB_PERMS.slice();box.innerHTML='<p style="background:rgba(219,234,254,.65);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:13px;color:#1e40af">Is account ko sirf Lab module ka access milega (Lab work list, lab reports, test list). Baaki modules, users aur settings hidden rahenge.</p>';return}
 if(role==="admin"){box.innerHTML='<p style="background:var(--violet-bg);border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:13px;color:#5b21b6">Administrators automatically have full access to every module including delete and backup.</p>';return}
 box.innerHTML='<div class="grid g2">'+ALL_PERMS.map(p=>
 '<label style="display:flex;align-items:center;gap:8px;border:1px solid var(--slate-200);border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer"><input type="checkbox" data-perm="'+p+'" '+(perms.indexOf(p)>=0?"checked":"")+' style="width:16px;height:16px"><span'+(p==="delete"?' style="font-weight:600;color:#be123c"':"")+">"+(PERM_LABELS[p]||p)+"</span></label>").join("")+"</div>";
@@ -3013,7 +3298,7 @@ $$("[data-perm]",ov).forEach(cb=>cb.addEventListener("change",()=>{
 const p=cb.dataset.perm;if(cb.checked){if(perms.indexOf(p)<0)perms.push(p)}else perms=perms.filter(x=>x!==p)}));
 };
 $("#um-role",ov).addEventListener("change",e=>{role=e.target.value;
-perms=role==="admin"?ALL_PERMS.slice():role==="doctor"?DOCTOR_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():RECEPTION_PERMS.slice();drawPerms()});
+perms=role==="admin"?ALL_PERMS.slice():role==="doctor"?DOCTOR_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():role==="lab"?LAB_PERMS.slice():RECEPTION_PERMS.slice();drawPerms()});
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
 ov.querySelector("#um-save").onclick=async()=>{
 if(u.id===ADMIN_ID){toast("The fixed administrator account cannot be edited","error");return}
@@ -3023,7 +3308,7 @@ if(!un){toast("Username is required","error");return}
 if(!pw){toast("Password is required","error");return}
 if(app.users.some(x=>x.username.toLowerCase()===un.toLowerCase()&&x.id!==u.id)){toast("That username already exists","error");return}
 const obj={id:u.id||id("usr"),username:un,password:pw,fullName:$("#um-name",ov).value.trim()||un,role:role,
-permissions:role==="admin"?ALL_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():perms,active:u.active!==undefined?u.active:true,createdAt:u.createdAt||new Date().toISOString()};
+permissions:role==="admin"?ALL_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():role==="lab"?LAB_PERMS.slice():perms,active:u.active!==undefined?u.active:true,createdAt:u.createdAt||new Date().toISOString()};
 await qPut("users",obj);await audit(app.user.username,u.id?"UPDATE":"CREATE","users",obj.id,un+" ("+role+")");
 await loadData();toast(u.id?"User updated":"User created");ov.remove();pageUsers();
 };
@@ -3056,8 +3341,8 @@ $("#page").innerHTML='<div class="grid" style="grid-template-columns:2fr 1fr;ali
 '<div class="field"><label>MR Number Prefix</label><input class="inp" id="st-prefix" value="'+esc(s.patientIdPrefix||"")+'"></div>'+
 '<div class="field"><label>Slip Font Size (Standard: 13)</label><div class="flex g12 aic"><input type="range" id="st-font" min="9" max="26" step="0.5" value="'+s.slipFontSize+'" style="flex:1;accent-color:var(--blue-700)"><span id="st-fontv" style="font-weight:700;color:var(--blue-800);width:48px;text-align:center">'+s.slipFontSize+"px</span></div></div>"+
 '<div class="field"><label>Report Font Size</label><div class="flex g12 aic"><input type="range" id="st-rfont" min="9" max="22" step="0.5" value="'+(s.reportFontSize||12)+'" style="flex:1"><span id="st-rfontv">'+(s.reportFontSize||12)+'px</span></div></div>'+
-'<div class="field"><label>Logo Size on Reports</label><div class="flex g12 aic"><input type="range" id="st-logosize" min="24" max="120" step="2" value="'+(s.logoSize||56)+'" style="flex:1"><span id="st-logosizev">'+(s.logoSize||56)+'px</span></div></div>'+
-'<div class="field"><label>Thermal Paper Size (Ultrasound Report)</label><select class="inp" id="st-usth"><option value="58" '+(usThermalSize()==="58"?"selected":"")+'>58 mm</option><option value="80" '+(usThermalSize()==="80"?"selected":"")+'>80 mm</option></select><div class="flex g8 fw mt"><button class="btn btn-outline sm" data-usdemo="A4">🖨 Test US Report A4</button><button class="btn btn-outline sm" data-usdemo="58">🖨 58mm</button><button class="btn btn-outline sm" data-usdemo="80">🖨 80mm</button></div><p class="hint">Test buttons current (unsaved) Font / Logo size ke mutabiq nahi, saved settings ke mutabiq print karte hain.</p></div>'+
+'<div class="field"><label>Logo Size (Slips + Reports)</label><div class="flex g12 aic"><input type="range" id="st-logosize" min="24" max="120" step="2" value="'+(s.logoSize||56)+'" style="flex:1"><span id="st-logosizev">'+(s.logoSize||56)+'px</span></div></div>'+
+'<div class="field"><label>Thermal Paper Size (Ultrasound / Lab Reports)</label><select class="inp" id="st-usth"><option value="58" '+(usThermalSize()==="58"?"selected":"")+'>58 mm</option><option value="80" '+(usThermalSize()==="80"?"selected":"")+'>80 mm</option></select><div class="flex g8 fw mt"><button class="btn btn-outline sm" data-usdemo="A4">🖨 Test US Report A4</button><button class="btn btn-outline sm" data-usdemo="58">🖨 58mm</button><button class="btn btn-outline sm" data-usdemo="80">🖨 80mm</button></div><p class="hint">Test buttons current (unsaved) Font / Logo size ke mutabiq nahi, saved settings ke mutabiq print karte hain.</p></div>'+
 '<div class="field"><label>Duty Staff Name (shown on slip)</label><input class="inp" id="st-duty" value="'+esc(s.dutyStaffName||"")+'" placeholder="e.g. Ali, Hamza — blank = logged-in user"></div>'+
 '<div class="field"><label>Show MR Number on Slip</label><div class="flex g12 aic"><button id="st-mr" style="border:2px solid '+(s.showMrOnSlip?"var(--blue-600)":"var(--slate-300)")+';background:'+(s.showMrOnSlip?"var(--blue-600)":"var(--slate-200)")+';width:52px;height:28px;border-radius:99px;position:relative;transition:.2s"><span style="position:absolute;top:2px;'+(s.showMrOnSlip?"left:26px":"left:2px")+';width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:.2s"></span></button><span id="st-mrtxt" style="font-size:13px;font-weight:600">'+(s.showMrOnSlip?"ON — slip par MR number aayega":"OFF — slip par MR number nahi aayega")+"</span></div></div>"+
 '<div class="field"><label>Backup Reminder (days)</label><input class="inp" id="st-bk" inputmode="numeric" value="'+s.backupReminderDays+'"></div>'+
