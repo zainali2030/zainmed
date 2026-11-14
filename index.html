@@ -673,13 +673,14 @@ el.querySelectorAll("[data-bn]").forEach(b=>b.onclick=()=>{if(b.dataset.bn==="__
 function removeChrome(){["zm-bnav","zm-dock","zm-docbar"].forEach(i=>{const e=document.getElementById(i);if(e)e.remove()});document.body.classList.remove("has-bnav");document.body.classList.remove("has-dock")}
 function applyBg(st){
 let el=document.getElementById("zm-bg-style");if(!el){el=document.createElement("style");el.id="zm-bg-style";document.head.appendChild(el)}
-const img=st&&st.bgImage;
-if(!img){el.textContent="";return}
-const d=Math.min(.9,Math.max(0,(st.bgDim===undefined||st.bgDim===""?35:Number(st.bgDim))/100));
-el.textContent='body::before{background:linear-gradient(rgba(4,22,40,'+d+'),rgba(4,22,40,'+d+')),url("'+img+'") center/cover no-repeat!important}';
-}
+const dm=(v,def)=>Math.min(.9,Math.max(0,(v===undefined||v===""||v===null?def:Number(v))/100));
+let css="";
+if(st&&st.bgImage){const d=dm(st.bgDim,35);css+='body::before{background:linear-gradient(rgba(4,22,40,'+d+'),rgba(4,22,40,'+d+')),url("'+st.bgImage+'") center/cover no-repeat!important}';}
+if(st&&st.sbImage){const d=dm(st.sbDim,40);css+='.sidebar{background:linear-gradient(rgba(6,24,43,'+d+'),rgba(6,24,43,'+d+')),url("'+st.sbImage+'") center/cover no-repeat!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}';}
+el.textContent=css}
 function bgCardHTML(s){
-return '<div class="card" style="grid-column:span 2"><div class="card-h"><div><h2>🖼 App Background Picture</h2><div class="sub">Apni (ya Dr / Admin ki) photo background me lagayein. Sirf is device ke bajaye poore clinic ke liye save hoti hai.</div></div></div><div class="card-b"><div class="flex g12 aic fw"><div id="bg-prev" style="width:120px;height:72px;border-radius:8px;border:1px dashed var(--slate-300);background:#fff center/cover no-repeat;display:grid;place-items:center;font-size:11px;color:#64748b">Default</div><label class="btn btn-primary sm" style="margin:0;color:#fff">📤 Upload Picture<input type="file" id="bg-file" accept="image/*" style="display:none"></label><button type="button" class="btn btn-neutral sm" id="bg-rm">✕ Default background</button></div><div class="field mt"><label>Background andhera (dim) — text saaf parhne ke liye</label><div class="flex g12 aic"><input type="range" id="bg-dim" min="0" max="85" step="5" value="'+(s.bgDim===undefined||s.bgDim===""?35:s.bgDim)+'" style="flex:1"><span id="bg-dimv">'+(s.bgDim===undefined||s.bgDim===""?35:s.bgDim)+'%</span></div></div></div></div>'}
+return '<div class="card" style="grid-column:span 2"><div class="card-h"><div><h2>🖼 App Background Picture</h2><div class="sub">Apni (ya Dr / Admin ki) photo background me lagayein. Sirf is device ke bajaye poore clinic ke liye save hoti hai.</div></div></div><div class="card-b"><div class="flex g12 aic fw"><div id="bg-prev" style="width:120px;height:72px;border-radius:8px;border:1px dashed var(--slate-300);background:#fff center/cover no-repeat;display:grid;place-items:center;font-size:11px;color:#64748b">Default</div><label class="btn btn-primary sm" style="margin:0;color:#fff">📤 Upload Picture<input type="file" id="bg-file" accept="image/*" style="display:none"></label><button type="button" class="btn btn-neutral sm" id="bg-rm">✕ Default background</button></div><div class="field mt"><label>Background andhera (dim) — text saaf parhne ke liye</label><div class="flex g12 aic"><input type="range" id="bg-dim" min="0" max="85" step="5" value="'+(s.bgDim===undefined||s.bgDim===""?35:s.bgDim)+'" style="flex:1"><span id="bg-dimv">'+(s.bgDim===undefined||s.bgDim===""?35:s.bgDim)+'%</span></div></div>'+
+'<div style="border-top:1px solid var(--slate-200);margin:16px 0 12px"></div><b>📋 Sirf Side Menu (Dashboard wali patti) ki Picture</b><div class="hint">Baqi background wahi rahega. Sirf left menu me ye picture lagegi.</div><div class="flex g12 aic fw mt"><div id="sb-prev" style="width:60px;height:96px;border-radius:8px;border:1px dashed var(--slate-300);background:#fff center/cover no-repeat;display:grid;place-items:center;font-size:11px;color:#64748b">Default</div><label class="btn btn-primary sm" style="margin:0;color:#fff">📤 Upload Menu Picture<input type="file" id="sb-file" accept="image/*" style="display:none"></label><button type="button" class="btn btn-neutral sm" id="sb-rm">✕ Default menu</button></div><div class="field mt"><label>Menu andhera (dim)</label><div class="flex g12 aic"><input type="range" id="sb-dim" min="0" max="85" step="5" value="'+(s.sbDim===undefined||s.sbDim===""?40:s.sbDim)+'" style="flex:1"><span id="sb-dimv">'+(s.sbDim===undefined||s.sbDim===""?40:s.sbDim)+'%</span></div></div></div></div>'}
 const SL_TXT=[["name","Name / Heading","clinicName"],["tagline","Tagline / Sub-heading","tagline"],["address","Address","address"],["phone","Phone","phone"],["phone2","Alternate Phone","phone2"],["title","Slip Title","slipTitle"],["footer","Footer Text","footerText"]];
 function slipLogoCardHTML(s){const sl=s.slipLogos||{};
 return '<div class="card" style="grid-column:span 2"><div class="card-h"><div><h2>🖼 Har Slip ka Alag Logo & Text</h2><div class="sub">Sab slips par ek hi logo / naam rakhna ho to upar "Clinic Information" aur "Logo & Print Settings" mein ek dafa bharein. Kisi slip par alag logo, naam, address, phone ya footer chahiye to us slip ke box mein likhein — khali chhora to common wala use hoga.</div></div></div><div class="card-b"><div class="slip-logos">'+
@@ -4121,10 +4122,14 @@ else if(o.url){el.innerHTML='<img src="'+o.url+'">';md.textContent="✔ Is slip 
 else{el.innerHTML=logo?'<img src="'+logo+'">':"Common logo abhi set nahi";md.textContent="Common logo use ho raha hai";md.style.color="#475569"}});
 drawSL();
 let bgImg=s.bgImage||"",bgDim=(s.bgDim===undefined||s.bgDim==="")?35:Number(s.bgDim);
-const drawBg=()=>{const e=$("#bg-prev");e.style.backgroundImage=bgImg?'url("'+bgImg+'")':"none";e.textContent=bgImg?"":"Default";applyBg({bgImage:bgImg,bgDim:bgDim})};
+let sbImg=s.sbImage||"",sbDim=(s.sbDim===undefined||s.sbDim==="")?40:Number(s.sbDim);
+const drawBg=()=>{const sp=$("#sb-prev");sp.style.backgroundImage=sbImg?'url("'+sbImg+'")':"none";sp.textContent=sbImg?"":"Default";const e=$("#bg-prev");e.style.backgroundImage=bgImg?'url("'+bgImg+'")':"none";e.textContent=bgImg?"":"Default";applyBg({bgImage:bgImg,bgDim:bgDim,sbImage:sbImg,sbDim:sbDim})};
 drawBg();
 $("#bg-file").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;bgImg=await shrinkImg(f,1600,"image/jpeg",.8);drawBg();toast("Background set — SAVE SETTINGS dabayein","info");e.target.value=""});
 $("#bg-rm").onclick=()=>{bgImg="";drawBg()};
+$("#sb-file").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;sbImg=await shrinkImg(f,900,"image/jpeg",.8);drawBg();toast("Menu picture set — SAVE SETTINGS dabayein","info");e.target.value=""});
+$("#sb-rm").onclick=()=>{sbImg="";drawBg()};
+$("#sb-dim").addEventListener("input",e=>{sbDim=Number(e.target.value);$("#sb-dimv").textContent=sbDim+"%";drawBg()});
 $("#bg-dim").addEventListener("input",e=>{bgDim=Number(e.target.value);$("#bg-dimv").textContent=bgDim+"%";drawBg()});
 $$("[data-slfile]").forEach(i=>i.addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const k=i.dataset.slfile;
 const url=await shrinkImg(f,420,"image/png",.9);slipLogos[k]=Object.assign({},slipLogos[k],{url:url,none:false});drawSL();toast("Logo set — SAVE SETTINGS dabayein","info")}));
@@ -4143,7 +4148,7 @@ const lines=v=>v.split("\n").map(x=>x.trim()).filter(Boolean);
 const obj=Object.assign({},s,{clinicName:$("#st-name").value.trim()||s.clinicName,tagline:$("#st-tag").value,address:$("#st-addr").value,
 phone:$("#st-phone").value,phone2:$("#st-phone2").value,email:$("#st-email").value,timing:$("#st-timing").value,
 slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,msName:$("#st-msname").value.trim(),msAddress:$("#st-msaddr").value.trim(),msPhone:$("#st-msphone").value.trim(),msFooter:$("#st-msfoot").value.trim(),devFooter:$("#st-dev").value,slipLogos:slipLogos,
-bgImage:bgImg,bgDim:bgDim,logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
+bgImage:bgImg,bgDim:bgDim,sbImage:sbImg,sbDim:sbDim,logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
 slipFontSize:parseFloat($("#st-font").value),reportFontSize:parseFloat($("#st-rfont").value),logoSize:parseInt($("#st-logosize").value,10),usThermalSize:$("#st-usth").value,dutyStaffName:$("#st-duty").value,showMrOnSlip:showMr,
 backupReminderDays:num($("#st-bk").value),shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
 await saveSettingsObj(obj);
