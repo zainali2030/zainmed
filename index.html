@@ -507,6 +507,7 @@ const NAV=[
 {key:"agent",label:"AI Agent",icon:"🤖",perm:"agent"},
 {key:"users",label:"Users",icon:"🔐",perm:"users"},
 {key:"settings",label:"Settings",icon:"⚙️",perm:"settings"},
+{key:"staff",label:"Staff & Payroll",icon:"🧑‍💼",perm:"staff"},
 {key:"backup",label:"Backup & Restore",icon:"💾",perm:"backup"}];
 const DEFAULT_SETTINGS={key:"app",clinicName:"ZainMed Clinic",tagline:"General Practice • Laboratory • Ultrasound",
 address:"",phone:"",phone2:"",email:"",
@@ -759,14 +760,15 @@ if(OB.length&&netOK()){await flushOutbox();return}
 if(!OB.length&&NET.state==="off"&&navigator.onLine!==false&&Date.now()>=NET.offlineUntil-1){try{await api("GET","/api/ping",undefined,{force:true,timeout:5000});setNetState()}catch(e){}}
 else setNetState()},15000);
 /* ================= APP STATE ================= */
-const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],usreports:[],labreports:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
+const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],usreports:[],labreports:[],staff:[],attendance:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
 async function audit(user,action,entity,entityId,details){
 await qPut("audit",{id:id("log"),ts:new Date().toISOString(),user:user,action:action,entity:entity,entityId:entityId,details:details||""});
 }
 async function loadData(){
-const [p,v,d,t,pay,ex,u,au,s,usr,lbr]=await Promise.all([
+const [p,v,d,t,pay,ex,u,au,s,usr,lbr,stf,att]=await Promise.all([
 qGetAll("patients"),qGetAll("visits"),qGetAll("doctors"),qGetAll("tests"),qGetAll("payments"),
-qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app"),usGetAll().catch(e=>{console.error("usreports",e);return app.usreports||[]}),lbGetAll().catch(e=>{console.error("labreports",e);return app.labreports||[]})]);
+qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app"),usGetAll().catch(e=>{console.error("usreports",e);return app.usreports||[]}),lbGetAll().catch(e=>{console.error("labreports",e);return app.labreports||[]}),
+qGetAll("staff").catch(e=>{console.error("staff",e);return app.staff||[]}),qGetAll("attendance").catch(e=>{console.error("attendance",e);return app.attendance||[]})]);
 app.patients=p.sort((a,b)=>a.patientId<b.patientId?1:-1);
 app.visits=v.sort((a,b)=>a.createdAt<b.createdAt?1:-1);
 app.doctors=d.sort((a,b)=>a.name.localeCompare(b.name));
@@ -775,6 +777,8 @@ app.usreports=(usr||[]).sort((a,b)=>(a.createdAt||"")<(b.createdAt||"")?1:-1);
 app.labreports=(lbr||[]).sort((a,b)=>(a.createdAt||"")<(b.createdAt||"")?1:-1);
 app.payments=pay;app.expenses=ex.sort((a,b)=>a.date<b.date?1:-1);
 app.users=u;app.audit=au.sort((a,b)=>a.ts<b.ts?1:-1).slice(0,600);
+app.staff=(stf||[]).sort((a,b)=>(a.staffId||"").localeCompare(b.staffId||""));
+app.attendance=att||[];
 app.settings=Object.assign({},DEFAULT_SETTINGS,s||{});
 try{document.title=(app.settings.clinicName||"Clinic")+" • ZainMed"}catch(e){}
 }
@@ -803,6 +807,7 @@ if(!s.lastBackupAt)return app.visits.length>0;
 return daysBetween(s.lastBackupAt.slice(0,10),today())>=s.backupReminderDays}
 /* patient MR numbers */
 async function createPatientId(prefix){const yr=new Date().getFullYear();const n=await nextSeq("patientSeq_"+yr,1);return (prefix||"")+yr+"/"+String(n).padStart(4,"0")}
+async function createStaffId(){const n=await nextSeq("staffSeq",1);return "STF-"+String(n).padStart(4,"0")}
 async function peekPatientId(prefix){const yr=new Date().getFullYear();const n=await peekSeq("patientSeq_"+yr,1);return (prefix||"")+yr+"/"+String(n).padStart(4,"0")}
 /* ================= TOAST & CONFIRM ================= */
 function toast(msg,kind){kind=kind||"success";
@@ -1107,7 +1112,7 @@ const t=NAV.find(n=>n.key===route);
 $("#page-title").textContent=t?(t.grp==="ms"?"Medical Store • "+t.label:t.label):"Dashboard";
 const PAGES={dashboard:pageDashboard,newvisit:pageNewVisit,patients:pagePatients,emr:pageEMR,doctors:pageDoctors,
 lab:()=>pageTestModule("lab"),ultrasound:()=>pageTestModule("ultrasound"),injection:()=>pageTestModule("injection"),billing:pageBilling,ms_dashboard:()=>{app.msTab="dashboard";pageMedicalStore()},ms_stock:()=>{app.msTab="stock";pageMedicalStore()},ms_purchase:()=>{app.msTab="purchase";pageMedicalStore()},ms_sale:()=>{app.msTab="sale";pageMedicalStore()},ms_customers:()=>{app.msTab="customers";pageMedicalStore()},ms_reports:()=>{app.msTab="reports";pageMedicalStore()},expenses:pageExpenses,
-reports:pageReports,agent:pageAgent,users:pageUsers,settings:pageSettings,backup:pageBackup};
+reports:pageReports,agent:pageAgent,staff:pageStaff,users:pageUsers,settings:pageSettings,backup:pageBackup};
 (PAGES[route]||pageDashboard)();
 showBanner();
 window.scrollTo(0,0);
@@ -3246,6 +3251,145 @@ async function pageMedicalStore(){
   await records();shell();
 }
 
+/* ============================================================
+STAFF & PAYROLL
+============================================================ */
+const STAFF_ROLES=["Receptionist","Nurse","Lab Technician","Ultrasound Technician","Compounder / Dispenser","Ward Boy","Security Guard","Sweeper / Cleaner","Accountant","Manager","Driver","Other"];
+const ATT_STATUSES=[["P","Present","#16a34a"],["A","Absent","#dc2626"],["L","Leave","#d97706"],["H","Half Day","#2563eb"]];
+function daysInMonth(ym){const[y,m]=ym.split("-").map(Number);return new Date(y,m,0).getDate()}
+function staffAttKey(staffId,date){return "att_"+staffId+"_"+date}
+function pageStaff(){
+const s=app.settings;
+app.staffTab=app.staffTab||"list";
+const tabBtn=(k,label)=>'<button class="btn '+(app.staffTab===k?"btn-primary":"btn-outline")+' sm" data-stab="'+k+'">'+label+'</button>';
+const shell=()=>{
+$("#page").innerHTML='<div class="card"><div class="card-h"><div><h2>Staff & Payroll</h2><div class="sub">Staff records, daily attendance aur monthly salary calculation</div></div>'+
+'<div class="flex g8 fw">'+tabBtn("list","👥 Staff List")+tabBtn("attendance","🗓 Attendance")+tabBtn("payroll","💰 Payroll")+'</div></div>'+
+'<div class="card-b" id="staff-body"></div></div>';
+$$("[data-stab]").forEach(b=>b.onclick=()=>{app.staffTab=b.dataset.stab;shell()});
+if(app.staffTab==="attendance")drawAttendance();
+else if(app.staffTab==="payroll")drawPayroll();
+else drawList();
+};
+const drawList=()=>{
+const rows=app.staff.map(st=>{
+return '<tr><td style="font-weight:700">'+esc(st.staffId)+'</td><td style="font-weight:600">'+esc(st.name)+'<div style="font-size:11px;color:var(--slate-500);font-weight:400">'+esc(st.cnic||"")+'</div></td>'+
+'<td style="font-size:12px">'+esc(st.designation)+'</td><td style="font-size:12px">'+esc(st.phone||"-")+'</td><td style="font-size:12px">'+esc(st.shift||"-")+'</td>'+
+'<td style="font-weight:700;white-space:nowrap">'+s.currency+" "+fmtMoney(st.salary)+'</td>'+
+'<td><span class="badge '+(st.status==="Active"?"green":"slate")+'">'+esc(st.status)+'</span></td>'+
+'<td><div class="flex g8"><button class="btn btn-neutral sm" data-edit="'+st.id+'">✏️</button>'+
+'<button class="btn '+(st.status==="Active"?"btn-warn":"btn-success")+' sm" data-tog="'+st.id+'">'+(st.status==="Active"?"MARK LEFT":"RE-ACTIVATE")+'</button>'+
+(can("delete")?'<button class="btn btn-danger sm" data-del="'+st.id+'">🗑</button>':"")+'</div></td></tr>';
+}).join("");
+$("#staff-body").innerHTML='<div class="flex" style="justify-content:flex-end;margin-bottom:10px"><button class="btn btn-success sm" id="stf-add">➕ ADD STAFF</button></div>'+
+'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff ID</th><th>Name</th><th>Designation</th><th>Phone</th><th>Shift</th><th>Monthly Salary</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
+(rows||'<tr class="empty-row"><td colspan="8">No staff added yet</td></tr>')+'</tbody></table></div>';
+$("#stf-add").onclick=()=>staffModal({id:"",staffId:"",name:"",designation:STAFF_ROLES[0],phone:"",cnic:"",joiningDate:today(),salary:0,shift:s.shifts[0],status:"Active"});
+$$("[data-edit]").forEach(b=>b.onclick=()=>staffModal(app.staff.find(x=>x.id===b.dataset.edit)));
+$$("[data-tog]").forEach(b=>b.onclick=async()=>{const st=app.staff.find(x=>x.id===b.dataset.tog);
+const obj=Object.assign({},st,{status:st.status==="Active"?"Left":"Active",leftDate:st.status==="Active"?today():""});
+await qPut("staff",obj);await audit(app.user.username,"UPDATE","staff",st.id,st.name+" -> "+obj.status);await loadData();toast(st.name+" is now "+obj.status,"info");drawList()});
+$$("[data-del]").forEach(b=>b.onclick=async()=>{const st=app.staff.find(x=>x.id===b.dataset.del);
+if(!await confirmBox({title:"Delete Staff",message:"Permanently delete "+st.name+" ("+st.staffId+")? Attendance history ka reference bhi reports se hat jayega. Consider Mark Left instead.",danger:true,confirmText:"DELETE",requireText:"DELETE"}))return;
+await removeRecord("staff",st.id);await audit(app.user.username,"DELETE","staff",st.id,st.name);toast("Staff deleted","info");drawList()});
+};
+const drawAttendance=()=>{
+let date=app.staffAttDate||today();
+const active=app.staff.filter(x=>x.status==="Active");
+const sel={};
+active.forEach(st=>{const rec=app.attendance.find(a=>a.id===staffAttKey(st.id,date));sel[st.id]=rec?rec.status:"P"});
+const month=date.slice(0,7);
+const monthRows=active.map(st=>{
+const recs=app.attendance.filter(a=>a.staffId===st.id&&a.date.slice(0,7)===month);
+const c={P:0,A:0,L:0,H:0};recs.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++});
+return '<tr><td style="font-weight:600">'+esc(st.name)+'</td><td>'+c.P+'</td><td>'+c.A+'</td><td>'+c.L+'</td><td>'+c.H+'</td><td>'+recs.length+'</td></tr>';
+}).join("");
+$("#staff-body").innerHTML='<div class="grid g2" style="align-items:end;margin-bottom:14px">'+
+'<div class="field"><label>Attendance Date</label><input class="inp" type="date" id="att-date" value="'+date+'"></div>'+
+'<div style="text-align:right"><button class="btn btn-success" id="att-save">💾 SAVE ATTENDANCE</button></div></div>'+
+(active.length?'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff</th><th>Designation</th>'+ATT_STATUSES.map(x=>"<th>"+x[1]+"</th>").join("")+'</tr></thead><tbody>'+
+active.map(st=>'<tr><td style="font-weight:600">'+esc(st.name)+' <span style="color:var(--slate-500);font-size:11px">('+esc(st.staffId)+')</span></td><td style="font-size:12px">'+esc(st.designation)+'</td>'+
+ATT_STATUSES.map(x=>'<td style="text-align:center"><input type="radio" name="att-'+st.id+'" value="'+x[0]+'" '+(sel[st.id]===x[0]?"checked":"")+'></td>').join("")+'</tr>').join("")+
+'</tbody></table></div>':'<p class="sub">No active staff found. Pehle Staff List mein staff add karein.</p>')+
+'<h3 style="margin-top:22px;font-size:14px">Monthly Summary — '+month+'</h3>'+
+'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff</th><th>Present</th><th>Absent</th><th>Leave</th><th>Half Day</th><th>Marked Days</th></tr></thead><tbody>'+
+(monthRows||'<tr class="empty-row"><td colspan="6">No data</td></tr>')+'</tbody></table></div>';
+$("#att-date").addEventListener("change",e=>{app.staffAttDate=e.target.value;drawAttendance()});
+$("#att-save").onclick=async()=>{
+if(!active.length)return;
+for(const st of active){
+const v=(document.querySelector('input[name="att-'+st.id+'"]:checked')||{}).value||"P";
+await qPut("attendance",{id:staffAttKey(st.id,date),staffId:st.id,staffName:st.name,date:date,status:v,createdAt:new Date().toISOString()});
+}
+await audit(app.user.username,"UPDATE","attendance",date,"Attendance saved for "+active.length+" staff");
+await loadData();toast("Attendance saved for "+fmtDate(date));drawAttendance();
+};
+};
+const drawPayroll=()=>{
+let month=app.staffPayMonth||monthNow();
+const active=app.staff.filter(x=>x.status==="Active");
+const dim=daysInMonth(month);
+const rows=active.map(st=>{
+const recs=app.attendance.filter(a=>a.staffId===st.id&&a.date.slice(0,7)===month);
+const c={P:0,A:0,L:0,H:0};recs.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++});
+const perDay=num(st.salary)/dim;
+const deduction=Math.round(c.A*perDay+c.H*perDay/2);
+const net=Math.max(0,Math.round(num(st.salary)-deduction));
+const paid=app.expenses.some(e=>e.staffPayrollKey===st.id+"_"+month);
+return {st,c,perDay,deduction,net,paid};
+});
+$("#staff-body").innerHTML='<div class="grid g2" style="align-items:end;margin-bottom:14px">'+
+'<div class="field"><label>Payroll Month</label><input class="inp" type="month" id="pay-month" value="'+month+'"></div>'+
+'<div style="text-align:right"><button class="btn btn-outline sm" id="pay-csv">⬇ CSV</button></div></div>'+
+'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff</th><th>Salary</th><th>P</th><th>A</th><th>L</th><th>H</th><th>Deduction</th><th>Net Payable</th><th>Action</th></tr></thead><tbody>'+
+(rows.length?rows.map(r=>'<tr><td style="font-weight:600">'+esc(r.st.name)+'<div style="font-size:11px;color:var(--slate-500)">'+esc(r.st.staffId)+'</div></td>'+
+'<td>'+s.currency+" "+fmtMoney(r.st.salary)+'</td><td>'+r.c.P+'</td><td>'+r.c.A+'</td><td>'+r.c.L+'</td><td>'+r.c.H+'</td>'+
+'<td style="color:#be123c">'+s.currency+" "+fmtMoney(r.deduction)+'</td><td style="font-weight:800">'+s.currency+" "+fmtMoney(r.net)+'</td>'+
+'<td>'+(r.paid?'<span class="badge green">PAID</span>':'<button class="btn btn-success sm" data-pay="'+r.st.id+'">MARK PAID</button>')+'</td></tr>').join(""):
+'<tr class="empty-row"><td colspan="9">No active staff</td></tr>')+
+'</tbody></table></div>'+
+'<div class="sum-box mt"><div class="sum-row"><span style="font-weight:800">TOTAL NET PAYROLL ('+month+')</span><b>'+s.currency+" "+fmtMoney(rows.reduce((a,r)=>a+r.net,0))+'</b></div></div>';
+$("#pay-month").addEventListener("change",e=>{app.staffPayMonth=e.target.value;drawPayroll()});
+$$("[data-pay]").forEach(b=>b.onclick=async()=>{
+const r=rows.find(x=>x.st.id===b.dataset.pay);if(!r)return;
+if(!await confirmBox({title:"Mark Salary Paid",message:"Mark "+r.st.name+"'s salary of "+s.currency+" "+fmtMoney(r.net)+" for "+month+" as PAID? Ye ek Expense (Salary) entry ban jayegi.",confirmText:"MARK PAID"}))return;
+await qPut("expenses",{id:id("exp"),date:today(),category:"Salary",description:"Salary — "+r.st.name+" ("+month+")",paidTo:r.st.name,amount:r.net,staffPayrollKey:r.st.id+"_"+month,createdBy:app.user.fullName||"Admin",createdAt:new Date().toISOString()});
+await audit(app.user.username,"CREATE","expenses",r.st.id,"Salary paid "+r.st.name+" "+month);
+await loadData();toast("Salary marked paid — expense record created");drawPayroll();
+});
+$("#pay-csv").onclick=()=>downloadCSV("payroll_"+month+".csv",["Staff ID","Name","Salary","Present","Absent","Leave","Half Day","Deduction","Net Payable","Paid"],
+rows.map(r=>[r.st.staffId,r.st.name,r.st.salary,r.c.P,r.c.A,r.c.L,r.c.H,r.deduction,r.net,r.paid?"Yes":"No"]));
+};
+shell();
+}
+function staffModal(st){
+const s=app.settings;
+const ov=openModal(st.id?"Edit Staff — "+st.name:"Add New Staff",
+'<div class="grid g2">'+
+'<div class="field"><label>Full Name <span class="req">*</span></label><input class="inp" id="sm-name" value="'+esc(st.name)+'"></div>'+
+'<div class="field"><label>Designation</label><select class="inp" id="sm-desg">'+STAFF_ROLES.map(x=>'<option '+(st.designation===x?"selected":"")+">"+x+"</option>").join("")+'</select></div>'+
+'<div class="field"><label>Phone</label><input class="inp" id="sm-phone" value="'+esc(st.phone||"")+'"></div>'+
+'<div class="field"><label>CNIC</label><input class="inp" id="sm-cnic" value="'+esc(st.cnic||"")+'" placeholder="42101-1234567-1"></div>'+
+'<div class="field"><label>Joining Date</label><input class="inp" type="date" id="sm-join" value="'+(st.joiningDate||today())+'"></div>'+
+'<div class="field"><label>Duty Shift</label><select class="inp" id="sm-shift">'+s.shifts.map(x=>'<option '+(st.shift===x?"selected":"")+">"+x+"</option>").join("")+'<option '+(st.shift==="Full Day"?"selected":"")+">Full Day</option></select></div>"+
+'<div class="field"><label>Monthly Salary <span class="req">*</span></label><input class="inp" id="sm-salary" inputmode="numeric" value="'+num(st.salary)+'"></div>'+
+'<div class="field"><label>Status</label><select class="inp" id="sm-status"><option value="Active" '+(st.status==="Active"?"selected":"")+">Active</option><option value=\"Left\" "+(st.status==="Left"?"selected":"")+">Left</option></select></div>"+
+'</div>',
+'<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="sm-save">💾 SAVE STAFF</button>');
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+ov.querySelector("#sm-save").onclick=async()=>{
+const name=$("#sm-name",ov).value.trim();
+if(!name){toast("Staff name is required","error");return}
+const salary=num($("#sm-salary",ov).value);
+if(salary<=0){toast("Enter a valid monthly salary","error");return}
+const staffId=st.staffId||await createStaffId();
+const obj={id:st.id||id("stf"),staffId:staffId,name:name,designation:$("#sm-desg",ov).value,phone:$("#sm-phone",ov).value.trim(),
+cnic:$("#sm-cnic",ov).value.trim(),joiningDate:$("#sm-join",ov).value,shift:$("#sm-shift",ov).value,salary:salary,
+status:$("#sm-status",ov).value,leftDate:st.leftDate||"",createdAt:st.createdAt||new Date().toISOString()};
+await qPut("staff",obj);await audit(app.user.username,st.id?"UPDATE":"CREATE","staff",obj.id,obj.name+" ("+obj.staffId+")");
+await loadData();toast(st.id?"Staff updated":"Staff added — ID "+staffId);ov.remove();pageStaff();
+};
+}
 /* ============================================================
 USERS
 ============================================================ */
