@@ -12,6 +12,7 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 
 /* ---------- CONFIG: config.json ya environment variables ---------- */
 let CFG = {};
@@ -66,7 +67,7 @@ async function initDB() {
     await conn.end();
   } catch (e) { if (!IS_VERCEL) throw e; /* Vercel par neeche pool se hi asli error milega */ }
   pool = mysql.createPool({ host: DB.host, port: DB.port, user: DB.user, password: DB.password, database: DB.database, ssl: DB.ssl,
-                            connectionLimit: IS_VERCEL ? 3 : 10, charset: "utf8mb4_unicode_ci", connectTimeout: 15000 });
+                            connectionLimit: IS_VERCEL ? 3 : 20, waitForConnections: true, queueLimit: 0, enableKeepAlive: true, charset: "utf8mb4_unicode_ci", connectTimeout: 15000 });
   await pool.query("SELECT 1");
 
   await pool.query(
@@ -159,12 +160,43 @@ function clinicProblem(c) {
 /* ---------- express app ---------- */
 const app = express();
 app.use(cors());
+/* JSON jawab gzip ho kar jata hai (data 5-10 guna chhota => zyada clinics ho to bhi server/net halka rehta hai) */
+app.use((req, res, next) => {
+  if (!/gzip/.test(String(req.headers["accept-encoding"] || ""))) return next();
+  const plain = res.json.bind(res);
+  res.json = (obj) => {
+    let s; try { s = JSON.stringify(obj); } catch (e) { return plain(obj); }
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    if (s.length < 1500) return res.end(s);
+    zlib.gzip(s, { level: 5 }, (err, buf) => {
+      if (err) return res.end(s);
+      res.setHeader("Content-Encoding", "gzip"); res.setHeader("Vary", "Accept-Encoding"); res.setHeader("Content-Length", buf.length);
+      res.end(buf);
+    });
+    return res;
+  };
+  next();
+});
 app.use((req, res, next) => { res.setHeader("Permissions-Policy", "camera=(self), microphone=()"); next(); });
 app.use(express.json({ limit: "25mb" }));
 /* SECURITY: sirf ye files browser ko milengi (config.json, server.js waghera kabhi nahi) */
 const PUBLIC_FILES = new Set(["index.html","master.html","login-bg.jpg","manifest.json","sw.js","icon-192.png","icon-512.png"]);
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/:f", (req, res, next) => PUBLIC_FILES.has(req.params.f) ? res.sendFile(path.join(__dirname, req.params.f)) : next());
+/* HTML / JS / JSON files gzip ho kar jati hain (index.html ~600KB se ~120KB) */
+const gzCache = new Map();
+function sendPublic(name, req, res) {
+  const file = path.join(__dirname, name);
+  if (!/\.(html|js|json)$/.test(name) || !/gzip/.test(String(req.headers["accept-encoding"] || ""))) return res.sendFile(file);
+  try {
+    const st = fs.statSync(file);
+    let hit = gzCache.get(name);
+    if (!hit || hit.m !== st.mtimeMs) { hit = { m: st.mtimeMs, buf: zlib.gzipSync(fs.readFileSync(file), { level: 6 }) }; gzCache.set(name, hit); }
+    const types = { html: "text/html; charset=utf-8", js: "application/javascript; charset=utf-8", json: "application/json; charset=utf-8" };
+    res.setHeader("Content-Type", types[name.split(".").pop()]); res.setHeader("Content-Encoding", "gzip"); res.setHeader("Vary", "Accept-Encoding");
+    res.setHeader("Cache-Control", "no-cache"); res.end(hit.buf);
+  } catch (e) { res.sendFile(file); }
+}
+app.get("/", (req, res) => sendPublic("index.html", req, res));
+app.get("/:f", (req, res, next) => PUBLIC_FILES.has(req.params.f) ? sendPublic(req.params.f, req, res) : next());
 
 /* ---------- PUBLIC routes (clinic ID ki zaroorat nahi) ---------- */
 /* AI check: browser mein /api/ai-test kholein — AI key chal rahi hai ya nahi, saaf pata chal jata hai */
@@ -728,7 +760,8 @@ app.get("/api/agent/status", (req, res) => res.json({ ai: !!(GEMINI_KEY || CLAUD
 app.get("/api/stores", async (req, res) => {
   try {
     const out = {};
-    for (const s of STORES) out[s] = await loadStore(req.clinic, s);
+    const all = await Promise.all(STORES.map(s => loadStore(req.clinic, s)));
+    STORES.forEach((s, i) => { out[s] = all[i]; });
     res.json(out);
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
@@ -787,12 +820,22 @@ app.post("/api/:store/bulk", async (req, res) => {
   if (!okStore(req, res)) return;
   const arr = Array.isArray(req.body) ? req.body : [];
   try {
+    /* ek ek record ki jagah chhote chhote batch mein (tez + database par kam load) */
+    let chunk = [], bytes = 0, saved = 0;
+    const flush = async () => {
+      if (!chunk.length) return;
+      await pool.query("INSERT INTO records (clinic,store,id,data) VALUES " + chunk.map(() => "(?,?,?,?)").join(",") + " ON DUPLICATE KEY UPDATE data=VALUES(data)",
+        chunk.flatMap(r => [req.clinic, req.params.store, r.id, r.data]));
+      saved += chunk.length; chunk = []; bytes = 0;
+    };
     for (const obj of arr) {
       const id = recId(obj); if (!id) continue;
-      await pool.query("INSERT INTO records (clinic,store,id,data) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
-        [req.clinic, req.params.store, id, JSON.stringify(obj)]);
+      const data = JSON.stringify(obj);
+      chunk.push({ id, data }); bytes += data.length;
+      if (chunk.length >= 100 || bytes > 1500000) await flush();
     }
-    res.json({ saved: arr.length });
+    await flush();
+    res.json({ saved });
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 app.delete("/api/:store/:id", async (req, res) => {
@@ -813,6 +856,15 @@ app.delete("/api/:store", async (req, res) => {
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
+
+/* ---------- error safety: bura/bada request server ko girata nahi ---------- */
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const tooBig = err && err.type === "entity.too.large";
+  res.status(tooBig ? 413 : (err && err.status) || 500).json({ error: tooBig ? "Data bohat bada hai (25MB se zyada)" : errMsg(err) });
+});
+process.on("unhandledRejection", (e) => console.error("unhandledRejection:", errMsg(e)));
+process.on("uncaughtException", (e) => console.error("uncaughtException:", errMsg(e)));
 
 /* ---------- start ---------- */
 if (IS_VERCEL || require.main !== module) {

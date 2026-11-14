@@ -439,6 +439,88 @@ footer.app-foot{background:transparent;border-top:0;color:#9fd0ee}
 .login-glass .btn-primary{background:rgb(var(--lamp-rgb));border-color:rgb(var(--lamp-rgb));color:#111;font-weight:800;transition:background .5s}
 .login-glass #lg-err{color:#fecdd3!important}
 @media(max-width:768px){.login-wrap .login-left{display:none}.login-glass{opacity:1;filter:none}}
+
+/* ===================== v4 UPDATE ===================== */
+/* --- 1) Photo background poore software par (login ke ilawa sab pages) + zyada glass --- */
+body{background:#06202e!important}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+background:linear-gradient(160deg,rgba(4,22,40,.50),rgba(8,60,92,.30) 55%,rgba(6,86,92,.30)),url(login-bg.jpg) center/cover no-repeat}
+.medical-store-ui{background:rgba(4,16,38,.10)!important;backdrop-filter:none!important;box-shadow:none!important}
+.card,.stat,.preview-box{background:rgba(255,255,255,.50)!important;backdrop-filter:blur(22px) saturate(170%)!important;-webkit-backdrop-filter:blur(22px) saturate(170%)!important;border:1px solid rgba(255,255,255,.55)!important;box-shadow:0 12px 36px rgba(2,18,36,.30),inset 0 1px 0 rgba(255,255,255,.55)!important}
+.card:hover{transform:none}
+.card-h{background:rgba(255,255,255,.26)!important}
+.medical-store-ui .card,.medical-store-ui .stat,.medical-store-ui .mini-stat,.medical-store-ui .info-tile{background:rgba(255,255,255,.46)!important}
+.tbl-wrap{background:rgba(255,255,255,.38)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.mini-stat,.sum-box,.info-tile{background-color:rgba(255,255,255,.42)!important}
+.inp{background:rgba(255,255,255,.70)!important}
+.modal{background:rgba(255,255,255,.80)!important}
+.card h2,.card-h h2,.card .sub,.hint,label{text-shadow:0 1px 0 rgba(255,255,255,.35)}
+footer.app-foot{color:#d8f1ff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+/* --- 2) Floating side dock: WhatsApp + AI --- */
+#zm-dock{position:fixed;right:10px;top:50%;transform:translateY(-50%);z-index:900;display:flex;flex-direction:column;gap:10px}
+#zm-dock button{width:48px;height:48px;border-radius:16px;border:1px solid rgba(255,255,255,.6);display:grid;place-items:center;font-size:22px;color:#fff;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .15s}
+#zm-dock button:hover{transform:scale(1.08)}
+#zm-dock .wa{background:linear-gradient(135deg,#25d366,#128c7e)}
+#zm-dock .ai{background:linear-gradient(135deg,#7c3aed,#2563eb)}
+#zm-dock svg{width:26px;height:26px;fill:#fff}
+#zm-docbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9990;display:none;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:94vw;background:rgba(8,30,52,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:9px 12px;color:#fff;font-size:12px;box-shadow:0 12px 36px rgba(0,0,0,.45)}
+#zm-docbar.show{display:flex}
+#zm-docbar button{border:0;border-radius:11px;padding:9px 13px;font-weight:700;font-size:13px;color:#fff;cursor:pointer}
+#zm-docbar .pdf{background:linear-gradient(135deg,#ef4444,#b91c1c)}#zm-docbar .wa{background:linear-gradient(135deg,#25d366,#128c7e)}#zm-docbar .x{background:rgba(255,255,255,.18)}
+
+/* --- 3) Settings: har slip ka alag logo --- */
+.slip-logos{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.sl-box{border:1px solid rgba(255,255,255,.7);background:rgba(255,255,255,.45);border-radius:14px;padding:10px}
+.sl-box b{display:block;font-size:13px;margin-bottom:6px}
+.sl-prev{width:100%;height:64px;border-radius:10px;background:rgba(255,255,255,.8);border:1px dashed var(--slate-300);display:grid;place-items:center;overflow:hidden;margin-bottom:6px;font-size:11px;color:var(--slate-500);text-align:center}
+.sl-prev img{max-width:100%;max-height:100%;object-fit:contain}
+.sl-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* --- 4) Staff: roster, sheet, ID card --- */
+.stf-sheet{border-collapse:collapse;font-size:11px;min-width:0}
+.stf-sheet th,.stf-sheet td{border:1px solid rgba(255,255,255,.7);padding:3px 4px;text-align:center;min-width:24px}
+.stf-sheet td.nm{text-align:left;font-weight:700;white-space:nowrap;position:sticky;left:0;background:rgba(255,255,255,.85)}
+.att-P{background:#dcfce7;color:#166534}.att-A{background:#fee2e2;color:#991b1b}.att-L{background:#fef3c7;color:#92400e}.att-H{background:#dbeafe;color:#1e40af}.att-O{background:#e2e8f0;color:#334155}
+.ros-sel{width:100%;min-width:92px;padding:6px 4px;border-radius:8px;border:1px solid rgba(100,116,139,.35);font-size:12px;background:rgba(255,255,255,.8)}
+.pay-break{font-size:11px;color:var(--slate-600);line-height:1.5}
+.pill-stat{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:800;margin:2px 3px 2px 0}
+
+/* --- 5) MOBILE: app jaisa bottom bar + compact design --- */
+#zm-bnav{display:none}
+@media(max-width:1023px){
+ #zm-bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:950;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));background:rgba(8,30,52,.82);backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);border-top:1px solid rgba(255,255,255,.2);justify-content:space-around;gap:2px}
+ #zm-bnav button{flex:1;min-width:0;background:none;border:0;color:#cfe8ff;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:12px;font-size:10.5px;font-weight:700;cursor:pointer}
+ #zm-bnav button span:first-child{font-size:20px;line-height:1}
+ #zm-bnav button span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ #zm-bnav button.on{background:linear-gradient(135deg,#22d3ee,#3b82f6);color:#03213a}
+ body.has-bnav .main-wrap{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))}
+ body.has-bnav footer.app-foot{display:none}
+ #zm-dock{top:auto;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:none;right:8px;flex-direction:column;gap:8px}
+ #zm-dock button{width:44px;height:44px;border-radius:14px}
+ #zm-docbar{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+ .topbar{position:sticky}
+ #ai-top{display:none!important}
+ .sidebar{width:82vw;max-width:310px;border-radius:0 24px 24px 0}
+}
+@media(max-width:768px){
+ .content{padding:10px 8px}
+ .card,.stat{border-radius:16px!important}
+ .card-h{border-radius:16px 16px 0 0!important}
+ .tbl-wrap{border-radius:12px}
+ table.tbl{font-size:12px;min-width:560px}
+ .tbl th,.tbl td{padding:7px 8px}
+ .modal{margin:0!important;max-width:100vw!important;width:100vw!important;min-height:100vh;border-radius:0!important}
+ .modal-h{border-radius:0!important}.modal-f{border-radius:0!important;position:sticky;bottom:0;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+ .modal-f .btn{flex:1}
+ .slip-logos{grid-template-columns:1fr}
+ [style*="position:sticky;bottom:16px"]{bottom:calc(78px + env(safe-area-inset-bottom,0px))!important}
+ .topbar h1{font-size:15px}
+ .card-h{flex-direction:column;align-items:stretch}
+ .card-h .flex{flex-wrap:wrap}
+}
+@media(min-width:1024px){.content{padding-right:76px}}
+@media print{#zm-dock,#zm-bnav,#zm-docbar{display:none!important}body::before{display:none!important}}
 </style>
 </head>
 <body>
@@ -478,7 +560,7 @@ fetch() API calls ke zariye. Saara design/features wohi hain.
 ============================================================ */
 "use strict";
 /* ================= CONSTANTS ================= */
-const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff","usreports","labreports"];
+const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff","usreports","labreports","attendance"];
 let CLINIC=(function(){try{return localStorage.getItem("mcms_clinic")||""}catch(e){return ""}})();let CLINIC_INFO=null;
 const ADMIN_ID="usr_faheem_admin",ADMIN_USER="Faheem",ADMIN_PASS="Faheem786";
 const ALL_PERMS=["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
@@ -507,7 +589,7 @@ const NAV=[
 {key:"agent",label:"AI Agent",icon:"🤖",perm:"agent"},
 {key:"users",label:"Users",icon:"🔐",perm:"users"},
 {key:"settings",label:"Settings",icon:"⚙️",perm:"settings"},
-{key:"staff",label:"Staff & Payroll",icon:"🧑‍💼",perm:"staff"},
+{key:"staff",label:"Staff & Roster",icon:"🧑‍💼",perm:"staff"},
 {key:"backup",label:"Backup & Restore",icon:"💾",perm:"backup"}];
 const DEFAULT_SETTINGS={key:"app",clinicName:"ZainMed Clinic",tagline:"General Practice • Laboratory • Ultrasound",
 address:"",phone:"",phone2:"",email:"",
@@ -520,6 +602,74 @@ backupReminderDays:3,lastBackupAt:"",autoPrintAfterSave:true,
 msName:"",msAddress:"",msPhone:"",msFooter:"",
 devFooter:"Software developed by ZainMed\n03702906075 / 03192061690\nzainaliofficial343@gmail.com"};
 function devFooterHTML(s){const t=(s&&s.devFooter!==undefined&&s.devFooter!==null)?s.devFooter:DEFAULT_SETTINGS.devFooter;return String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(esc).join("<br>")}
+/* ================= v4: per-slip logo, PDF, WhatsApp, dock, mobile bar ================= */
+const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports / Salary Slip / ID Card"],["store","🏪 Medical Store Bill"]];
+function slipS(s,kind){const o=((s&&s.slipLogos)||{})[kind];if(!o)return s;const r=Object.assign({},s);if(o.none)r.logoDataUrl="";else if(o.url)r.logoDataUrl=o.url;if(o.size)r.logoSize=o.size;return r}
+function storeLogoHTML(){const s=slipS(app.settings,"store");return s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="height:'+Math.max(20,Number(s.logoSize)||56)+'px;width:auto;max-width:100%;object-fit:contain;margin-bottom:3px"></div>':""}
+let LAST_PRINT=null,_pdfLibs=null,_docbarT=null;
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("load failed"));document.head.appendChild(s)})}
+async function pdfLibs(){
+if(window.html2canvas&&window.jspdf)return;
+if(!_pdfLibs)_pdfLibs=Promise.all([window.html2canvas?0:loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),window.jspdf?0:loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")]).catch(e=>{_pdfLibs=null;throw e});
+await _pdfLibs}
+async function makePDF(html,size){
+await pdfLibs();
+const A4=size==="A4",wmm=A4?210:size==="58"?58:80,px=Math.round((A4?190:wmm-4)*3.7795);
+const fr=document.createElement("iframe");fr.style.cssText="position:fixed;left:-99999px;top:0;border:0;background:#fff;width:"+px+"px;height:1400px";document.body.appendChild(fr);
+try{
+const d=fr.contentDocument;d.open();d.write('<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#fff}</style></head><body>'+html+'</body></html>');d.close();
+await Promise.all(Array.from(d.images).map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r})));
+await new Promise(r=>setTimeout(r,200));
+fr.style.height=(d.documentElement.scrollHeight+10)+"px";
+const cv=await window.html2canvas(d.body,{scale:2.5,backgroundColor:"#fff",useCORS:true,logging:false,windowWidth:px});
+const jsPDF=window.jspdf.jsPDF;
+if(A4){const pdf=new jsPDF({unit:"mm",format:"a4"});const m=10,iw=210-2*m,pxMm=cv.width/iw,sliceH=Math.floor((297-2*m)*pxMm);let y=0,first=true;
+while(y<cv.height){const h=Math.min(sliceH,cv.height-y);const c2=document.createElement("canvas");c2.width=cv.width;c2.height=h;const g=c2.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c2.width,h);g.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+if(!first)pdf.addPage();pdf.addImage(c2.toDataURL("image/jpeg",.93),"JPEG",m,m,iw,h/pxMm);first=false;y+=h}
+return pdf}
+const hmm=Math.max(30,cv.height/cv.width*wmm);const pdf=new jsPDF({unit:"mm",format:[wmm,hmm]});pdf.addImage(cv.toDataURL("image/jpeg",.93),"JPEG",0,0,wmm,hmm);return pdf;
+}finally{fr.remove()}}
+function pdfName(){return ((app.settings&&app.settings.clinicName)||"ZainMed").replace(/[^A-Za-z0-9]+/g,"_").slice(0,24)+"_"+today()+"_"+timeNow().replace(":","")+".pdf"}
+async function lastPDF(share){
+if(!LAST_PRINT)return toast("Pehle koi slip / report print karein","error");
+toast("PDF ban rahi hai…","info");
+try{const pdf=await makePDF(LAST_PRINT.html,LAST_PRINT.size);const name=pdfName();
+if(share&&navigator.canShare){try{const f=new File([pdf.output("blob")],name,{type:"application/pdf"});if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}}
+pdf.save(name);toast("PDF download ho gayi","success");
+if(share)openWA("","Assalam o Alaikum, "+((app.settings&&app.settings.clinicName)||"")+" ki slip / report ki PDF (abhi download hui) — attach kar dein.");
+}catch(e){console.error(e);toast("PDF library load nahi hui (pehli dafa internet chahiye). Print window mein 'Save as PDF' chunein.","error");printHTML(LAST_PRINT.html,LAST_PRINT.size)}}
+function showDocBar(){
+let b=document.getElementById("zm-docbar");if(!b){b=document.createElement("div");b.id="zm-docbar";document.body.appendChild(b)}
+b.innerHTML='<span>Slip tayyar</span><button class="pdf" id="db-pdf">📄 PDF</button><button class="wa" id="db-wa">💬 WhatsApp</button><button class="x" id="db-x">✕</button>';
+b.classList.add("show");
+document.getElementById("db-pdf").onclick=()=>lastPDF(false);document.getElementById("db-wa").onclick=()=>lastPDF(true);document.getElementById("db-x").onclick=()=>b.classList.remove("show");
+clearTimeout(_docbarT);_docbarT=setTimeout(()=>b.classList.remove("show"),20000)}
+function waNum(n){let d=String(n||"").replace(/\D/g,"");if(d.indexOf("00")===0)d=d.slice(2);if(d.charAt(0)==="0")d="92"+d.slice(1);return d}
+function openWA(n,text){window.open("https://wa.me/"+waNum(n)+(text?"?text="+encodeURIComponent(text):""),"_blank")}
+function waModal(){
+const s=app.settings;
+const ov=openModal("💬 WhatsApp",'<div class="field"><label>Number (03xx… ya 92…) — khali chhor sakte hain</label><input class="inp" id="wa-n" inputmode="tel" placeholder="0300 1234567"></div><div class="field"><label>Message</label><textarea class="inp" id="wa-t" rows="4">'+esc("Assalam o Alaikum, "+(s.clinicName||"")+" ki taraf se.")+'</textarea></div>'+(LAST_PRINT?'<button class="btn btn-outline block" id="wa-pdf">📄 Aakhri slip ki PDF bana kar share karein</button>':""),'<button class="btn btn-neutral" data-close>Close</button><button class="btn" style="background:#25d366;color:#fff;border-color:#25d366" id="wa-go">Send on WhatsApp</button>');
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+ov.querySelector("#wa-go").onclick=()=>{openWA(ov.querySelector("#wa-n").value,ov.querySelector("#wa-t").value);ov.remove()};
+const p=ov.querySelector("#wa-pdf");if(p)p.onclick=()=>{ov.remove();lastPDF(true)}}
+function renderDock(){
+let d=document.getElementById("zm-dock");if(!d){d=document.createElement("div");d.id="zm-dock";document.body.appendChild(d)}
+d.innerHTML='<button class="wa" id="dk-wa" title="WhatsApp"><svg viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.04 21.5h-.01a9.9 9.9 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.87 9.87 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.9-9.88 2.64 0 5.12 1.03 6.99 2.9a9.82 9.82 0 0 1 2.9 6.99c0 5.45-4.44 9.88-9.9 9.88z"/></svg></button>'+(can("agent")?'<button class="ai" id="dk-ai" title="AI Agent">🤖</button>':"");
+document.getElementById("dk-wa").onclick=waModal;const a=document.getElementById("dk-ai");if(a)a.onclick=()=>go("agent")}
+function renderBnav(){
+let el=document.getElementById("zm-bnav");if(!el){el=document.createElement("nav");el.id="zm-bnav";document.body.appendChild(el)}
+const role=app.user&&app.user.role;
+const pref=role==="medicalstore"?["ms_dashboard","ms_sale","ms_stock","ms_purchase"]:role==="lab"?["lab"]:["dashboard","newvisit","patients","billing"];
+const short={newvisit:"Visit",ms_dashboard:"Home",ms_sale:"Sale",ms_stock:"Stock",ms_purchase:"Purchase",dashboard:"Home",patients:"Patients",billing:"Billing",lab:"Lab"};
+const items=NAV.filter(n=>pref.indexOf(n.key)>=0&&can(n.perm)).sort((a,b)=>pref.indexOf(a.key)-pref.indexOf(b.key)).slice(0,4);
+el.innerHTML=items.map(n=>'<button data-bn="'+n.key+'" class="'+(app.route===n.key?"on":"")+'"><span>'+n.icon+'</span><span>'+(short[n.key]||n.label)+'</span></button>').join("")+'<button data-bn="__more"><span>☰</span><span>Menu</span></button>';
+document.body.classList.add("has-bnav");
+el.querySelectorAll("[data-bn]").forEach(b=>b.onclick=()=>{if(b.dataset.bn==="__more"){document.getElementById("sidebar").classList.toggle("hidden-m");document.getElementById("backdrop").classList.toggle("show")}else go(b.dataset.bn)})}
+function removeChrome(){["zm-bnav","zm-dock","zm-docbar"].forEach(i=>{const e=document.getElementById(i);if(e)e.remove()});document.body.classList.remove("has-bnav")}
+function slipLogoCardHTML(s){const sl=s.slipLogos||{};
+return '<div class="card" style="grid-column:span 2"><div class="card-h"><div><h2>🖼 Har Slip ka Alag Logo</h2><div class="sub">Sab slips par ek hi logo rakhna ho to sirf upar "Logo & Print Settings" mein ek dafa upload karein. Kisi slip par alag logo chahiye to yahan us slip ka logo lagayein.</div></div></div><div class="card-b"><div class="slip-logos">'+
+SLIP_KINDS.map(k=>'<div class="sl-box"><b>'+k[1]+'</b><div class="sl-prev" id="sl-prev-'+k[0]+'"></div><div id="sl-mode-'+k[0]+'" style="font-size:11px;font-weight:700;margin-bottom:6px"></div><div class="sl-row"><label class="btn btn-outline sm" style="margin:0">📤 Upload<input type="file" accept="image/*" data-slfile="'+k[0]+'" style="display:none"></label><button type="button" class="btn btn-neutral sm" data-slcommon="'+k[0]+'">Common logo</button><button type="button" class="btn btn-neutral sm" data-slnone="'+k[0]+'">No logo</button></div><div class="sl-row" style="margin-top:6px"><span style="font-size:11px">Size (px)</span><input class="inp" style="width:78px;padding:5px" inputmode="numeric" data-slsize="'+k[0]+'" value="'+((sl[k[0]]||{}).size||"")+'" placeholder="auto"></div></div>').join("")+'</div></div></div>'}
+
 const SEED_DOCTORS=[
 {name:"Dr. Ahmed Raza",specialization:"General Physician",qualification:"MBBS, FCPS",fee:500,mobile:"+92 300 1234567",commissionEnabled:true,commissionPercent:40,shift:"Morning",active:true},
 {name:"Dr. Sana Khalid",specialization:"Gynaecologist",qualification:"MBBS, MCPS (Gynae)",fee:800,mobile:"+92 301 2345678",commissionEnabled:true,commissionPercent:50,shift:"Evening",active:true},
@@ -862,17 +1012,18 @@ st.textContent=size==="58"?"@page{size:58mm auto;margin:2mm}":size==="80"?"@page
 }
 function printHTML(html,size){
 const root=document.getElementById("print-root");if(!root)return;
+LAST_PRINT={html:html,size:size};
 setPageStyle(size);root.innerHTML=html;
 const touch=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/i.test(navigator.platform||""));
 /* Mobile par afterprint jaldi fire ho jata hai, isliye wahan slip clear nahi karte (agli print par replace ho jati hai) */
 if(!touch){const after=()=>{root.innerHTML="";window.removeEventListener("afterprint",after)};window.addEventListener("afterprint",after)}
-setTimeout(()=>{try{window.print()}catch(e){toast("Is browser mein print nahi ho raha. Chrome ya Safari mein kholein.","error")}},touch?350:120);
+setTimeout(()=>{try{window.print()}catch(e){toast("Is browser mein print nahi ho raha. Chrome ya Safari mein kholein.","error")}},touch?350:120);showDocBar();
 }
 function shieldSVG(sz,color){color=color||"#000";
 return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M32 3 L58 12 v20 c0 15-11 26-26 29C17 58 6 47 6 32V12z" fill="none" stroke="'+color+'" stroke-width="3"/><path d="M27 17h10v10h10v10H37v10H27V37H17V27h10z" fill="'+color+'"/></svg>'}
 /* ---- receipt slip HTML ---- */
 function slipHTML(v,s,size){
-size=size||s.printSize;const A4=size==="A4";
+s=slipS(s,"opd");size=size||s.printSize;const A4=size==="A4";
 const fs=s.slipFontSize||(A4?14:size==="58"?11.5:13);
 const p=fs+"px",sm=(fs*.8)+"px",lg=(fs*1.25)+"px";
 const width=A4?"100%":size==="58"?"54mm":"74mm";
@@ -920,7 +1071,7 @@ return (v.doctorMobile||(d&&d.mobile)||"").toString().trim()}catch(e){return ""}
 }
 /* ---- LAB / ULTRASOUND ALAG SLIP ---- */
 function labSlipHTML(v,s,size){
-size=size||s.printSize;const A4=size==="A4";
+s=slipS(s,"lab");size=size||s.printSize;const A4=size==="A4";
 const fs=s.slipFontSize||(A4?14:size==="58"?11.5:13);
 const p=fs+"px",sm=(fs*.8)+"px",lg=(fs*1.25)+"px";
 const width=A4?"100%":size==="58"?"54mm":"74mm";
@@ -965,6 +1116,7 @@ printHTML(labSlipHTML(v,app.settings,size),size||app.settings.printSize)}
 
 /* ---- A4 report HTML ---- */
 function reportHTML(cfg,s){
+s=slipS(s,"rep");
 const align=i=>(cfg.align&&cfg.align[i])||"left";
 const rows=cfg.rows.map((r,i)=>'<tr style="background:'+(i%2?"#f4f8fd":"#fff")+'">'+r.map((c,j)=>'<td style="font-size:11px;padding:5px 6px;border:1px solid #cbd9e8;text-align:'+align(j)+'">'+esc(c)+"</td>").join("")+"</tr>").join("");
 const head=cfg.headers.map((h,i)=>'<th style="font-size:11px;padding:6px;border:1px solid #1d4ed8;background:#1d4ed8;color:#fff;text-align:'+align(i)+'">'+esc(h)+"</th>").join("");
@@ -1007,6 +1159,7 @@ $("#app").innerHTML=html;
 }
 /* ---------------- LOGIN ---------------- */
 function renderLogin(msg){
+removeChrome();
 const s=app.settings;const hasC=!!CLINIC_INFO;const cname=hasC?s.clinicName:"ZainMed";const caddr=hasC?s.address:"Smart Clinic Management System";const clinicField=CLINIC?'<input type="hidden" id="lg-clinic" value="'+esc(CLINIC)+'">':'<div class="field"><label>Clinic ID <span class="req">*</span></label><input class="inp" id="lg-clinic" value="" placeholder="e.g. cityclinic" required autocapitalize="off" style="font-weight:700;text-transform:lowercase"></div>';const loginTitle=CLINIC_INFO&&CLINIC_INFO.type==="medicalstore"?"Medical Store Staff Login":"Staff Login";document.title=(hasC?s.clinicName+" • ":"")+"ZainMed";
 mount('<div class="login-wrap"><div class="login-card">'+
 '<div class="login-left"><div><div class="shield">'+shieldSVG(56,"#1d4ed8")+"</div>"+
@@ -1089,7 +1242,7 @@ $$("[data-navgrp]").forEach(b=>b.onclick=()=>{const sub=$("#nav-sub-"+b.dataset.
 if(_clockTimer)clearInterval(_clockTimer);
 tickClock();_clockTimer=setInterval(tickClock,1000);
 {const np=$("#net-pill");if(np){np.onclick=openSyncModal}NET.state="";setNetState()}
-showBanner();
+showBanner();renderDock();renderBnav();
 }
 function tickClock(){const el=$("#clock");if(!el)return;const d=new Date();
 el.innerHTML=d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})+"<small>"+d.toLocaleDateString([],{weekday:"short",day:"2-digit",month:"short",year:"numeric"})+"</small>"}
@@ -1768,7 +1921,7 @@ const sel=(r.findings||[]).filter(x=>x.items&&x.items.length);
 const meas=(r.measurements||[]).filter(m=>m.label&&String(m.value||"").trim());
 return {sel:sel,meas:meas}}
 function usReportHTML(r,size){
-const s=app.settings,A4=size==="A4";
+const s=slipS(app.settings,"us"),A4=size==="A4";
 const b=usBody(r);const E=esc;
 const base=Number(s.reportFontSize||12),logo=Number(s.logoSize||56);
 const clinic=E(s.clinicName||""),addr=E([s.address,s.phone,s.phone2].filter(Boolean).join(" • "));
@@ -2029,7 +2182,7 @@ return (r.tests||[]).map(t=>{const out=[];let head=null;
 (t.rows||[]).forEach(x=>{if(x.h){head=x.n;return}if(!String(x.v||"").trim())return;if(head){out.push({h:head});head=null}out.push(x)});
 return {name:t.name,rows:out,remarks:t.remarks||""}}).filter(t=>t.rows.length)}
 function lbReportHTML(r,size){
-const s=app.settings,A4=size==="A4",E=esc;
+const s=slipS(app.settings,"lb"),A4=size==="A4",E=esc;
 const base=Number(s.reportFontSize||12),logo=Number(s.logoSize||56);
 const clinic=E(s.clinicName||""),addr=E([s.address,s.phone,s.phone2].filter(Boolean).join(" • "));
 const ageTxt=E((r.age||"")+(r.age?" "+(r.ageUnit||"Years"):""));
@@ -3246,7 +3399,7 @@ async function pageMedicalStore(){
   const printSale=(s)=>{
     const receiptWidth=app.settings.printSize==="58"?"54mm":"74mm";
     const rows=s.items.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+' '+esc(x.unit||'unit')+'</td><td>'+fmtMoney(x.price)+'</td><td>'+fmtMoney(x.qty*x.price)+'</td></tr>').join("");
-    printHTML('<style>@page{size:'+((app.settings.printSize==="58")?"58mm":"80mm")+' auto;margin:2mm}html,body{margin:0;padding:0;width:'+receiptWidth+';font-family:Arial,sans-serif}*{box-sizing:border-box}table{table-layout:fixed;font-size:10px}th,td{overflow-wrap:anywhere;padding:3px!important}h2{font-size:14px}p{font-size:10px;margin:5px 0}</style><div style="font-family:Arial,sans-serif;color:#111;width:'+receiptWidth+';max-width:'+receiptWidth+';margin:0 auto"><h2 style="text-align:center">'+esc(app.settings.msName||storeTitle(app.settings.clinicName))+'</h2><p style="text-align:center">'+esc(app.settings.msAddress||app.settings.address||"")+' '+esc(app.settings.msPhone||app.settings.phone||"")+'</p><hr><h3>Sales Receipt</h3><p>Bill: '+esc(s.billNo)+' | Date: '+fmtDate(s.date)+' '+esc(s.time)+'</p><p>Customer: '+esc(s.customerName)+' | Mobile: '+esc(s.mobile||"")+'</p><table style="width:100%;border-collapse:collapse" border="1" cellpadding="7"><thead><tr><th>Medicine</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table><p style="text-align:right">Subtotal: '+money(s.subtotal)+'<br>Discount: '+money(s.discount)+'<br><b>Total: '+money(s.total)+'</b><br>Paid: '+money(s.paid)+'<br>Due: '+money(s.due)+'</p>'+(s.doctor?'<p>Doctor: '+esc(s.doctor)+(s.rxNo?' | Rx: '+esc(s.rxNo):'')+'</p>':'')+'<p>Payment: '+esc(s.method)+'</p><p style="text-align:center;margin-top:25px">'+esc(app.settings.msFooter||app.settings.footerText||"Thank you")+'</p><p style="text-align:center;font-size:9px;margin-top:8px;line-height:1.5;word-break:break-all">'+devFooterHTML(app.settings)+'</p></div>',app.settings.printSize||"80");
+    printHTML('<style>@page{size:'+((app.settings.printSize==="58")?"58mm":"80mm")+' auto;margin:2mm}html,body{margin:0;padding:0;width:'+receiptWidth+';font-family:Arial,sans-serif}*{box-sizing:border-box}table{table-layout:fixed;font-size:10px}th,td{overflow-wrap:anywhere;padding:3px!important}h2{font-size:14px}p{font-size:10px;margin:5px 0}</style><div style="font-family:Arial,sans-serif;color:#111;width:'+receiptWidth+';max-width:'+receiptWidth+';margin:0 auto">'+storeLogoHTML()+'<h2 style="text-align:center">'+esc(app.settings.msName||storeTitle(app.settings.clinicName))+'</h2><p style="text-align:center">'+esc(app.settings.msAddress||app.settings.address||"")+' '+esc(app.settings.msPhone||app.settings.phone||"")+'</p><hr><h3>Sales Receipt</h3><p>Bill: '+esc(s.billNo)+' | Date: '+fmtDate(s.date)+' '+esc(s.time)+'</p><p>Customer: '+esc(s.customerName)+' | Mobile: '+esc(s.mobile||"")+'</p><table style="width:100%;border-collapse:collapse" border="1" cellpadding="7"><thead><tr><th>Medicine</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table><p style="text-align:right">Subtotal: '+money(s.subtotal)+'<br>Discount: '+money(s.discount)+'<br><b>Total: '+money(s.total)+'</b><br>Paid: '+money(s.paid)+'<br>Due: '+money(s.due)+'</p>'+(s.doctor?'<p>Doctor: '+esc(s.doctor)+(s.rxNo?' | Rx: '+esc(s.rxNo):'')+'</p>':'')+'<p>Payment: '+esc(s.method)+'</p><p style="text-align:center;margin-top:25px">'+esc(app.settings.msFooter||app.settings.footerText||"Thank you")+'</p><p style="text-align:center;font-size:9px;margin-top:8px;line-height:1.5;word-break:break-all">'+devFooterHTML(app.settings)+'</p></div>',app.settings.printSize||"80");
   };
   await records();shell();
 }
@@ -3255,137 +3408,222 @@ async function pageMedicalStore(){
 STAFF & PAYROLL
 ============================================================ */
 const STAFF_ROLES=["Receptionist","Nurse","Lab Technician","Ultrasound Technician","Compounder / Dispenser","Ward Boy","Security Guard","Sweeper / Cleaner","Accountant","Manager","Driver","Other"];
-const ATT_STATUSES=[["P","Present","#16a34a"],["A","Absent","#dc2626"],["L","Leave","#d97706"],["H","Half Day","#2563eb"]];
+const ATT_STATUSES=[["P","Present","#16a34a"],["A","Absent","#dc2626"],["L","Leave","#d97706"],["H","Half Day","#2563eb"],["O","Off","#64748b"]];
+const WEEK=[["mon","Mon"],["tue","Tue"],["wed","Wed"],["thu","Thu"],["fri","Fri"],["sat","Sat"],["sun","Sun"]];
+const ROSTER_OPTS=["Morning","Evening","Night","Full Day","Off"];
+function dowKey(d){return ["sun","mon","tue","wed","thu","fri","sat"][new Date(d+"T00:00:00").getDay()]}
 function daysInMonth(ym){const[y,m]=ym.split("-").map(Number);return new Date(y,m,0).getDate()}
 function staffAttKey(staffId,date){return "att_"+staffId+"_"+date}
+function adjKey(stId,month){return "adj_"+stId+"_"+month}
+function attOf(st,month){return app.attendance.filter(a=>a.staffId===st.id&&a.date&&a.date.slice(0,7)===month&&!a.kind)}
+function adjOf(st,month){return app.attendance.find(a=>a.id===adjKey(st.id,month))||{advance:0,bonus:0,otHours:0,fine:0,note:""}}
+function payBasis(){const c=app.attendance.find(a=>a.id==="cfg_pay");return (c&&c.payBasis)||"cal"}
+function defStatus(st,date){return (st.roster&&st.roster[dowKey(date)])==="Off"?"O":"P"}
+/* AUTO CALCULATION: salary, absent/half-day katauti, overtime, bonus, advance, fine => net */
+function calcPay(st,month){
+const dim=daysInMonth(month),pb=payBasis(),basis=pb==="30"?30:pb==="26"?26:dim;
+const recs=attOf(st,month);const c={P:0,A:0,L:0,H:0,O:0};recs.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++});
+const perDay=num(st.salary)/basis;
+const absentDed=Math.round(c.A*perDay),halfDed=Math.round(c.H*perDay/2);
+const adj=adjOf(st,month);
+const otRate=num(st.otRate)||Math.round(perDay/8);
+const ot=Math.round(num(adj.otHours)*otRate),bonus=num(adj.bonus),advance=num(adj.advance),fine=num(adj.fine);
+const gross=num(st.salary)+ot+bonus;
+const net=Math.max(0,Math.round(gross-absentDed-halfDed-advance-fine));
+return {c,perDay,absentDed,halfDed,ot,otRate,bonus,advance,fine,gross,net,adj,basis,dim,unmarked:Math.max(0,dim-recs.length)};
+}
+async function shrinkImg(file,max,type,q){
+const url=await readAsDataURL(file);
+return await new Promise(res=>{const im=new Image();im.onload=()=>{try{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+const g=c.getContext("2d");if(type==="image/jpeg"){g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height)}g.drawImage(im,0,0,c.width,c.height);res(c.toDataURL(type||"image/png",q||.85))}catch(e){res(url)}};im.onerror=()=>res(url);im.src=url});
+}
+function staffCardsHTML(list){
+const s=slipS(app.settings,"rep");const E=esc;
+const logo=s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:9mm;width:auto;max-width:15mm;object-fit:contain;background:#fff;border-radius:1.5mm;padding:.5mm">':"";
+const wrap='width:85.6mm;height:54mm;border-radius:3mm;overflow:hidden;position:relative;font-family:Arial,sans-serif;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box';
+const card=st=>{
+const ph=st.photo?'<img src="'+st.photo+'" style="width:21mm;height:26mm;object-fit:cover;border-radius:2mm;border:.6mm solid #1e3a8a">':'<div style="width:21mm;height:26mm;border-radius:2mm;border:.6mm solid #1e3a8a;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:9mm;color:#64748b">'+E((st.name||"?").trim().charAt(0).toUpperCase())+'</div>';
+const front='<div style="'+wrap+';border:.3mm solid #1e3a8a;background:#fff">'+
+'<div style="background:linear-gradient(90deg,#1e3a8a,#0891b2);color:#fff;height:12mm;display:flex;align-items:center;gap:2mm;padding:0 3mm">'+logo+'<div style="min-width:0"><div style="font-size:3.6mm;font-weight:800;line-height:1.1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:62mm">'+E(s.clinicName||"")+'</div><div style="font-size:2.2mm;opacity:.9">STAFF IDENTITY CARD</div></div></div>'+
+'<div style="display:flex;gap:3mm;padding:3mm"><div>'+ph+'</div><div style="font-size:2.9mm;line-height:1.55;min-width:0;color:#0f172a">'+
+'<div style="font-size:4mm;font-weight:800;color:#1e3a8a;line-height:1.15">'+E(st.name)+'</div>'+
+'<div style="font-weight:700;color:#0e7490">'+E(st.designation||"")+'</div>'+
+'<div><b>ID:</b> '+E(st.staffId)+'</div>'+(st.phone?'<div><b>Phone:</b> '+E(st.phone)+'</div>':"")+(st.joiningDate?'<div><b>Joined:</b> '+fmtDate(st.joiningDate)+'</div>':"")+(st.bloodGroup?'<div><b>Blood:</b> '+E(st.bloodGroup)+'</div>':"")+'</div></div>'+
+'<div style="position:absolute;left:0;right:0;bottom:0;height:4mm;background:#1e3a8a;color:#fff;font-size:2.3mm;text-align:center;line-height:4mm">'+E(s.phone||s.timing||"")+'</div></div>';
+const back='<div style="'+wrap+';border:.3mm solid #1e3a8a;background:#f8fafc;padding:4mm;font-size:2.7mm;line-height:1.6;color:#0f172a">'+
+'<div style="font-weight:800;color:#1e3a8a;font-size:3.4mm;margin-bottom:1.5mm">'+E(s.clinicName||"")+'</div>'+
+'<div>Ye card clinic ki milkiyat hai. Gum ho jaye ya mil jaye to wapas karein:</div>'+
+'<div style="margin-top:1mm"><b>'+E(s.address||"")+'</b></div><div><b>'+E(s.phone||"")+'</b></div>'+
+(st.emergency?'<div style="margin-top:1.5mm"><b>Emergency:</b> '+E(st.emergency)+'</div>':"")+(st.address?'<div><b>Address:</b> '+E(st.address)+'</div>':"")+
+'<div style="position:absolute;right:4mm;bottom:5mm;border-top:.3mm solid #475569;padding-top:.8mm;font-size:2.4mm;width:30mm;text-align:center">Authorized Signature</div></div>';
+return '<div style="display:flex;gap:5mm;margin-bottom:6mm;flex-wrap:wrap">'+front+back+'</div>'};
+return '<div style="width:100%;color:#111">'+list.map(card).join("")+'</div>';
+}
+function payslipHTML(st,month,r){
+const s=slipS(app.settings,"rep"),cur=s.currency||"Rs.",E=esc;
+const row=(a,b,c)=>'<tr><td style="padding:6px 8px;border:1px solid #cbd5e1">'+a+'</td><td style="padding:6px 8px;border:1px solid #cbd5e1;text-align:right">'+(b||"")+'</td><td style="padding:6px 8px;border:1px solid #cbd5e1;text-align:right;color:#be123c">'+(c||"")+'</td></tr>';
+const m=x=>cur+" "+fmtMoney(x);
+return '<div style="font-family:Arial,sans-serif;color:#111;width:100%"><div style="text-align:center">'+(s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:'+(s.logoSize||56)+'px;width:auto;max-width:100%;object-fit:contain"><br>':"")+
+'<div style="font-size:20px;font-weight:800">'+E(s.clinicName||"")+'</div><div style="font-size:12px">'+E(s.address||"")+' '+E(s.phone||"")+'</div></div>'+
+'<h2 style="text-align:center;margin:14px 0 4px;font-size:17px">SALARY SLIP — '+E(month)+'</h2><hr>'+
+'<table style="width:100%;font-size:13px;margin:8px 0"><tr><td><b>Name:</b> '+E(st.name)+'</td><td><b>Staff ID:</b> '+E(st.staffId)+'</td></tr><tr><td><b>Designation:</b> '+E(st.designation||"")+'</td><td><b>Joining:</b> '+fmtDate(st.joiningDate||"")+'</td></tr></table>'+
+'<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#e2e8f0"><th style="padding:6px 8px;border:1px solid #cbd5e1;text-align:left">Details</th><th style="padding:6px 8px;border:1px solid #cbd5e1;text-align:right">Earnings</th><th style="padding:6px 8px;border:1px solid #cbd5e1;text-align:right">Deductions</th></tr></thead><tbody>'+
+row("Basic Salary",m(st.salary),"")+(r.ot?row("Overtime ("+r.adj.otHours+" hrs x "+fmtMoney(r.otRate)+")",m(r.ot),""):"")+(r.bonus?row("Bonus",m(r.bonus),""):"")+
+(r.absentDed?row("Absent ("+r.c.A+" days)","",m(r.absentDed)):"")+(r.halfDed?row("Half Day ("+r.c.H+")","",m(r.halfDed)):"")+(r.advance?row("Advance","",m(r.advance)):"")+(r.fine?row("Fine","",m(r.fine)):"")+
+'<tr style="background:#f1f5f9;font-weight:800"><td style="padding:8px;border:1px solid #cbd5e1">NET PAYABLE</td><td colspan="2" style="padding:8px;border:1px solid #cbd5e1;text-align:right;font-size:16px">'+m(r.net)+'</td></tr></tbody></table>'+
+'<p style="font-size:12px;margin-top:10px">Attendance: Present '+r.c.P+' | Absent '+r.c.A+' | Leave '+r.c.L+' | Half Day '+r.c.H+' | Off '+r.c.O+'</p>'+
+'<div style="display:flex;justify-content:space-between;margin-top:46px;font-size:12px"><div style="border-top:1px solid #333;padding-top:4px;width:40%;text-align:center">Receiver Signature</div><div style="border-top:1px solid #333;padding-top:4px;width:40%;text-align:center">Authorized Signature</div></div></div>';
+}
 function pageStaff(){
-const s=app.settings;
+const s=app.settings,cur=s.currency||"Rs.";
 app.staffTab=app.staffTab||"list";
 const tabBtn=(k,label)=>'<button class="btn '+(app.staffTab===k?"btn-primary":"btn-outline")+' sm" data-stab="'+k+'">'+label+'</button>';
 const shell=()=>{
-$("#page").innerHTML='<div class="card"><div class="card-h"><div><h2>Staff & Payroll</h2><div class="sub">Staff records, daily attendance aur monthly salary calculation</div></div>'+
-'<div class="flex g8 fw">'+tabBtn("list","👥 Staff List")+tabBtn("attendance","🗓 Attendance")+tabBtn("payroll","💰 Payroll")+'</div></div>'+
+$("#page").innerHTML='<div class="card"><div class="card-h"><div><h2>Staff Management</h2><div class="sub">Staff ID, Attendance (Present / Absent / Off), Duty Roster aur automatic Salary calculation</div></div>'+
+'<div class="flex g8 fw">'+tabBtn("list","👥 Staff & ID")+tabBtn("attendance","🗓 Attendance")+tabBtn("roster","📋 Roster")+tabBtn("payroll","💰 Salary")+'</div></div>'+
 '<div class="card-b" id="staff-body"></div></div>';
 $$("[data-stab]").forEach(b=>b.onclick=()=>{app.staffTab=b.dataset.stab;shell()});
-if(app.staffTab==="attendance")drawAttendance();
-else if(app.staffTab==="payroll")drawPayroll();
-else drawList();
+({attendance:drawAttendance,roster:drawRoster,payroll:drawPayroll}[app.staffTab]||drawList)();
 };
+/* ---------- STAFF LIST + ID CARD ---------- */
 const drawList=()=>{
-const rows=app.staff.map(st=>{
-return '<tr><td style="font-weight:700">'+esc(st.staffId)+'</td><td style="font-weight:600">'+esc(st.name)+'<div style="font-size:11px;color:var(--slate-500);font-weight:400">'+esc(st.cnic||"")+'</div></td>'+
+const act=app.staff.filter(x=>x.status==="Active");
+const rows=app.staff.map(st=>'<tr><td style="font-weight:800;white-space:nowrap">'+esc(st.staffId)+'</td><td><div class="flex g8 aic">'+(st.photo?'<img src="'+st.photo+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover">':'<span style="width:34px;height:34px;border-radius:50%;background:#dbeafe;display:grid;place-items:center;font-weight:800;color:#1e40af">'+esc((st.name||"?").charAt(0).toUpperCase())+'</span>')+'<div style="font-weight:700">'+esc(st.name)+'<div style="font-size:11px;color:var(--slate-500);font-weight:400">'+esc(st.cnic||"")+'</div></div></div></td>'+
 '<td style="font-size:12px">'+esc(st.designation)+'</td><td style="font-size:12px">'+esc(st.phone||"-")+'</td><td style="font-size:12px">'+esc(st.shift||"-")+'</td>'+
-'<td style="font-weight:700;white-space:nowrap">'+s.currency+" "+fmtMoney(st.salary)+'</td>'+
-'<td><span class="badge '+(st.status==="Active"?"green":"slate")+'">'+esc(st.status)+'</span></td>'+
-'<td><div class="flex g8"><button class="btn btn-neutral sm" data-edit="'+st.id+'">✏️</button>'+
-'<button class="btn '+(st.status==="Active"?"btn-warn":"btn-success")+' sm" data-tog="'+st.id+'">'+(st.status==="Active"?"MARK LEFT":"RE-ACTIVATE")+'</button>'+
-(can("delete")?'<button class="btn btn-danger sm" data-del="'+st.id+'">🗑</button>':"")+'</div></td></tr>';
-}).join("");
-$("#staff-body").innerHTML='<div class="flex" style="justify-content:flex-end;margin-bottom:10px"><button class="btn btn-success sm" id="stf-add">➕ ADD STAFF</button></div>'+
-'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff ID</th><th>Name</th><th>Designation</th><th>Phone</th><th>Shift</th><th>Monthly Salary</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
-(rows||'<tr class="empty-row"><td colspan="8">No staff added yet</td></tr>')+'</tbody></table></div>';
+'<td style="font-weight:700;white-space:nowrap">'+cur+" "+fmtMoney(st.salary)+'</td><td><span class="badge '+(st.status==="Active"?"green":"slate")+'">'+esc(st.status)+'</span></td>'+
+'<td><div class="flex g8 fw"><button class="btn btn-neutral sm" data-edit="'+st.id+'">✏️</button><button class="btn btn-primary sm" data-card="'+st.id+'">🪪 ID Card</button>'+
+'<button class="btn '+(st.status==="Active"?"btn-warn":"btn-success")+' sm" data-tog="'+st.id+'">'+(st.status==="Active"?"MARK LEFT":"RE-ACTIVATE")+'</button>'+(can("delete")?'<button class="btn btn-danger sm" data-del="'+st.id+'">🗑</button>':"")+'</div></td></tr>').join("");
+$("#staff-body").innerHTML='<div class="flex g8 fw" style="justify-content:flex-end;margin-bottom:10px"><button class="btn btn-outline sm" id="stf-allcards">🪪 Print All ID Cards</button><button class="btn btn-success sm" id="stf-add">➕ ADD STAFF</button></div>'+
+'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff ID</th><th>Name</th><th>Designation</th><th>Phone</th><th>Shift</th><th>Monthly Salary</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr class="empty-row"><td colspan="8">Abhi koi staff add nahi hua</td></tr>')+'</tbody></table></div>';
 $("#stf-add").onclick=()=>staffModal({id:"",staffId:"",name:"",designation:STAFF_ROLES[0],phone:"",cnic:"",joiningDate:today(),salary:0,shift:s.shifts[0],status:"Active"});
+$("#stf-allcards").onclick=()=>{if(!act.length)return toast("Koi active staff nahi","error");printHTML(staffCardsHTML(act),"A4")};
+$$("[data-card]").forEach(b=>b.onclick=()=>printHTML(staffCardsHTML([app.staff.find(x=>x.id===b.dataset.card)]),"A4"));
 $$("[data-edit]").forEach(b=>b.onclick=()=>staffModal(app.staff.find(x=>x.id===b.dataset.edit)));
 $$("[data-tog]").forEach(b=>b.onclick=async()=>{const st=app.staff.find(x=>x.id===b.dataset.tog);
 const obj=Object.assign({},st,{status:st.status==="Active"?"Left":"Active",leftDate:st.status==="Active"?today():""});
 await qPut("staff",obj);await audit(app.user.username,"UPDATE","staff",st.id,st.name+" -> "+obj.status);await loadData();toast(st.name+" is now "+obj.status,"info");drawList()});
 $$("[data-del]").forEach(b=>b.onclick=async()=>{const st=app.staff.find(x=>x.id===b.dataset.del);
-if(!await confirmBox({title:"Delete Staff",message:"Permanently delete "+st.name+" ("+st.staffId+")? Attendance history ka reference bhi reports se hat jayega. Consider Mark Left instead.",danger:true,confirmText:"DELETE",requireText:"DELETE"}))return;
+if(!await confirmBox({title:"Delete Staff",message:"Permanently delete "+st.name+" ("+st.staffId+")? Consider Mark Left instead.",danger:true,confirmText:"DELETE",requireText:"DELETE"}))return;
 await removeRecord("staff",st.id);await audit(app.user.username,"DELETE","staff",st.id,st.name);toast("Staff deleted","info");drawList()});
 };
+/* ---------- ATTENDANCE ---------- */
 const drawAttendance=()=>{
-let date=app.staffAttDate||today();
-const active=app.staff.filter(x=>x.status==="Active");
-const sel={};
-active.forEach(st=>{const rec=app.attendance.find(a=>a.id===staffAttKey(st.id,date));sel[st.id]=rec?rec.status:"P"});
-const month=date.slice(0,7);
-const monthRows=active.map(st=>{
-const recs=app.attendance.filter(a=>a.staffId===st.id&&a.date.slice(0,7)===month);
-const c={P:0,A:0,L:0,H:0};recs.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++});
-return '<tr><td style="font-weight:600">'+esc(st.name)+'</td><td>'+c.P+'</td><td>'+c.A+'</td><td>'+c.L+'</td><td>'+c.H+'</td><td>'+recs.length+'</td></tr>';
-}).join("");
-$("#staff-body").innerHTML='<div class="grid g2" style="align-items:end;margin-bottom:14px">'+
-'<div class="field"><label>Attendance Date</label><input class="inp" type="date" id="att-date" value="'+date+'"></div>'+
-'<div style="text-align:right"><button class="btn btn-success" id="att-save">💾 SAVE ATTENDANCE</button></div></div>'+
-(active.length?'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff</th><th>Designation</th>'+ATT_STATUSES.map(x=>"<th>"+x[1]+"</th>").join("")+'</tr></thead><tbody>'+
-active.map(st=>'<tr><td style="font-weight:600">'+esc(st.name)+' <span style="color:var(--slate-500);font-size:11px">('+esc(st.staffId)+')</span></td><td style="font-size:12px">'+esc(st.designation)+'</td>'+
-ATT_STATUSES.map(x=>'<td style="text-align:center"><input type="radio" name="att-'+st.id+'" value="'+x[0]+'" '+(sel[st.id]===x[0]?"checked":"")+'></td>').join("")+'</tr>').join("")+
-'</tbody></table></div>':'<p class="sub">No active staff found. Pehle Staff List mein staff add karein.</p>')+
-'<h3 style="margin-top:22px;font-size:14px">Monthly Summary — '+month+'</h3>'+
-'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff</th><th>Present</th><th>Absent</th><th>Leave</th><th>Half Day</th><th>Marked Days</th></tr></thead><tbody>'+
-(monthRows||'<tr class="empty-row"><td colspan="6">No data</td></tr>')+'</tbody></table></div>';
-$("#att-date").addEventListener("change",e=>{app.staffAttDate=e.target.value;drawAttendance()});
-$("#att-save").onclick=async()=>{
-if(!active.length)return;
-for(const st of active){
-const v=(document.querySelector('input[name="att-'+st.id+'"]:checked')||{}).value||"P";
-await qPut("attendance",{id:staffAttKey(st.id,date),staffId:st.id,staffName:st.name,date:date,status:v,createdAt:new Date().toISOString()});
-}
-await audit(app.user.username,"UPDATE","attendance",date,"Attendance saved for "+active.length+" staff");
-await loadData();toast("Attendance saved for "+fmtDate(date));drawAttendance();
+const date=app.staffAttDate||today();const active=app.staff.filter(x=>x.status==="Active");
+const sel={};active.forEach(st=>{const rec=app.attendance.find(a=>a.id===staffAttKey(st.id,date));sel[st.id]=rec?rec.status:defStatus(st,date)});
+const month=date.slice(0,7),dim=daysInMonth(month);
+const sheet=active.map(st=>{const recs=attOf(st,month),by={};recs.forEach(r=>by[+r.date.slice(8,10)]=r.status);const c={P:0,A:0,L:0,H:0,O:0};recs.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++});
+let cells="";for(let d=1;d<=dim;d++){const v=by[d]||"";cells+='<td class="'+(v?"att-"+v:"")+'">'+v+'</td>'}
+return '<tr><td class="nm">'+esc(st.name)+'</td>'+cells+'<td><b>'+c.P+'</b></td><td><b>'+c.A+'</b></td><td><b>'+c.L+'</b></td><td><b>'+c.H+'</b></td><td><b>'+c.O+'</b></td></tr>'}).join("");
+let head="";for(let d=1;d<=dim;d++)head+="<th>"+d+"</th>";
+$("#staff-body").innerHTML='<div class="grid g2" style="align-items:end;margin-bottom:12px"><div class="field"><label>Attendance Date</label><input class="inp" type="date" id="att-date" value="'+date+'"></div>'+
+'<div class="flex g8 fw" style="justify-content:flex-end"><button class="btn btn-outline sm" data-all="P">✔ All Present</button><button class="btn btn-outline sm" data-all="O">⏸ All Off</button><button class="btn btn-success" id="att-save">💾 SAVE</button></div></div>'+
+(active.length?'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff</th>'+ATT_STATUSES.map(x=>"<th style='text-align:center'>"+x[1]+"</th>").join("")+'</tr></thead><tbody>'+
+active.map(st=>'<tr><td style="font-weight:700">'+esc(st.name)+'<div style="font-size:11px;color:var(--slate-500);font-weight:400">'+esc(st.staffId)+' • '+esc(st.designation)+'</div></td>'+
+ATT_STATUSES.map(x=>'<td style="text-align:center"><input type="radio" style="width:20px;height:20px;accent-color:'+x[2]+'" name="att-'+st.id+'" value="'+x[0]+'" '+(sel[st.id]===x[0]?"checked":"")+'></td>').join("")+'</tr>').join("")+'</tbody></table></div>'
+:'<p class="sub">Active staff nahi mila. Pehle Staff tab mein staff add karein.</p>')+
+'<h3 style="margin:20px 0 8px;font-size:14px">Monthly Sheet — '+month+' <span class="hint" style="font-weight:400">(P Present, A Absent, L Leave, H Half, O Off)</span></h3>'+
+'<div class="tbl-wrap"><table class="stf-sheet"><thead><tr style="background:rgba(14,116,190,.85);color:#fff"><th style="text-align:left">Staff</th>'+head+'<th>P</th><th>A</th><th>L</th><th>H</th><th>O</th></tr></thead><tbody>'+(sheet||'<tr><td colspan="'+(dim+6)+'">No data</td></tr>')+'</tbody></table></div>';
+$("#att-date").addEventListener("change",e=>{app.staffAttDate=e.target.value||today();drawAttendance()});
+$$("[data-all]").forEach(b=>b.onclick=()=>active.forEach(st=>{const r=document.querySelector('input[name="att-'+st.id+'"][value="'+b.dataset.all+'"]');if(r)r.checked=true}));
+$("#att-save").onclick=async()=>{if(!active.length)return;
+const arr=active.map(st=>({id:staffAttKey(st.id,date),staffId:st.id,staffName:st.name,date:date,status:(document.querySelector('input[name="att-'+st.id+'"]:checked')||{}).value||"P",createdAt:new Date().toISOString()}));
+await qBulk("attendance",arr);await audit(app.user.username,"UPDATE","attendance",date,"Attendance saved for "+active.length+" staff");
+await loadData();toast("Attendance saved — "+fmtDate(date));drawAttendance()};
 };
+/* ---------- ROSTER ---------- */
+const drawRoster=()=>{
+const active=app.staff.filter(x=>x.status==="Active");const td=today(),tk=dowKey(td);
+const duty={};ROSTER_OPTS.forEach(o=>duty[o]=[]);active.forEach(st=>{const v=(st.roster&&st.roster[tk])||st.shift||"Full Day";(duty[v]=duty[v]||[]).push(st.name)});
+$("#staff-body").innerHTML='<div class="grid g4" style="margin-bottom:14px">'+ROSTER_OPTS.map(o=>'<div class="mini-stat" style="padding:10px"><div style="font-size:11px;font-weight:800;color:var(--slate-600)">'+(o==="Off"?"⏸":"🕒")+" "+o+' — AAJ</div><div style="font-size:12px;margin-top:4px">'+(duty[o]&&duty[o].length?duty[o].map(esc).join(", "):'<span style="color:var(--slate-400)">—</span>')+'</div></div>').join("")+'</div>'+
+'<div class="flex g8 fw aic" style="margin-bottom:10px"><span style="font-size:12px;font-weight:700">Sab ka weekly off:</span><select class="inp" id="ros-offday" style="width:auto">'+WEEK.map(w=>'<option value="'+w[0]+'">'+w[1]+'</option>').join("")+'</select><button class="btn btn-outline sm" id="ros-applyoff">Apply</button><span style="flex:1"></span><button class="btn btn-success" id="ros-save">💾 SAVE ROSTER</button></div>'+
+(active.length?'<div class="tbl-wrap"><table class="tbl" style="min-width:760px"><thead><tr><th>Staff</th>'+WEEK.map(w=>'<th>'+w[1]+'</th>').join("")+'</tr></thead><tbody>'+
+active.map(st=>'<tr><td style="font-weight:700;white-space:nowrap">'+esc(st.name)+'<div style="font-size:11px;color:var(--slate-500);font-weight:400">'+esc(st.designation)+'</div></td>'+WEEK.map(w=>{const cur0=(st.roster&&st.roster[w[0]])||(st.shift&&ROSTER_OPTS.includes(st.shift)?st.shift:"Full Day");
+return '<td><select class="ros-sel" data-st="'+st.id+'" data-d="'+w[0]+'">'+ROSTER_OPTS.map(o=>'<option '+(cur0===o?"selected":"")+'>'+o+'</option>').join("")+'</select></td>'}).join("")+'</tr>').join("")+'</tbody></table></div>'
+:'<p class="sub">Pehle staff add karein.</p>')+'<p class="hint" style="margin-top:8px">Roster mein "Off" wala din Attendance mein khud "Off" aayega (salary nahi katti).</p>';
+$("#ros-applyoff").onclick=()=>{const d=$("#ros-offday").value;$$('.ros-sel[data-d="'+d+'"]').forEach(x=>x.value="Off");toast("Ab Save Roster dabayein","info")};
+$("#ros-save").onclick=async()=>{const m={};$$(".ros-sel").forEach(x=>{(m[x.dataset.st]=m[x.dataset.st]||{})[x.dataset.d]=x.value});
+for(const st of active){if(m[st.id])await qPut("staff",Object.assign({},st,{roster:m[st.id]}))}
+await loadData();toast("Roster saved");drawRoster()};
 };
+/* ---------- PAYROLL (auto calculation) ---------- */
 const drawPayroll=()=>{
-let month=app.staffPayMonth||monthNow();
-const active=app.staff.filter(x=>x.status==="Active");
-const dim=daysInMonth(month);
-const rows=active.map(st=>{
-const recs=app.attendance.filter(a=>a.staffId===st.id&&a.date.slice(0,7)===month);
-const c={P:0,A:0,L:0,H:0};recs.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++});
-const perDay=num(st.salary)/dim;
-const deduction=Math.round(c.A*perDay+c.H*perDay/2);
-const net=Math.max(0,Math.round(num(st.salary)-deduction));
-const paid=app.expenses.some(e=>e.staffPayrollKey===st.id+"_"+month);
-return {st,c,perDay,deduction,net,paid};
-});
-$("#staff-body").innerHTML='<div class="grid g2" style="align-items:end;margin-bottom:14px">'+
-'<div class="field"><label>Payroll Month</label><input class="inp" type="month" id="pay-month" value="'+month+'"></div>'+
-'<div style="text-align:right"><button class="btn btn-outline sm" id="pay-csv">⬇ CSV</button></div></div>'+
-'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff</th><th>Salary</th><th>P</th><th>A</th><th>L</th><th>H</th><th>Deduction</th><th>Net Payable</th><th>Action</th></tr></thead><tbody>'+
-(rows.length?rows.map(r=>'<tr><td style="font-weight:600">'+esc(r.st.name)+'<div style="font-size:11px;color:var(--slate-500)">'+esc(r.st.staffId)+'</div></td>'+
-'<td>'+s.currency+" "+fmtMoney(r.st.salary)+'</td><td>'+r.c.P+'</td><td>'+r.c.A+'</td><td>'+r.c.L+'</td><td>'+r.c.H+'</td>'+
-'<td style="color:#be123c">'+s.currency+" "+fmtMoney(r.deduction)+'</td><td style="font-weight:800">'+s.currency+" "+fmtMoney(r.net)+'</td>'+
-'<td>'+(r.paid?'<span class="badge green">PAID</span>':'<button class="btn btn-success sm" data-pay="'+r.st.id+'">MARK PAID</button>')+'</td></tr>').join(""):
-'<tr class="empty-row"><td colspan="9">No active staff</td></tr>')+
-'</tbody></table></div>'+
-'<div class="sum-box mt"><div class="sum-row"><span style="font-weight:800">TOTAL NET PAYROLL ('+month+')</span><b>'+s.currency+" "+fmtMoney(rows.reduce((a,r)=>a+r.net,0))+'</b></div></div>';
-$("#pay-month").addEventListener("change",e=>{app.staffPayMonth=e.target.value;drawPayroll()});
-$$("[data-pay]").forEach(b=>b.onclick=async()=>{
-const r=rows.find(x=>x.st.id===b.dataset.pay);if(!r)return;
-if(!await confirmBox({title:"Mark Salary Paid",message:"Mark "+r.st.name+"'s salary of "+s.currency+" "+fmtMoney(r.net)+" for "+month+" as PAID? Ye ek Expense (Salary) entry ban jayegi.",confirmText:"MARK PAID"}))return;
+const month=app.staffPayMonth||monthNow();const active=app.staff.filter(x=>x.status==="Active");
+const rows=active.map(st=>{const r=calcPay(st,month);r.st=st;r.paid=app.expenses.some(e=>e.staffPayrollKey===st.id+"_"+month);return r});
+const tot=k=>rows.reduce((a,r)=>a+r[k],0);
+$("#staff-body").innerHTML='<div class="grid g3" style="align-items:end;margin-bottom:12px"><div class="field"><label>Salary Month</label><input class="inp" type="month" id="pay-month" value="'+month+'"></div>'+
+'<div class="field"><label>Din ka hisab</label><select class="inp" id="pay-basis"><option value="cal" '+(payBasis()==="cal"?"selected":"")+'>Calendar days ('+daysInMonth(month)+')</option><option value="30" '+(payBasis()==="30"?"selected":"")+'>Fixed 30 din</option><option value="26" '+(payBasis()==="26"?"selected":"")+'>Fixed 26 din</option></select></div>'+
+'<div class="flex g8 fw" style="justify-content:flex-end"><button class="btn btn-outline sm" id="pay-fill">⚡ Auto-fill Attendance</button><button class="btn btn-outline sm" id="pay-csv">⬇ CSV</button></div></div>'+
+'<div class="tbl-wrap"><table class="tbl" style="min-width:980px"><thead><tr><th>Staff</th><th>Salary</th><th>P</th><th>A</th><th>L</th><th>H</th><th>Off</th><th>Unmarked</th><th>Katauti</th><th>+ OT/Bonus</th><th>− Adv/Fine</th><th>Net Payable</th><th>Action</th></tr></thead><tbody>'+
+(rows.length?rows.map(r=>'<tr><td style="font-weight:700;white-space:nowrap">'+esc(r.st.name)+'<div style="font-size:11px;color:var(--slate-500);font-weight:400">'+esc(r.st.staffId)+' • '+cur+' '+fmtMoney(r.perDay)+'/din</div></td><td>'+cur+" "+fmtMoney(r.st.salary)+'</td>'+
+'<td>'+r.c.P+'</td><td style="color:#b91c1c;font-weight:700">'+r.c.A+'</td><td>'+r.c.L+'</td><td>'+r.c.H+'</td><td>'+r.c.O+'</td><td style="color:'+(r.unmarked?"#b45309":"inherit")+'">'+r.unmarked+'</td>'+
+'<td style="color:#be123c">'+fmtMoney(r.absentDed+r.halfDed)+'</td><td style="color:#047857">'+fmtMoney(r.ot+r.bonus)+'</td><td style="color:#be123c">'+fmtMoney(r.advance+r.fine)+'</td>'+
+'<td style="font-weight:800;white-space:nowrap">'+cur+" "+fmtMoney(r.net)+'</td><td><div class="flex g8 fw"><button class="btn btn-neutral sm" data-adj="'+r.st.id+'" title="Advance / Bonus / Overtime">➕➖</button><button class="btn btn-outline sm" data-slip="'+r.st.id+'">🖨 Slip</button>'+
+(r.paid?'<span class="badge green">PAID</span>':'<button class="btn btn-success sm" data-pay="'+r.st.id+'">MARK PAID</button>')+'</div></td></tr>').join(""):'<tr class="empty-row"><td colspan="13">Active staff nahi</td></tr>')+'</tbody></table></div>'+
+'<div class="sum-box mt"><div class="sum-row"><span>Total Basic Salary</span><b>'+cur+" "+fmtMoney(rows.reduce((a,r)=>a+num(r.st.salary),0))+'</b></div><div class="sum-row"><span>Total Katauti (Absent/Half)</span><b>'+cur+" "+fmtMoney(tot("absentDed")+tot("halfDed"))+'</b></div><div class="sum-row"><span>Total Advance + Fine</span><b>'+cur+" "+fmtMoney(tot("advance")+tot("fine"))+'</b></div><div class="sum-row"><span style="font-weight:800">TOTAL NET PAYROLL ('+month+')</span><b>'+cur+" "+fmtMoney(tot("net"))+'</b></div></div>';
+$("#pay-month").addEventListener("change",e=>{app.staffPayMonth=e.target.value||monthNow();drawPayroll()});
+$("#pay-basis").addEventListener("change",async e=>{await qPut("attendance",{id:"cfg_pay",kind:"cfg",payBasis:e.target.value,date:"1970-01-01"});await loadData();drawPayroll()});
+$("#pay-fill").onclick=async()=>{
+const dim=daysInMonth(month),last=month===monthNow()?+today().slice(8,10):(month<monthNow()?dim:0);const arr=[];
+active.forEach(st=>{for(let d=1;d<=last;d++){const ds=month+"-"+String(d).padStart(2,"0");if(st.joiningDate&&ds<st.joiningDate)continue;if(app.attendance.some(a=>a.id===staffAttKey(st.id,ds)))continue;
+arr.push({id:staffAttKey(st.id,ds),staffId:st.id,staffName:st.name,date:ds,status:defStatus(st,ds),createdAt:new Date().toISOString()})}});
+if(!arr.length)return toast("Koi unmarked din nahi","info");
+if(!await confirmBox({title:"Auto-fill Attendance",message:arr.length+" unmarked din roster ke mutabiq (Off ya Present) bhar diye jayenge. Absent / Leave baad mein Attendance tab se badal sakte hain.",confirmText:"FILL"}))return;
+await qBulk("attendance",arr);await loadData();toast(arr.length+" din bhar diye");drawPayroll()};
+$$("[data-slip]").forEach(b=>b.onclick=()=>{const r=rows.find(x=>x.st.id===b.dataset.slip);printHTML(payslipHTML(r.st,month,r),"A4")});
+$$("[data-adj]").forEach(b=>b.onclick=()=>adjModal(rows.find(x=>x.st.id===b.dataset.adj),month));
+$$("[data-pay]").forEach(b=>b.onclick=async()=>{const r=rows.find(x=>x.st.id===b.dataset.pay);if(!r)return;
+if(!await confirmBox({title:"Mark Salary Paid",message:r.st.name+" ki "+month+" ki salary "+cur+" "+fmtMoney(r.net)+" PAID mark hogi. Expense (Salary) entry ban jayegi.",confirmText:"MARK PAID"}))return;
 await qPut("expenses",{id:id("exp"),date:today(),category:"Salary",description:"Salary — "+r.st.name+" ("+month+")",paidTo:r.st.name,amount:r.net,staffPayrollKey:r.st.id+"_"+month,createdBy:app.user.fullName||"Admin",createdAt:new Date().toISOString()});
-await audit(app.user.username,"CREATE","expenses",r.st.id,"Salary paid "+r.st.name+" "+month);
-await loadData();toast("Salary marked paid — expense record created");drawPayroll();
-});
-$("#pay-csv").onclick=()=>downloadCSV("payroll_"+month+".csv",["Staff ID","Name","Salary","Present","Absent","Leave","Half Day","Deduction","Net Payable","Paid"],
-rows.map(r=>[r.st.staffId,r.st.name,r.st.salary,r.c.P,r.c.A,r.c.L,r.c.H,r.deduction,r.net,r.paid?"Yes":"No"]));
+await audit(app.user.username,"CREATE","expenses",r.st.id,"Salary paid "+r.st.name+" "+month);await loadData();toast("Salary paid — expense record ban gaya");drawPayroll()});
+$("#pay-csv").onclick=()=>downloadCSV("salary_"+month+".csv",["Staff ID","Name","Salary","Present","Absent","Leave","Half Day","Off","Katauti","Overtime","Bonus","Advance","Fine","Net Payable","Paid"],
+rows.map(r=>[r.st.staffId,r.st.name,r.st.salary,r.c.P,r.c.A,r.c.L,r.c.H,r.c.O,r.absentDed+r.halfDed,r.ot,r.bonus,r.advance,r.fine,r.net,r.paid?"Yes":"No"]));
+};
+const adjModal=(r,month)=>{
+const st=r.st,a=r.adj;
+const ov=openModal("Salary Adjust — "+st.name+" ("+month+")",'<div class="grid g2">'+
+'<div class="field"><label>Overtime (ghante)</label><input class="inp" id="aj-ot" inputmode="decimal" value="'+num(a.otHours)+'"></div>'+
+'<div class="field"><label>Overtime rate / ghanta</label><input class="inp" id="aj-rate" disabled value="'+fmtMoney(r.otRate)+'"></div>'+
+'<div class="field"><label>Bonus</label><input class="inp" id="aj-bonus" inputmode="numeric" value="'+num(a.bonus)+'"></div>'+
+'<div class="field"><label>Advance (katega)</label><input class="inp" id="aj-adv" inputmode="numeric" value="'+num(a.advance)+'"></div>'+
+'<div class="field"><label>Fine (katega)</label><input class="inp" id="aj-fine" inputmode="numeric" value="'+num(a.fine)+'"></div>'+
+'<div class="field"><label>Note</label><input class="inp" id="aj-note" value="'+esc(a.note||"")+'"></div></div>'+
+'<div class="sum-box"><div class="sum-row"><span style="font-weight:800">Net Payable (auto)</span><b id="aj-net">-</b></div></div>',
+'<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="aj-save">💾 SAVE</button>');
+const upd=()=>{const ot=Math.round(num($("#aj-ot",ov).value)*r.otRate);const net=Math.max(0,Math.round(num(st.salary)+ot+num($("#aj-bonus",ov).value)-r.absentDed-r.halfDed-num($("#aj-adv",ov).value)-num($("#aj-fine",ov).value)));$("#aj-net",ov).textContent=(app.settings.currency||"Rs.")+" "+fmtMoney(net)};
+ov.querySelectorAll("input").forEach(i=>i.addEventListener("input",upd));upd();
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+$("#aj-save",ov).onclick=async()=>{await qPut("attendance",{id:adjKey(st.id,month),kind:"adj",staffId:st.id,date:month+"-01",month:month,otHours:num($("#aj-ot",ov).value),bonus:num($("#aj-bonus",ov).value),advance:num($("#aj-adv",ov).value),fine:num($("#aj-fine",ov).value),note:$("#aj-note",ov).value});
+await loadData();ov.remove();toast("Adjustment saved");drawPayroll()};
 };
 shell();
 }
 function staffModal(st){
-const s=app.settings;
+const s=app.settings;let photo=st.photo||"";
 const ov=openModal(st.id?"Edit Staff — "+st.name:"Add New Staff",
 '<div class="grid g2">'+
+'<div class="field" style="grid-column:span 2"><label>Photo (ID card ke liye)</label><div class="flex g12 aic"><div id="sm-ph" style="width:64px;height:78px;border-radius:8px;border:1px dashed var(--slate-300);background:#fff;display:grid;place-items:center;overflow:hidden;font-size:24px">'+(photo?'<img src="'+photo+'" style="width:100%;height:100%;object-fit:cover">':"👤")+'</div><input type="file" id="sm-file" accept="image/*" capture="user" style="font-size:12px;max-width:200px"></div></div>'+
 '<div class="field"><label>Full Name <span class="req">*</span></label><input class="inp" id="sm-name" value="'+esc(st.name)+'"></div>'+
 '<div class="field"><label>Designation</label><select class="inp" id="sm-desg">'+STAFF_ROLES.map(x=>'<option '+(st.designation===x?"selected":"")+">"+x+"</option>").join("")+'</select></div>'+
-'<div class="field"><label>Phone</label><input class="inp" id="sm-phone" value="'+esc(st.phone||"")+'"></div>'+
+'<div class="field"><label>Phone</label><input class="inp" id="sm-phone" inputmode="tel" value="'+esc(st.phone||"")+'"></div>'+
 '<div class="field"><label>CNIC</label><input class="inp" id="sm-cnic" value="'+esc(st.cnic||"")+'" placeholder="42101-1234567-1"></div>'+
 '<div class="field"><label>Joining Date</label><input class="inp" type="date" id="sm-join" value="'+(st.joiningDate||today())+'"></div>'+
-'<div class="field"><label>Duty Shift</label><select class="inp" id="sm-shift">'+s.shifts.map(x=>'<option '+(st.shift===x?"selected":"")+">"+x+"</option>").join("")+'<option '+(st.shift==="Full Day"?"selected":"")+">Full Day</option></select></div>"+
+'<div class="field"><label>Duty Shift</label><select class="inp" id="sm-shift">'+s.shifts.map(x=>'<option '+(st.shift===x?"selected":"")+">"+x+"</option>").join("")+'<option '+(st.shift==="Full Day"?"selected":"")+'>Full Day</option></select></div>'+
 '<div class="field"><label>Monthly Salary <span class="req">*</span></label><input class="inp" id="sm-salary" inputmode="numeric" value="'+num(st.salary)+'"></div>'+
-'<div class="field"><label>Status</label><select class="inp" id="sm-status"><option value="Active" '+(st.status==="Active"?"selected":"")+">Active</option><option value=\"Left\" "+(st.status==="Left"?"selected":"")+">Left</option></select></div>"+
-'</div>',
+'<div class="field"><label>Overtime rate / ghanta (khali = auto)</label><input class="inp" id="sm-ot" inputmode="numeric" value="'+(num(st.otRate)||"")+'"></div>'+
+'<div class="field"><label>Blood Group</label><input class="inp" id="sm-blood" value="'+esc(st.bloodGroup||"")+'" placeholder="B+"></div>'+
+'<div class="field"><label>Emergency Contact</label><input class="inp" id="sm-emg" value="'+esc(st.emergency||"")+'"></div>'+
+'<div class="field" style="grid-column:span 2"><label>Home Address</label><input class="inp" id="sm-addr" value="'+esc(st.address||"")+'"></div>'+
+'<div class="field"><label>Status</label><select class="inp" id="sm-status"><option value="Active" '+(st.status==="Active"?"selected":"")+'>Active</option><option value="Left" '+(st.status==="Left"?"selected":"")+'>Left</option></select></div></div>',
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="sm-save">💾 SAVE STAFF</button>');
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
+$("#sm-file",ov).addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;photo=await shrinkImg(f,260,"image/jpeg",.82);$("#sm-ph",ov).innerHTML='<img src="'+photo+'" style="width:100%;height:100%;object-fit:cover">'});
 ov.querySelector("#sm-save").onclick=async()=>{
-const name=$("#sm-name",ov).value.trim();
-if(!name){toast("Staff name is required","error");return}
-const salary=num($("#sm-salary",ov).value);
-if(salary<=0){toast("Enter a valid monthly salary","error");return}
+const name=$("#sm-name",ov).value.trim();if(!name){toast("Staff name is required","error");return}
+const salary=num($("#sm-salary",ov).value);if(salary<=0){toast("Enter a valid monthly salary","error");return}
 const staffId=st.staffId||await createStaffId();
-const obj={id:st.id||id("stf"),staffId:staffId,name:name,designation:$("#sm-desg",ov).value,phone:$("#sm-phone",ov).value.trim(),
-cnic:$("#sm-cnic",ov).value.trim(),joiningDate:$("#sm-join",ov).value,shift:$("#sm-shift",ov).value,salary:salary,
-status:$("#sm-status",ov).value,leftDate:st.leftDate||"",createdAt:st.createdAt||new Date().toISOString()};
+const obj=Object.assign({},st,{id:st.id||id("stf"),staffId:staffId,name:name,designation:$("#sm-desg",ov).value,phone:$("#sm-phone",ov).value.trim(),
+cnic:$("#sm-cnic",ov).value.trim(),joiningDate:$("#sm-join",ov).value,shift:$("#sm-shift",ov).value,salary:salary,otRate:num($("#sm-ot",ov).value),bloodGroup:$("#sm-blood",ov).value.trim(),emergency:$("#sm-emg",ov).value.trim(),address:$("#sm-addr",ov).value.trim(),photo:photo,
+status:$("#sm-status",ov).value,leftDate:st.leftDate||"",createdAt:st.createdAt||new Date().toISOString()});
 await qPut("staff",obj);await audit(app.user.username,st.id?"UPDATE":"CREATE","staff",obj.id,obj.name+" ("+obj.staffId+")");
 await loadData();toast(st.id?"Staff updated":"Staff added — ID "+staffId);ov.remove();pageStaff();
 };
@@ -3492,7 +3730,7 @@ $("#page").innerHTML='<div class="grid" style="grid-template-columns:2fr 1fr;ali
 '<div class="field"><label>Backup Reminder (days)</label><input class="inp" id="st-bk" inputmode="numeric" value="'+s.backupReminderDays+'"></div>'+
 '<div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:8px;padding:12px"><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--blue-800);margin-bottom:8px">Test Print Sample Slip</p><div class="flex g8 fw">'+
 ["58","80","A4"].map(x=>'<button class="btn btn-outline sm" data-demo="'+x+'">🖨 '+(x==="A4"?"A4":x+"mm")+"</button>").join("")+"</div></div></div></div></div>"+
-'<div class="card" style="grid-column:span 2"><div class="card-h"><h2>🏪 Medical Store Slip</h2><div class="sub">Medical Store ki bill slip yahan se edit karein — khali chhora to Clinic wali value use hogi</div></div><div class="card-b"><div class="grid g2">'+
+slipLogoCardHTML(s)+'<div class="card" style="grid-column:span 2"><div class="card-h"><h2>🏪 Medical Store Slip</h2><div class="sub">Medical Store ki bill slip yahan se edit karein — khali chhora to Clinic wali value use hogi</div></div><div class="card-b"><div class="grid g2">'+
 '<div class="field" style="grid-column:span 2"><label>Store Name (slip ke upar)</label><input class="inp" id="st-msname" style="font-weight:700" value="'+esc(s.msName||"")+'" placeholder="Khali = automatic (e.g. Jawad Medical Store)"></div>'+
 '<div class="field" style="grid-column:span 2"><label>Store Address</label><input class="inp" id="st-msaddr" value="'+esc(s.msAddress||"")+'" placeholder="Khali = Clinic ka address"></div>'+
 '<div class="field"><label>Store Phone</label><input class="inp" id="st-msphone" value="'+esc(s.msPhone||"")+'" placeholder="Khali = Clinic ka phone"></div>'+
@@ -3518,6 +3756,17 @@ $("#st-logobox").innerHTML='<img src="'+logo+'" style="max-width:100%;max-height
 toast("Logo loaded — remember to press SAVE SETTINGS","info");
 });
 const rm=$("#st-logorm");if(rm)rm.onclick=()=>{logo="";$("#st-logobox").innerHTML=shieldSVG(48,"#1d4ed8")};
+let slipLogos=JSON.parse(JSON.stringify(s.slipLogos||{}));
+const drawSL=()=>SLIP_KINDS.forEach(k=>{const o=slipLogos[k[0]]||{};const el=$("#sl-prev-"+k[0]),md=$("#sl-mode-"+k[0]);if(!el)return;
+if(o.none){el.textContent="Is slip par logo nahi lagega";md.textContent="🚫 No logo";md.style.color="#b91c1c"}
+else if(o.url){el.innerHTML='<img src="'+o.url+'">';md.textContent="✔ Is slip ka apna logo";md.style.color="#047857"}
+else{el.innerHTML=logo?'<img src="'+logo+'">':"Common logo abhi set nahi";md.textContent="Common logo use ho raha hai";md.style.color="#475569"}});
+drawSL();
+$$("[data-slfile]").forEach(i=>i.addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const k=i.dataset.slfile;
+const url=await shrinkImg(f,420,"image/png",.9);slipLogos[k]=Object.assign({},slipLogos[k],{url:url,none:false});drawSL();toast("Logo set — SAVE SETTINGS dabayein","info")}));
+$$("[data-slcommon]").forEach(b=>b.onclick=()=>{const k=b.dataset.slcommon;const sz=(slipLogos[k]||{}).size;slipLogos[k]=sz?{size:sz}:undefined;if(!slipLogos[k])delete slipLogos[k];drawSL()});
+$$("[data-slnone]").forEach(b=>b.onclick=()=>{const k=b.dataset.slnone;slipLogos[k]=Object.assign({},slipLogos[k],{none:true});drawSL()});
+$$("[data-slsize]").forEach(i=>i.addEventListener("input",()=>{const k=i.dataset.slsize,v=parseInt(i.value,10)||0;if(v>0)slipLogos[k]=Object.assign({},slipLogos[k],{size:v});else if(slipLogos[k]){delete slipLogos[k].size;if(!slipLogos[k].url&&!slipLogos[k].none)delete slipLogos[k]}}));
 const demo=()=>({patientId:today().slice(0,4)+"/0001",patientName:"MUHAMMAD ALI",age:"22",ageUnit:"Years",gender:"Male",mobile:"0300-1234567",token:8,date:today(),time:timeNow(),shift:"Morning",referredBy:"SELF",doctorName:"Dr. Ahmed Raza",paymentMethod:"Cash",
 items:[{id:"c1",description:"OPD Fees",category:"opd",rate:500,qty:1,amount:500},{id:"c2",description:"CBC",category:"lab",rate:500,qty:1,amount:500},{id:"c3",description:"Ultrasound Abdomen",category:"ultrasound",rate:1500,qty:1,amount:1500}],
 subTotal:2500,discount:0,total:2500,received:2000,due:500,createdBy:"Reception"});
@@ -3527,7 +3776,7 @@ $("#st-save").onclick=async()=>{
 const lines=v=>v.split("\n").map(x=>x.trim()).filter(Boolean);
 const obj=Object.assign({},s,{clinicName:$("#st-name").value.trim()||s.clinicName,tagline:$("#st-tag").value,address:$("#st-addr").value,
 phone:$("#st-phone").value,phone2:$("#st-phone2").value,email:$("#st-email").value,timing:$("#st-timing").value,
-slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,msName:$("#st-msname").value.trim(),msAddress:$("#st-msaddr").value.trim(),msPhone:$("#st-msphone").value.trim(),msFooter:$("#st-msfoot").value.trim(),devFooter:$("#st-dev").value,
+slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,msName:$("#st-msname").value.trim(),msAddress:$("#st-msaddr").value.trim(),msPhone:$("#st-msphone").value.trim(),msFooter:$("#st-msfoot").value.trim(),devFooter:$("#st-dev").value,slipLogos:slipLogos,
 logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
 slipFontSize:parseFloat($("#st-font").value),reportFontSize:parseFloat($("#st-rfont").value),logoSize:parseInt($("#st-logosize").value,10),usThermalSize:$("#st-usth").value,dutyStaffName:$("#st-duty").value,showMrOnSlip:showMr,
 backupReminderDays:num($("#st-bk").value),shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
@@ -3675,7 +3924,7 @@ await obLoad();
 await seed();
 await loadData();
 const oc=ownerCreds();
-if(oc){try{await api("GET","/api/master/clinics");app.user={id:"owner",username:oc.u,fullName:"Owner ("+oc.u+")",role:"owner",permissions:ALL_PERMS.slice(),active:true}}catch(e){sessionStorage.removeItem("abraj_owner")}}
+if(oc){let okOwner=true;try{await api("GET","/api/master/clinics")}catch(e){if(e&&e.net){/* offline: owner session barkarar rakho */}else{okOwner=false;sessionStorage.removeItem("abraj_owner")}}if(okOwner)app.user={id:"owner",username:oc.u,fullName:"Owner ("+oc.u+")",role:"owner",permissions:ALL_PERMS.slice(),active:true}}
 const sid=sessionStorage.getItem("abraj_session_user");
 if(!app.user&&sid){const u=await qGet("users",sid);if(u&&u.active)app.user=u}
 /* hash routing (supports #emr:MRNO) */
