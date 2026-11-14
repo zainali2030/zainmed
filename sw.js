@@ -1,5 +1,5 @@
 /* ZainMed Service Worker — app internet ke baghair bhi khulti hai (offline shell) */
-const V = "zainmed-shell-v6";
+const V = "zainmed-shell-v7";
 const SHELL = ["/", "/index.html", "/master.html", "/manifest.json", "/icon-192.png", "/icon-512.png", "/login-bg.jpg", "/login-bg.jpg.jpeg"];
 
 self.addEventListener("install", e => {
@@ -22,7 +22,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   /* PDF libraries (html2canvas / jsPDF) pehli dafa internet se, phir offline bhi chalti hain */
-  if (url.origin === "https://cdnjs.cloudflare.com" && /html2canvas|jspdf/i.test(url.pathname)) {
+  if (/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com)$/.test(url.origin) && /html2canvas|jspdf|jsqr/i.test(url.pathname)) {
     e.respondWith((async () => {
       const c = await caches.open(V);
       const hit = await c.match(req);

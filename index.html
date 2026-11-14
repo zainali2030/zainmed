@@ -463,6 +463,10 @@ footer.app-foot{color:#d8f1ff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
 #zm-dock button:hover{transform:scale(1.08)}
 #zm-dock .wa{background:linear-gradient(135deg,#25d366,#128c7e)}
 #zm-dock .ai{background:linear-gradient(135deg,#7c3aed,#2563eb)}
+#zm-dock .inst{background:linear-gradient(135deg,#1e3a8a,#0891b2)}
+body.has-dock #pwa-install{display:none!important}
+body:has(.modal-overlay) #zm-dock{display:none!important}
+.sl-txt{margin-top:8px;font-size:12px}.sl-txt summary{cursor:pointer;font-weight:700;color:var(--blue-800,#1e40af)}.sl-txt label{display:block;margin-top:6px;font-size:11px;font-weight:600}.sl-txt .inp{margin-top:2px;padding:6px;font-size:12px}
 #zm-dock svg{width:26px;height:26px;fill:#fff}
 #zm-docbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9990;display:none;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:94vw;background:rgba(8,30,52,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:9px 12px;color:#fff;font-size:12px;box-shadow:0 12px 36px rgba(0,0,0,.45)}
 #zm-docbar.show{display:flex}
@@ -603,8 +607,8 @@ msName:"",msAddress:"",msPhone:"",msFooter:"",
 devFooter:"Software developed by ZainMed\n03702906075 / 03192061690\nzainaliofficial343@gmail.com"};
 function devFooterHTML(s){const t=(s&&s.devFooter!==undefined&&s.devFooter!==null)?s.devFooter:DEFAULT_SETTINGS.devFooter;return String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(esc).join("<br>")}
 /* ================= v4: per-slip logo, PDF, WhatsApp, dock, mobile bar ================= */
-const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports / Salary Slip / ID Card"],["store","🏪 Medical Store Bill"]];
-function slipS(s,kind){const o=((s&&s.slipLogos)||{})[kind];if(!o)return s;const r=Object.assign({},s);if(o.none)r.logoDataUrl="";else if(o.url)r.logoDataUrl=o.url;if(o.size)r.logoSize=o.size;return r}
+const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports (A4 tables)"],["sal","💰 Salary Slip"],["idc","🪪 Staff ID Card"],["store","🏪 Medical Store Bill"]];
+function slipS(s,kind){const o=((s&&s.slipLogos)||{})[kind];if(!o)return s;const r=Object.assign({},s);if(o.none)r.logoDataUrl="";else if(o.url)r.logoDataUrl=o.url;if(o.size)r.logoSize=o.size;SL_TXT.forEach(f=>{if(o[f[0]]!==undefined&&String(o[f[0]]).trim()!=="")r[f[2]]=o[f[0]]});return r}
 function storeLogoHTML(){const s=slipS(app.settings,"store");return s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="height:'+Math.max(20,Number(s.logoSize)||56)+'px;width:auto;max-width:100%;object-fit:contain;margin-bottom:3px"></div>':""}
 let LAST_PRINT=null,_pdfLibs=null,_docbarT=null;
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("load failed"));document.head.appendChild(s)})}
@@ -654,8 +658,9 @@ ov.querySelector("#wa-go").onclick=()=>{openWA(ov.querySelector("#wa-n").value,o
 const p=ov.querySelector("#wa-pdf");if(p)p.onclick=()=>{ov.remove();lastPDF(true)}}
 function renderDock(){
 let d=document.getElementById("zm-dock");if(!d){d=document.createElement("div");d.id="zm-dock";document.body.appendChild(d)}
-d.innerHTML='<button class="wa" id="dk-wa" title="WhatsApp"><svg viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.04 21.5h-.01a9.9 9.9 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.87 9.87 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.9-9.88 2.64 0 5.12 1.03 6.99 2.9a9.82 9.82 0 0 1 2.9 6.99c0 5.45-4.44 9.88-9.9 9.88z"/></svg></button>'+(can("agent")?'<button class="ai" id="dk-ai" title="AI Agent">🤖</button>':"");
-document.getElementById("dk-wa").onclick=waModal;const a=document.getElementById("dk-ai");if(a)a.onclick=()=>go("agent")}
+const inst=!!(window.zmInstall&&window.zmInstall.show);d.innerHTML=(inst?'<button class="inst" id="dk-inst" title="Install App">📲</button>':"")+'<button class="wa" id="dk-wa" title="WhatsApp"><svg viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.04 21.5h-.01a9.9 9.9 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.87 9.87 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.9-9.88 2.64 0 5.12 1.03 6.99 2.9a9.82 9.82 0 0 1 2.9 6.99c0 5.45-4.44 9.88-9.9 9.88z"/></svg></button>'+(can("agent")?'<button class="ai" id="dk-ai" title="AI Agent">🤖</button>':"");
+document.getElementById("dk-wa").onclick=waModal;const a=document.getElementById("dk-ai");if(a)a.onclick=()=>go("agent");const ib=document.getElementById("dk-inst");if(ib)ib.onclick=()=>window.zmInstall&&window.zmInstall.click();document.body.classList.add("has-dock")}
+document.addEventListener("zm-install",()=>{if(document.getElementById("zm-dock"))renderDock()});
 function renderBnav(){
 let el=document.getElementById("zm-bnav");if(!el){el=document.createElement("nav");el.id="zm-bnav";document.body.appendChild(el)}
 const role=app.user&&app.user.role;
@@ -665,10 +670,23 @@ const items=NAV.filter(n=>pref.indexOf(n.key)>=0&&can(n.perm)).sort((a,b)=>pref.
 el.innerHTML=items.map(n=>'<button data-bn="'+n.key+'" class="'+(app.route===n.key?"on":"")+'"><span>'+n.icon+'</span><span>'+(short[n.key]||n.label)+'</span></button>').join("")+'<button data-bn="__more"><span>☰</span><span>Menu</span></button>';
 document.body.classList.add("has-bnav");
 el.querySelectorAll("[data-bn]").forEach(b=>b.onclick=()=>{if(b.dataset.bn==="__more"){document.getElementById("sidebar").classList.toggle("hidden-m");document.getElementById("backdrop").classList.toggle("show")}else go(b.dataset.bn)})}
-function removeChrome(){["zm-bnav","zm-dock","zm-docbar"].forEach(i=>{const e=document.getElementById(i);if(e)e.remove()});document.body.classList.remove("has-bnav")}
+function removeChrome(){["zm-bnav","zm-dock","zm-docbar"].forEach(i=>{const e=document.getElementById(i);if(e)e.remove()});document.body.classList.remove("has-bnav");document.body.classList.remove("has-dock")}
+function applyBg(st){
+let el=document.getElementById("zm-bg-style");if(!el){el=document.createElement("style");el.id="zm-bg-style";document.head.appendChild(el)}
+const img=st&&st.bgImage;
+if(!img){el.textContent="";return}
+const d=Math.min(.9,Math.max(0,(st.bgDim===undefined||st.bgDim===""?35:Number(st.bgDim))/100));
+el.textContent='body::before{background:linear-gradient(rgba(4,22,40,'+d+'),rgba(4,22,40,'+d+')),url("'+img+'") center/cover no-repeat!important}';
+}
+function bgCardHTML(s){
+return '<div class="card" style="grid-column:span 2"><div class="card-h"><div><h2>🖼 App Background Picture</h2><div class="sub">Apni (ya Dr / Admin ki) photo background me lagayein. Sirf is device ke bajaye poore clinic ke liye save hoti hai.</div></div></div><div class="card-b"><div class="flex g12 aic fw"><div id="bg-prev" style="width:120px;height:72px;border-radius:8px;border:1px dashed var(--slate-300);background:#fff center/cover no-repeat;display:grid;place-items:center;font-size:11px;color:#64748b">Default</div><label class="btn btn-primary sm" style="margin:0;color:#fff">📤 Upload Picture<input type="file" id="bg-file" accept="image/*" style="display:none"></label><button type="button" class="btn btn-neutral sm" id="bg-rm">✕ Default background</button></div><div class="field mt"><label>Background andhera (dim) — text saaf parhne ke liye</label><div class="flex g12 aic"><input type="range" id="bg-dim" min="0" max="85" step="5" value="'+(s.bgDim===undefined||s.bgDim===""?35:s.bgDim)+'" style="flex:1"><span id="bg-dimv">'+(s.bgDim===undefined||s.bgDim===""?35:s.bgDim)+'%</span></div></div></div></div>'}
+const SL_TXT=[["name","Name / Heading","clinicName"],["tagline","Tagline / Sub-heading","tagline"],["address","Address","address"],["phone","Phone","phone"],["phone2","Alternate Phone","phone2"],["title","Slip Title","slipTitle"],["footer","Footer Text","footerText"]];
 function slipLogoCardHTML(s){const sl=s.slipLogos||{};
-return '<div class="card" style="grid-column:span 2"><div class="card-h"><div><h2>🖼 Har Slip ka Alag Logo</h2><div class="sub">Sab slips par ek hi logo rakhna ho to sirf upar "Logo & Print Settings" mein ek dafa upload karein. Kisi slip par alag logo chahiye to yahan us slip ka logo lagayein.</div></div></div><div class="card-b"><div class="slip-logos">'+
-SLIP_KINDS.map(k=>'<div class="sl-box"><b>'+k[1]+'</b><div class="sl-prev" id="sl-prev-'+k[0]+'"></div><div id="sl-mode-'+k[0]+'" style="font-size:11px;font-weight:700;margin-bottom:6px"></div><div class="sl-row"><label class="btn btn-outline sm" style="margin:0">📤 Upload<input type="file" accept="image/*" data-slfile="'+k[0]+'" style="display:none"></label><button type="button" class="btn btn-neutral sm" data-slcommon="'+k[0]+'">Common logo</button><button type="button" class="btn btn-neutral sm" data-slnone="'+k[0]+'">No logo</button></div><div class="sl-row" style="margin-top:6px"><span style="font-size:11px">Size (px)</span><input class="inp" style="width:78px;padding:5px" inputmode="numeric" data-slsize="'+k[0]+'" value="'+((sl[k[0]]||{}).size||"")+'" placeholder="auto"></div></div>').join("")+'</div></div></div>'}
+return '<div class="card" style="grid-column:span 2"><div class="card-h"><div><h2>🖼 Har Slip ka Alag Logo & Text</h2><div class="sub">Sab slips par ek hi logo / naam rakhna ho to upar "Clinic Information" aur "Logo & Print Settings" mein ek dafa bharein. Kisi slip par alag logo, naam, address, phone ya footer chahiye to us slip ke box mein likhein — khali chhora to common wala use hoga.</div></div></div><div class="card-b"><div class="slip-logos">'+
+SLIP_KINDS.map(k=>{const o=sl[k[0]]||{};
+const txt=k[0]==="store"?'<div class="hint" style="margin-top:8px">Store ka naam / address / phone neeche "🏪 Medical Store Slip" card mein edit hota hai.</div>':
+'<details class="sl-txt"'+(SL_TXT.some(f=>String(o[f[0]]||"").trim())?" open":"")+'><summary>✏️ Is slip ka text edit karein</summary>'+SL_TXT.map(f=>'<label>'+f[1]+'<input class="inp" data-sltxt="'+k[0]+'|'+f[0]+'" value="'+esc(o[f[0]]||"")+'" placeholder="Khali = common"></label>').join("")+'</details>';
+return '<div class="sl-box"><b>'+k[1]+'</b><div class="sl-prev" id="sl-prev-'+k[0]+'"></div><div id="sl-mode-'+k[0]+'" style="font-size:11px;font-weight:700;margin-bottom:6px"></div><div class="sl-row"><label class="btn btn-outline sm" style="margin:0">📤 Upload<input type="file" accept="image/*" data-slfile="'+k[0]+'" style="display:none"></label><button type="button" class="btn btn-neutral sm" data-slcommon="'+k[0]+'">Common logo</button><button type="button" class="btn btn-neutral sm" data-slnone="'+k[0]+'">No logo</button></div><div class="sl-row" style="margin-top:6px"><span style="font-size:11px">Size (px)</span><input class="inp" style="width:78px;padding:5px" inputmode="numeric" data-slsize="'+k[0]+'" value="'+(o.size||"")+'" placeholder="auto"></div>'+txt+'</div>'}).join("")+'</div></div></div>'}
 
 const SEED_DOCTORS=[
 {name:"Dr. Ahmed Raza",specialization:"General Physician",qualification:"MBBS, FCPS",fee:500,mobile:"+92 300 1234567",commissionEnabled:true,commissionPercent:40,shift:"Morning",active:true},
@@ -696,7 +714,7 @@ const SEED_TESTS=[
 ["Ultrasound Abdomen (Full)","Ultrasound","ultrasound",1500],["Ultrasound Pelvis","Ultrasound","ultrasound",1500],
 ["Obstetric Ultrasound (Pregnancy)","Ultrasound","ultrasound",1800],["Ultrasound KUB","Ultrasound","ultrasound",1200],
 ["Ultrasound Breast","Ultrasound","ultrasound",1800],["Ultrasound Neck / Thyroid","Ultrasound","ultrasound",1600],
-["Doppler Study","Ultrasound","ultrasound",3000]];
+["Doppler Study","Ultrasound","ultrasound",3000],["Doppler Carotid & Vertebral","Ultrasound","ultrasound",3000],["Doppler Lower Limb Venous (DVT)","Ultrasound","ultrasound",3000],["Doppler Lower Limb Arterial","Ultrasound","ultrasound",3000],["Doppler Obstetric (Umbilical / MCA)","Ultrasound","ultrasound",2500],["Doppler Scrotal (Varicocele)","Ultrasound","ultrasound",2500],["Anomaly Scan (Level II)","Ultrasound","ultrasound",3500],["NT Scan","Ultrasound","ultrasound",3000],["Folliculometry (Follicular Study)","Ultrasound","ultrasound",1200],["Ultrasound Scrotum","Ultrasound","ultrasound",1500],["Ultrasound Thyroid","Ultrasound","ultrasound",1600]];
 /* ================= UTILITIES ================= */
 function id(p){return (p||"id")+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,9)}
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -1242,7 +1260,7 @@ $$("[data-navgrp]").forEach(b=>b.onclick=()=>{const sub=$("#nav-sub-"+b.dataset.
 if(_clockTimer)clearInterval(_clockTimer);
 tickClock();_clockTimer=setInterval(tickClock,1000);
 {const np=$("#net-pill");if(np){np.onclick=openSyncModal}NET.state="";setNetState()}
-showBanner();renderDock();renderBnav();
+showBanner();renderDock();renderBnav();applyBg(app.settings);
 }
 function tickClock(){const el=$("#clock");if(!el)return;const d=new Date();
 el.innerHTML=d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})+"<small>"+d.toLocaleDateString([],{weekday:"short",day:"2-digit",month:"short",year:"numeric"})+"</small>"}
@@ -1892,10 +1910,191 @@ sections:[
 ["FETAL GROWTH / OTHERS",["Fetal biometry corresponds to gestational age.","Fetal growth appears appropriate for gestational age.","Fetal growth restriction suspected.","Umbilical cord: three vessels seen.","No gross fetal anomaly seen on this scan.","Cervix is closed and normal in length."]]],
 meas:["BPD (cm)","HC (cm)","AC (cm)","FL (cm)","GA by US (weeks)","EFW (grams)","FHR (bpm)","AFI (cm)","EDD","Cervical length (cm)"]}
 ];
+/* ---- Extra ultrasound / Doppler report types (groups ke saath) ---- */
+const US_GROUPS=[["abdomen","Abdomen & Urinary"],["obgyn","Pelvis & Obstetric"],["doppler","Doppler Studies"],["small","Small Parts & Others"]];
+US_TYPES[0].group="abdomen";US_TYPES[1].group="obgyn";US_TYPES[1].ob=true;US_TYPES[2].group="obgyn";US_TYPES[2].ob=true;
+(function(){
+const abd=US_TYPES[0],pel=US_TYPES[1];
+const sec=(t,n)=>t.sections.find(s=>s[0]===n);
+const pad=(g,id,name,short,sections,meas,extra)=>US_TYPES.push(Object.assign({id:id,name:name,short:short,group:g,sections:sections,meas:meas},extra||{}));
+const both=(fn)=>["Right","Left"].map(fn);
+/* ===== Abdomen & Urinary ===== */
+pad("abdomen","kub","Ultrasound KUB (Kidneys, Ureters, Bladder)","KUB",[sec(abd,"RIGHT KIDNEY"),sec(abd,"LEFT KIDNEY"),
+["URETERS",["Both ureters are not dilated.","Right upper ureter is dilated.","Left upper ureter is dilated.","Right distal ureteric calculus seen:","Left distal ureteric calculus seen:","Ureters not visualized (bowel gas)."]],
+sec(abd,"URINARY BLADDER"),sec(abd,"PROSTATE (MALE)")],
+["Right kidney (cm)","Left kidney (cm)","Right cortical thickness (mm)","Left cortical thickness (mm)","Largest stone size (mm)","Pre-void bladder volume (cc)","Post-void residual (cc)","Prostate volume (cc)"]);
+pad("abdomen","hbs","Ultrasound Liver / Hepatobiliary (HBS)","Liver / HBS",[sec(abd,"LIVER"),sec(abd,"GALL BLADDER"),
+["BILE DUCTS / PORTAL VEIN",["CBD is normal in caliber.","CBD is dilated:","Intra-hepatic biliary radicles are not dilated.","Intra-hepatic biliary radicles are dilated.","Portal vein is normal in caliber.","Portal vein is dilated (portal hypertension?).","Calculus seen in CBD:"]],
+sec(abd,"PANCREAS"),sec(abd,"SPLEEN"),sec(abd,"FREE FLUID / OTHERS")],
+["Liver span (cm)","CBD (mm)","Portal vein (mm)","GB wall (mm)","Spleen (cm)","Largest focal lesion (cm)"]);
+pad("abdomen","upper","Ultrasound Upper Abdomen","Upper Abdomen",[sec(abd,"LIVER"),sec(abd,"GALL BLADDER"),sec(abd,"PANCREAS"),sec(abd,"SPLEEN"),sec(abd,"RIGHT KIDNEY"),sec(abd,"LEFT KIDNEY"),sec(abd,"FREE FLUID / OTHERS")],
+["Liver span (cm)","Spleen (cm)","CBD (mm)","Right kidney (cm)","Left kidney (cm)"]);
+pad("abdomen","malepel","Ultrasound Pelvis Male (Prostate & Bladder)","Pelvis (Male)",[sec(abd,"URINARY BLADDER"),
+["PROSTATE",["Prostate is normal in size and echotexture.","Prostate is enlarged — benign prostatic hyperplasia (BPH).","Grade I BPH.","Grade II BPH.","Grade III BPH (median lobe protruding into bladder).","Prostatic calcification seen.","Hypoechoic area seen in prostate:","Intravesical protrusion of prostate seen."]],
+["SEMINAL VESICLES / FLUID",["Seminal vesicles appear normal.","No free fluid seen in pelvis.","Free fluid seen in pelvis."]]],
+["Prostate size (cm)","Prostate volume (cc)","Pre-void bladder volume (cc)","Post-void residual (cc)","Bladder wall (mm)"]);
+pad("abdomen","appx","Ultrasound Right Iliac Fossa (Appendix)","Appendix",[
+["APPENDIX",["Appendix is visualized, compressible, diameter < 6 mm — normal.","Appendix is visualized, non-compressible and dilated (> 6 mm).","Appendicolith seen.","Periappendiceal fat is echogenic / inflamed.","Appendix is not visualized.","Periappendiceal collection / abscess seen:"]],
+["RIF OTHERS",["Free fluid seen in right iliac fossa.","Mesenteric lymph nodes seen:","No free fluid seen in RIF.","Terminal ileum appears normal.","Right ovary / adnexa normal (female)."]]],
+["Appendix diameter (mm)","Wall thickness (mm)","Mesenteric node (mm)"]);
+/* ===== Pelvis & Obstetric ===== */
+pad("obgyn","tvs","Ultrasound Pelvis Transvaginal (TVS)","Pelvis (TVS)",[sec(pel,"UTERUS"),
+["ENDOMETRIUM",["Endometrium is thin and linear.","Endometrium is thickened:","Endometrial cavity fluid / collection seen.","Endometrial polyp suspected:","Retained products of conception suspected.","IUCD (Copper-T) seen in situ, correctly positioned.","IUCD is low-lying / malpositioned."]],
+sec(pel,"RIGHT OVARY"),sec(pel,"LEFT OVARY"),sec(pel,"CERVIX / ADNEXA"),sec(pel,"FLUID IN CUL-DE-SAC")],
+["Uterus size (cm)","Endometrial thickness (mm)","Right ovary (cm)","Left ovary (cm)","Right ovarian cyst (cm)","Left ovarian cyst (cm)","Fibroid size (cm)"],{ob:true});
+pad("obgyn","ob1","Obstetric Ultrasound — Early Pregnancy (1st Trimester)","Early Pregnancy",[
+["GESTATIONAL SAC",["Intrauterine gestational sac seen.","Gestational sac is regular in outline.","Gestational sac is irregular / low-lying.","No intrauterine gestational sac seen (pregnancy of unknown location).","Yolk sac seen.","Yolk sac not seen.","Double decidual sac sign present."]],
+["EMBRYO / FETAL POLE",["Single live intrauterine embryo seen.","Cardiac activity present.","Cardiac activity absent — missed miscarriage suspected.","Embryo size corresponds to gestational age.","Twin gestation — two embryos seen.","Empty sac / blighted ovum suspected."]],
+["SUBCHORIONIC / UTERUS",["No subchorionic collection seen.","Subchorionic hematoma seen:","Uterus is gravid, anteverted.","Cervix is closed and normal in length.","Fibroid seen:","Corpus luteum cyst seen in ovary:"]],
+["ADNEXA / FLUID",["Both ovaries appear normal.","No adnexal mass seen.","No free fluid seen in pouch of Douglas.","Free fluid seen in pouch of Douglas.","Adnexal mass seen — ectopic pregnancy cannot be excluded, urgent clinical correlation advised."]]],
+["MSD (mm)","CRL (mm)","GA by US (weeks)","FHR (bpm)","Yolk sac (mm)","EDD","Subchorionic hematoma (cm)"],{ob:true});
+pad("obgyn","nt","Obstetric Ultrasound — NT Scan (11–14 weeks)","NT Scan",[
+["FETUS",["Single live intrauterine fetus.","Cardiac activity present.","CRL corresponds to gestational age.","Fetal heart rate is normal.","Twin pregnancy — see details."]],
+["NUCHAL TRANSLUCENCY",["NT thickness is normal.","NT thickness is increased:","Nuchal cystic hygroma seen."]],
+["OTHER MARKERS",["Nasal bone is present.","Nasal bone is absent / hypoplastic.","Ductus venosus flow is normal.","Tricuspid valve flow is normal.","Facial angle normal."]],
+["EARLY ANATOMY",["Skull ossified, midline falx seen.","Stomach bubble seen.","Urinary bladder seen.","Anterior abdominal wall intact.","Four limbs seen with hands and feet."]],
+["PLACENTA / UTERUS",["Placenta anterior.","Placenta posterior.","Placenta fundal.","Placenta low-lying.","Cervix is closed.","Uterine arteries: normal flow."]]],
+["CRL (mm)","NT (mm)","Nasal bone length (mm)","FHR (bpm)","GA by US (weeks)","EDD","Ductus venosus PI"],{ob:true});
+pad("obgyn","anom","Obstetric Ultrasound — Anomaly Scan (Level II, 18–22 weeks)","Anomaly Scan",[
+["GESTATION / LIE",["Single live intrauterine fetus.","Cardiac activity present.","Fetal movements seen.","Cephalic presentation.","Breech presentation.","Transverse lie."]],
+["HEAD / BRAIN",["Skull shape and contour are normal.","Lateral ventricles are normal in size.","Cavum septum pellucidum is seen.","Cerebellum and cisterna magna are normal.","Choroid plexuses are normal.","Ventriculomegaly seen:","Choroid plexus cyst seen:"]],
+["FACE / NECK",["Both orbits seen, normal.","Nose and lips appear intact — no cleft lip seen.","Fetal profile is normal.","Nuchal fold thickness is normal.","Neck mass / cystic hygroma seen."]],
+["SPINE",["Spine appears intact with normal alignment.","No open neural tube defect seen.","Sacral spine not clearly seen."]],
+["THORAX / HEART",["Four-chamber view is normal.","LVOT and RVOT views are normal.","Cardiac axis and situs are normal.","Both lungs appear normal.","Diaphragm is intact.","Echogenic intracardiac focus seen.","Cardiac anomaly suspected — fetal echocardiography advised."]],
+["ABDOMEN",["Stomach bubble is seen.","Anterior abdominal wall is intact, cord insertion normal.","Both kidneys are seen, no hydronephrosis.","Pelvicalyceal dilatation seen:","Urinary bladder is seen.","Bowel appears normal.","Abdominal wall defect seen."]],
+["LIMBS",["All four limbs are seen with normal long bones.","Both hands and feet are seen.","Limb abnormality suspected:"]],
+["PLACENTA / CORD / LIQUOR",["Placenta anterior.","Placenta posterior.","Placenta fundal.","Placenta low-lying.","Placenta previa.","Three-vessel cord seen.","Two-vessel cord seen.","Amniotic fluid is normal.","Oligohydramnios.","Polyhydramnios."]],
+["CERVIX / CONCLUSION",["Cervical length is normal, cervix closed.","Cervical length is short:","No gross structural anomaly seen on this scan.","Note: Ultrasound cannot exclude all fetal anomalies (limited by fetal position, liquor and maternal habitus)."]]],
+["BPD (cm)","HC (cm)","AC (cm)","FL (cm)","GA by US (weeks)","EFW (grams)","FHR (bpm)","AFI (cm)","Nuchal fold (mm)","Cerebellum (mm)","Cisterna magna (mm)","Lateral ventricle (mm)","Cervical length (cm)","EDD"],{ob:true});
+pad("obgyn","twin","Obstetric Ultrasound — Twin Pregnancy","Twin Pregnancy",[
+["CHORIONICITY",["Dichorionic diamniotic (DCDA) twin pregnancy.","Monochorionic diamniotic (MCDA) twin pregnancy.","Monochorionic monoamniotic (MCMA) twin pregnancy.","Lambda (twin-peak) sign present.","T sign present.","Inter-twin membrane seen."]],
+...both(s=>[s==="Right"?"TWIN 1":"TWIN 2",["Live fetus, cardiac activity present.","Cephalic presentation.","Breech presentation.","Transverse lie.","Amniotic fluid is normal.","Oligohydramnios.","Polyhydramnios.","Placenta anterior.","Placenta posterior.","Placenta fundal.","Placenta low-lying.","Fetal biometry corresponds to gestational age.","Fetal growth restriction suspected."]]),
+["COMPARISON",["No significant growth discordance.","Growth discordance seen:","Cervix is closed and normal in length."]]],
+["Twin 1 BPD (cm)","Twin 1 HC (cm)","Twin 1 AC (cm)","Twin 1 FL (cm)","Twin 1 EFW (g)","Twin 1 FHR (bpm)","Twin 1 AFI (cm)","Twin 2 BPD (cm)","Twin 2 HC (cm)","Twin 2 AC (cm)","Twin 2 FL (cm)","Twin 2 EFW (g)","Twin 2 FHR (bpm)","Twin 2 AFI (cm)","Discordance (%)","GA by US (weeks)","Cervical length (cm)"],{ob:true});
+pad("obgyn","foll","Folliculometry (Follicular Study)","Folliculometry",[
+["ENDOMETRIUM",["Endometrium is thin, linear (early proliferative).","Endometrium is proliferative with trilaminar pattern.","Endometrium is secretory / hyperechoic.","Endometrial thickness is adequate for implantation.","Endometrial thickness is suboptimal."]],
+["RIGHT OVARY",["Right ovary: dominant follicle seen:","Right ovary: multiple small antral follicles seen.","Right ovary: polycystic morphology.","Right ovary: follicle ruptured — ovulation has occurred.","Right ovary: corpus luteum seen.","Right ovary: no dominant follicle."]],
+["LEFT OVARY",["Left ovary: dominant follicle seen:","Left ovary: multiple small antral follicles seen.","Left ovary: polycystic morphology.","Left ovary: follicle ruptured — ovulation has occurred.","Left ovary: corpus luteum seen.","Left ovary: no dominant follicle."]],
+["UTERUS / FLUID",["Uterus is normal in size and shape.","No free fluid in pouch of Douglas.","Free fluid seen in pouch of Douglas (post-ovulation)."]]],
+["Cycle day","Endometrial thickness (mm)","Right follicle 1 (mm)","Right follicle 2 (mm)","Right follicle 3 (mm)","Left follicle 1 (mm)","Left follicle 2 (mm)","Left follicle 3 (mm)","Right ovary volume (cc)","Left ovary volume (cc)"],{ob:true});
+/* ===== Doppler Studies ===== */
+pad("doppler","dopob","Doppler — Obstetric (Umbilical / MCA / Uterine Artery)","Doppler Obstetric",[
+["UMBILICAL ARTERY",["Umbilical artery Doppler waveform is normal with positive end-diastolic flow.","Umbilical artery resistance indices are within normal limits for gestational age.","Umbilical artery resistance index is raised.","Reduced end-diastolic flow in umbilical artery.","Absent end-diastolic flow (AEDF) in umbilical artery.","Reversed end-diastolic flow (REDF) in umbilical artery."]],
+["MIDDLE CEREBRAL ARTERY",["MCA Doppler is normal.","MCA PI is low — brain sparing effect.","MCA PSV is within normal range (no evidence of fetal anemia).","MCA PSV is raised (> 1.5 MoM) — fetal anemia suspected."]],
+["UTERINE ARTERIES",["Both uterine arteries show normal flow with no early diastolic notch.","Bilateral early diastolic notching seen.","Unilateral early diastolic notching seen.","Mean uterine artery PI is raised."]],
+["DUCTUS VENOSUS / CPR",["Ductus venosus a-wave is normal.","Ductus venosus a-wave is reduced / absent / reversed.","Cerebro-placental ratio (CPR) is normal.","Cerebro-placental ratio (CPR) is reduced — fetal redistribution."]],
+["OVERALL",["Fetal movement and cardiac activity present.","Liquor is adequate.","Doppler indices are normal for gestational age.","Findings suggest placental insufficiency — clinical correlation and follow-up advised."]]],
+["UA PI","UA RI","UA S/D ratio","MCA PI","MCA RI","MCA PSV (cm/s)","CPR","Right UtA PI","Left UtA PI","Mean UtA PI","DV PI","FHR (bpm)","AFI (cm)","EFW (grams)"],{ob:true});
+pad("doppler","dopcar","Doppler — Carotid & Vertebral Arteries","Doppler Carotid",[
+...both(s=>[s.toUpperCase()+" COMMON CAROTID (CCA)",[s+" CCA is normal in caliber with normal flow pattern.","No plaque seen in "+s+" CCA.","Intima-media thickness of "+s+" CCA is normal.","Intima-media thickness of "+s+" CCA is increased:","Atheromatous plaque seen in "+s+" CCA:"]]),
+...both(s=>[s.toUpperCase()+" ICA / ECA",[s+" ICA and ECA show normal flow, no stenosis.","Plaque seen in "+s+" ICA:","Stenosis of "+s+" ICA (estimated %):","Occlusion of "+s+" ICA.","Plaque / stenosis seen in "+s+" carotid bulb:"]]),
+["VERTEBRAL ARTERIES",["Both vertebral arteries show normal antegrade flow.","Right vertebral artery flow is reversed (subclavian steal).","Left vertebral artery flow is reversed (subclavian steal).","Right vertebral artery is hypoplastic.","Left vertebral artery is hypoplastic."]],
+["CONCLUSION",["No hemodynamically significant stenosis seen.","Hemodynamically significant stenosis seen:"]]],
+["R CCA PSV (cm/s)","R ICA PSV (cm/s)","R ICA/CCA ratio","R CIMT (mm)","L CCA PSV (cm/s)","L ICA PSV (cm/s)","L ICA/CCA ratio","L CIMT (mm)","R vertebral PSV (cm/s)","L vertebral PSV (cm/s)"]);
+pad("doppler","dopdvt","Doppler — Lower Limb Venous (DVT Study)","Doppler LL Venous",[
+...both(s=>[s.toUpperCase()+" LOWER LIMB",[s+" common femoral vein: compressible, phasic flow, no thrombus.",s+" superficial femoral vein: compressible, no thrombus.",s+" popliteal vein: compressible, no thrombus.",s+" calf veins (posterior tibial / peroneal): patent.",s+" great saphenous vein: patent.","Deep vein thrombosis (DVT) seen in "+s+" limb:",s+" sapheno-femoral junction is incompetent (reflux seen).",s+" perforator incompetence seen.","Varicose veins seen in "+s+" limb.","Baker's cyst seen in "+s+" popliteal fossa:","Subcutaneous edema seen in "+s+" limb."]]),
+["CONCLUSION",["No evidence of deep vein thrombosis in either lower limb.","Superficial thrombophlebitis seen:","Chronic venous insufficiency changes seen."]]],
+["R CFV diameter (mm)","L CFV diameter (mm)","R reflux time (sec)","L reflux time (sec)","R SFJ diameter (mm)","L SFJ diameter (mm)","Thrombus length (cm)"]);
+pad("doppler","dopart","Doppler — Lower Limb Arterial","Doppler LL Arterial",[
+...both(s=>[s.toUpperCase()+" LOWER LIMB",[s+" common femoral artery: triphasic flow, no stenosis.",s+" superficial femoral artery: triphasic flow, no stenosis.",s+" popliteal artery: triphasic flow, no stenosis.",s+" anterior / posterior tibial and dorsalis pedis arteries: normal flow.","Monophasic / damped flow seen in "+s+" limb at:","Atherosclerotic plaque seen in "+s+" limb:","Significant stenosis seen in "+s+" limb at:","Occlusion seen in "+s+" limb at:","Aneurysm seen in "+s+" limb:"]]),
+["CONCLUSION",["No significant arterial stenosis or occlusion in either lower limb.","Peripheral arterial disease (PAD) seen:"]]],
+["R ABI","L ABI","R CFA PSV (cm/s)","R SFA PSV (cm/s)","R popliteal PSV (cm/s)","L CFA PSV (cm/s)","L SFA PSV (cm/s)","L popliteal PSV (cm/s)"]);
+pad("doppler","dopul","Doppler — Upper Limb (Venous / Arterial / AV Fistula)","Doppler Upper Limb",[
+...both(s=>[s.toUpperCase()+" UPPER LIMB",[s+" subclavian / axillary vein: patent, normal respiratory phasicity.",s+" brachial, basilic and cephalic veins: compressible, no thrombus.","Thrombus seen in "+s+" upper limb vein:",s+" subclavian / axillary / brachial arteries: normal triphasic flow.",s+" radial and ulnar arteries: normal flow.","Monophasic flow / stenosis seen in "+s+" limb artery:"]]),
+["AV FISTULA (if present)",["AV fistula is patent with good flow and thrill.","Stenosis seen in AV fistula:","Thrombosis of AV fistula.","Fistula vein diameter adequate for cannulation.","Pseudoaneurysm / aneurysmal dilatation seen:"]]],
+["Fistula flow volume (ml/min)","Fistula vein diameter (mm)","Feeding artery PSV (cm/s)","Stenosis PSV ratio"]);
+pad("doppler","dopren","Doppler — Renal Arteries","Doppler Renal",[
+...both(s=>[s.toUpperCase()+" RENAL ARTERY / KIDNEY",[s+" renal artery shows normal flow, no stenosis.",s+" renal artery PSV is raised — stenosis suspected.",s+" intra-renal resistive index is normal.",s+" intra-renal resistive index is raised.",s+" kidney size and parenchymal echotexture are normal.",s+" kidney is small with increased echogenicity."]]),
+["AORTA",["Abdominal aorta is normal in caliber with normal flow.","Atherosclerotic changes seen in aorta.","Aortic aneurysm seen:"]]],
+["R renal artery PSV (cm/s)","R RAR (renal-aortic ratio)","R RI (resistive index)","L renal artery PSV (cm/s)","L RAR (renal-aortic ratio)","L RI (resistive index)","Aortic PSV (cm/s)","Right kidney (cm)","Left kidney (cm)"]);
+pad("doppler","dopport","Doppler — Portal Vein / Liver","Doppler Portal",[
+["PORTAL VEIN",["Portal vein is normal in caliber with hepatopetal flow.","Portal vein is dilated (> 13 mm).","Hepatofugal (reversed) flow in portal vein.","Portal vein thrombosis seen.","Cavernous transformation of portal vein seen.","Portal vein velocity is reduced."]],
+["HEPATIC VEINS / IVC",["Hepatic veins show normal triphasic flow.","Hepatic veins show dampened / monophasic flow.","Hepatic vein thrombosis seen — Budd-Chiari syndrome suspected.","IVC is normal.","IVC is dilated / non-collapsing."]],
+["HEPATIC ARTERY / SPLENIC VEIN",["Hepatic artery flow is normal.","Hepatic artery resistive index is raised.","Splenic vein is normal in caliber.","Splenic vein is dilated."]],
+["LIVER / SPLEEN / COLLATERALS",["Liver shows features of chronic liver disease.","Spleen is enlarged (splenomegaly).","Porto-systemic collaterals seen.","Ascites seen.","No ascites seen."]]],
+["Portal vein diameter (mm)","Portal vein velocity (cm/s)","Splenic vein diameter (mm)","Spleen (cm)","Hepatic artery RI","Liver span (cm)"]);
+pad("doppler","dopscr","Doppler — Scrotal (Varicocele / Torsion)","Doppler Scrotal",[
+...both(s=>[s.toUpperCase()+" TESTIS / EPIDIDYMIS",[s+" testis shows normal intratesticular color flow.",s+" testicular flow is reduced.",s+" testicular flow is absent — torsion suspected, urgent surgical referral.",s+" epididymis is enlarged and hyperemic (epididymo-orchitis).","Twisted spermatic cord (whirlpool sign) seen on "+s+" side.",s+" testis is enlarged with increased vascularity (orchitis)."]]),
+["VARICOCELE",["No varicocele seen on either side.","Right varicocele seen.","Left varicocele seen.","Bilateral varicocele seen.","Grade I varicocele (reflux only on Valsalva).","Grade II varicocele.","Grade III varicocele (visible at rest)."]],
+["OTHERS",["Hydrocele seen:","Scrotal wall edema seen.","Inguinal hernia suspected."]]],
+["R testis (cm)","L testis (cm)","R testis volume (cc)","L testis volume (cc)","R max vein diameter (mm)","L max vein diameter (mm)","R RI","L RI"]);
+pad("doppler","dopgen","Doppler Study (General / Other — title khud likhein)","Doppler (General)",[
+["VESSEL EXAMINED",["Vessel is patent with normal color filling.","Spectral waveform is normal.","No evidence of stenosis or thrombus.","Stenosis seen:","Thrombus seen:","Flow is reduced.","Flow is absent.","Reversal of flow seen.","Aneurysmal dilatation seen:","Increased vascularity seen in lesion."]]],
+["Vessel diameter (mm)","PSV (cm/s)","EDV (cm/s)","RI","PI","S/D ratio"],{customTitle:true});
+/* ===== Small Parts & Others ===== */
+pad("small","thy","Ultrasound Thyroid / Neck","Thyroid / Neck",[
+["RIGHT LOBE",["Right lobe is normal in size and echotexture.","Right lobe is enlarged.","Nodule seen in right lobe:","Cyst seen in right lobe:","Calcification seen in right lobe:"]],
+["LEFT LOBE",["Left lobe is normal in size and echotexture.","Left lobe is enlarged.","Nodule seen in left lobe:","Cyst seen in left lobe:","Calcification seen in left lobe:"]],
+["ISTHMUS",["Isthmus is normal in thickness.","Isthmus is thickened.","Nodule seen in isthmus:"]],
+["THYROID — GENERAL",["Diffuse heterogeneous echotexture (thyroiditis pattern).","Diffuse enlargement with increased vascularity (Graves pattern).","Multinodular goiter.","Colloid nodule(s) seen.","Suspicious nodule (hypoechoic, microcalcification / irregular margin) — FNAC advised.","Retrosternal extension cannot be excluded."]],
+["NECK / LYMPH NODES",["No significant cervical lymphadenopathy.","Reactive-looking cervical nodes with preserved fatty hilum.","Enlarged cervical lymph node(s) seen:","Salivary glands appear normal."]]],
+["Right lobe (L x AP x W cm)","Left lobe (L x AP x W cm)","Isthmus (mm)","Thyroid volume (ml)","Nodule 1 size (mm)","Nodule 2 size (mm)"]);
+pad("small","brst","Ultrasound Breast","Breast",[
+...both(s=>[s.toUpperCase()+" BREAST",[s+" breast shows normal fibroglandular pattern, no mass.","Fibrocystic changes seen in "+s+" breast.","Simple cyst seen in "+s+" breast at ... o'clock:","Solid hypoechoic mass seen in "+s+" breast at ... o'clock (likely fibroadenoma):","Suspicious lesion with irregular margins / posterior shadowing seen in "+s+" breast:","Duct ectasia seen in "+s+" breast.","Abscess / collection seen in "+s+" breast:","Skin thickening seen over "+s+" breast."]]),
+...both(s=>[s.toUpperCase()+" AXILLA",[s+" axilla: no enlarged lymph node.",s+" axillary lymph node(s) seen:"]]),
+["BI-RADS",["BI-RADS 1 (negative).","BI-RADS 2 (benign finding).","BI-RADS 3 (probably benign).","BI-RADS 4 (suspicious) — biopsy advised.","BI-RADS 5 (highly suggestive of malignancy)."]]],
+["Right lesion (cm)","Left lesion (cm)","Distance from nipple (cm)","Axillary node (mm)"]);
+pad("small","scr","Ultrasound Scrotum / Testes","Scrotum",[
+...both(s=>[s.toUpperCase()+" TESTIS / EPIDIDYMIS",[s+" testis is normal in size, shape and echotexture.",s+" testis is small / atrophic.","Testicular lesion seen in "+s+" testis:","Microlithiasis seen in "+s+" testis.",s+" epididymis appears normal.",s+" epididymis is enlarged (epididymitis).","Epididymal cyst seen on "+s+" side:"]]),
+["HYDROCELE / VARICOCELE / HERNIA",["No hydrocele seen.","Right hydrocele seen.","Left hydrocele seen.","Bilateral hydroceles seen.","Varicocele seen:","Inguinal hernia suspected on:","Scrotal wall thickening seen."]]],
+["R testis (cm)","L testis (cm)","R testis volume (cc)","L testis volume (cc)","Hydrocele depth (mm)","Lesion size (cm)"]);
+pad("small","soft","Ultrasound Soft Tissue / Lump / Hernia","Soft Tissue / Lump",[
+["LESION",["Site of swelling / lump (mention in detail):","Well-defined cystic lesion seen:","Solid hypoechoic lesion seen:","Lipoma pattern — well-defined, iso- to hyperechoic.","Sebaceous / epidermoid cyst seen.","Abscess / collection with internal debris seen.","Lymph node(s) enlarged:","Hematoma seen:","Foreign body suspected:"]],
+["HERNIA",["Hernial defect seen at:","Bowel loops herniate through the defect.","Omentum / fat herniates through the defect.","Reducible on probe pressure.","No hernial defect seen."]],
+["VASCULARITY",["Increased vascularity seen on color Doppler.","No internal vascularity seen on color Doppler."]]],
+["Length (cm)","AP (cm)","Width (cm)","Depth from skin (mm)","Defect size (cm)"]);
+pad("small","chest","Ultrasound Chest (Pleural / Effusion)","Chest / Pleural",[
+...both(s=>[s.toUpperCase()+" PLEURAL SPACE",["No pleural effusion on the "+s.toLowerCase()+" side.",s+" pleural effusion seen — anechoic.",s+" pleural effusion with septations / internal echoes (complex).",s+" lung base consolidation / collapse seen.",s+" hemidiaphragm shows normal movement.",s+" pleural thickening seen."]]),
+["MARKING",["Suitable site marked for aspiration:","Safe window not available for aspiration."]]],
+["Right effusion depth (mm)","Left effusion depth (mm)","Estimated volume (ml)"]);
+pad("small","cran","Ultrasound Cranial (Infant / Neonate)","Cranial (Infant)",[
+["VENTRICLES",["Lateral ventricles are normal in size.","Ventriculomegaly seen:","Third and fourth ventricles are normal.","Intraventricular hemorrhage seen — grade:"]],
+["BRAIN PARENCHYMA",["Brain parenchyma shows normal echotexture.","Midline structures are normal.","Increased periventricular echogenicity seen.","Periventricular leucomalacia suspected.","Cerebellum and posterior fossa are normal."]],
+["EXTRA-AXIAL / OTHERS",["No extra-axial collection seen.","Extra-axial collection seen:","Anterior fontanelle is open with adequate acoustic window.","Cisterna magna is normal."]]],
+["Right lateral ventricle (mm)","Left lateral ventricle (mm)","Anterior fontanelle (cm)"]);
+pad("small","hip","Ultrasound Hip (Infant — DDH Screening)","Infant Hip",[
+...both(s=>[s.toUpperCase()+" HIP",[s+" hip: femoral head well seated with normal acetabular coverage.",s+" hip: Graf type I (alpha angle ≥ 60°).",s+" hip: Graf type IIa / IIb (physiological / delayed ossification).",s+" hip: Graf type IIc / D (critical / decentering).",s+" hip: Graf type III / IV (dislocated).",s+" hip: joint effusion seen."]]),
+["CONCLUSION",["No evidence of developmental dysplasia of the hip.","Developmental dysplasia of the hip (DDH) — orthopedic referral advised."]]],
+["Alpha angle R (°)","Beta angle R (°)","Alpha angle L (°)","Beta angle L (°)","Femoral head coverage R (%)","Femoral head coverage L (%)"]);
+pad("small","msk","Ultrasound Joint / Musculoskeletal (Shoulder, Knee, etc.)","Joint / MSK",[
+["REGION",["Region examined (joint / side):"]],
+["JOINT",["Joint effusion seen.","No joint effusion seen.","Synovial thickening seen.","Baker's cyst seen:","Ganglion cyst seen:","Bursitis seen:"]],
+["TENDONS / MUSCLE",["Tendon is intact with normal fibrillar pattern.","Tendinosis / tendon thickening seen:","Partial tear seen:","Complete tear seen:","Calcific deposit seen:","Muscle tear / hematoma seen:"]]],
+["Effusion depth (mm)","Tendon thickness (mm)","Collection size (cm)"]);
+pad("small","custom","Other Ultrasound (Custom — title khud likhein)","Custom Report",[],
+["Length (cm)","Width (cm)","Depth (cm)","Size (mm)"],{customTitle:true});
+})();
+function usGroupedOptions(){return US_GROUPS.map(g=>'<optgroup label="'+esc(g[1])+'">'+US_TYPES.filter(t=>t.group===g[0]).map(t=>'<option value="'+t.id+'">'+esc(t.name)+'</option>').join("")+'</optgroup>').join("")}
 const usType=id=>US_TYPES.find(t=>t.id===id)||US_TYPES[0];
 function usGuessType(desc){const d=String(desc||"").toLowerCase();
-if(/pregnan|obstetric|fwb|fetal|foetal|growth|anomaly|\bob\b/.test(d))return"fwb";
-if(/pelvi|uterus|ovar|gynae|gynec|trans.?vag/.test(d))return"pelvis";return"abd"}
+if(/doppler|colou?r flow|duplex/.test(d)){
+if(/carotid|vertebral/.test(d))return"dopcar";
+if(/upper limb|arm/.test(d))return"dopul";
+if(/dvt|venous|vein|varic/.test(d)&&!/arter/.test(d))return"dopdvt";
+if(/arter|\bpad\b|peripheral|leg|limb/.test(d))return"dopart";
+if(/renal|kidney/.test(d))return"dopren";if(/portal|liver|hepatic/.test(d))return"dopport";
+if(/scrot|testi|varicocele/.test(d))return"dopscr";
+if(/pregnan|obstetric|fetal|foetal|umbilical|uterine|\bob\b|growth/.test(d))return"dopob";
+return"dopgen"}
+if(/\bnt\b|nuchal/.test(d))return"nt";
+if(/anomal|level.?ii|targeted/.test(d))return"anom";
+if(/twin/.test(d))return"twin";
+if(/follic|ovulat/.test(d))return"foll";
+if(/early pregnan|dating|1st trimester|first trimester|viability/.test(d))return"ob1";
+if(/pregnan|obstetric|fwb|fetal|foetal|growth|\bob\b/.test(d))return"fwb";
+if(/trans.?vag|\btvs\b/.test(d))return"tvs";
+if(/prostate/.test(d)&&!/uterus|ovar/.test(d))return"malepel";
+if(/pelvi|uterus|ovar|gynae|gynec/.test(d))return"pelvis";
+if(/\bkub\b|kidney|renal|urinary/.test(d))return"kub";
+if(/thyroid|neck/.test(d))return"thy";if(/breast/.test(d))return"brst";if(/scrot|testi/.test(d))return"scr";
+if(/appendix|\brif\b|iliac/.test(d))return"appx";
+if(/upper abd/.test(d))return"upper";
+if(/liver|hbs|hepato|gall|biliary/.test(d))return"hbs";
+if(/lump|soft tissue|hernia|swelling/.test(d))return"soft";
+if(/pleural|chest|effusion/.test(d))return"chest";
+if(/cranial|neonat/.test(d))return"cran";if(/\bhip\b|ddh/.test(d))return"hip";
+if(/joint|shoulder|knee|msk|tendon/.test(d))return"msk";
+return"abd"}
 function usThermalSize(){const s=app.settings;return s.usThermalSize==="58"?"58":s.usThermalSize==="80"?"80":(s.printSize==="58"?"58":"80")}
 /* ---- storage helpers ---- */
 async function usGetAll(){
@@ -1983,7 +2182,7 @@ const startType=old?old.type:(item?usGuessType(item.description):"abd");
 const docs=app.doctors.filter(d=>d.active!==false);
 const ov=openModal(old?"Edit Ultrasound Report":"New Ultrasound Report",
 '<div class="grid g2 mb">'+
-'<div class="field"><label>Report Type</label><select class="inp" id="usr-type">'+US_TYPES.map(t=>'<option value="'+t.id+'">'+esc(t.name)+'</option>').join("")+'</select></div>'+
+'<div class="field" style="grid-column:span 2"><label>Report Type</label><select class="inp" id="usr-type">'+usGroupedOptions()+'</select></div>'+'<div class="field" id="usr-titlerow" style="display:none;grid-column:span 2"><label>Report Title (khud likhein)</label><input class="inp" id="usr-title" placeholder="e.g. Doppler Study — Both Lower Limbs"></div>'+
 '<div class="field"><label>Date</label><input class="inp" type="date" id="usr-date" value="'+esc(R.date||(visit&&visit.date)||today())+'"></div>'+
 '<div class="field"><label>MR No</label><div class="flex g8"><input class="inp" id="usr-mr" readonly style="background:var(--slate-50);font-weight:700" value="'+esc(pat?padMr(pat.patientId):(R.patientId?padMr(R.patientId):""))+'"><button class="btn btn-outline sm" id="usr-pick" type="button">🔍 PATIENT</button></div></div>'+
 '<div class="field"><label>Patient Name <span class="req">*</span></label><input class="inp" id="usr-name" value="'+esc(R.patientName||(pat&&pat.name)||(visit&&visit.patientName)||"")+'"></div>'+
@@ -1999,7 +2198,7 @@ const ov=openModal(old?"Edit Ultrasound Report":"New Ultrasound Report",
 '<p class="hint">Sirf tick ki hui findings final report mein print hongi. Untick findings print mein bilkul nazar nahi aayengi.</p>',
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="usr-save">💾 SAVE</button><button class="btn btn-dark" id="usr-a4">💾 SAVE + 🖨 A4</button><button class="btn btn-primary" id="usr-th">💾 SAVE + 🧾 THERMAL</button>',true);
 const $q=sel=>ov.querySelector(sel);
-$q("#usr-type").value=startType;
+$q("#usr-type").value=startType;$q("#usr-title").value=(old&&usType(old.type).customTitle&&old.typeName)||"";
 let measVals={};if(old&&old.measurements)old.measurements.forEach(m=>{measVals[m.label]=m.value});
 let customM=old&&old.measurements?old.measurements.filter(m=>!usType(startType).meas.includes(m.label)).map(m=>({label:m.label,value:m.value})):[];
 const oldChecks=old&&old.checks?old.checks:{};
@@ -2012,7 +2211,7 @@ sec[1].map((v,vi)=>{const k=keyOf(sec[0],v),kp=keep[k],on=kp?kp.on:!!oldChecks[k
 return '<label style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #e5e7eb;font-size:13px"><input type="checkbox" data-ck="'+esc(k)+'" data-si="'+si+'" style="margin-top:3px"'+(on?" checked":"")+'><span style="flex:1">'+esc(v)+'</span><input class="inp" data-dt="'+esc(k)+'" placeholder="Size / detail" value="'+esc(dv)+'" style="max-width:170px;padding:6px"></label>'}).join("")+'</div></div>').join("");
 ov.querySelectorAll("[data-all]").forEach(b=>b.onclick=()=>ov.querySelectorAll('[data-si="'+b.dataset.all+'"]').forEach(c=>c.checked=true));
 ov.querySelectorAll("[data-none]").forEach(b=>b.onclick=()=>ov.querySelectorAll('[data-si="'+b.dataset.none+'"]').forEach(c=>c.checked=false));
-const preg=$q("#usr-type").value!=="abd";$q("#usr-parow").style.display=preg?"":"none";$q("#usr-lmprow").style.display=preg?"":"none";
+const preg=!!t.ob;$q("#usr-titlerow").style.display=t.customTitle?"":"none";$q("#usr-parow").style.display=preg?"":"none";$q("#usr-lmprow").style.display=preg?"":"none";
 drawMeas()};
 const collectMeas=()=>{ov.querySelectorAll("[data-mv]").forEach(i=>{measVals[i.dataset.mv]=i.value});
 customM=Array.from(ov.querySelectorAll("[data-cm]")).map(r=>({label:r.querySelector("[data-cml]").value,value:r.querySelector("[data-cmv]").value}))};
@@ -2045,7 +2244,7 @@ patientName:name,age:$q("#usr-age").value.trim(),ageUnit:$q("#usr-ageunit").valu
 date:$q("#usr-date").value||today(),time:old?old.time:timeNow(),
 doctor:$q("#usr-doc").value.trim(),refBy:$q("#usr-ref").value.trim(),
 para:$q("#usr-parow").style.display==="none"?"":$q("#usr-para").value.trim(),lmp:$q("#usr-parow").style.display==="none"?"":$q("#usr-lmp").value.trim(),
-type:t.id,typeName:t.name,checks:checks,details:details,findings:findings,measurements:m,
+type:t.id,typeName:(t.customTitle&&$q("#usr-title").value.trim())||t.name,checks:checks,details:details,findings:findings,measurements:m,
 remarks:$q("#usr-remarks").value.trim(),status:"Final",
 createdBy:old?old.createdBy:(app.user&&app.user.username)||"",createdAt:old?old.createdAt:now,updatedAt:now})};
 const save=async(printMode)=>{
@@ -2083,7 +2282,7 @@ function ultrasoundReportModal(){usEditor({},()=>{if(app.route==="ultrasound")pa
 
 function usSampleReport(){
 return {id:"sample",patientId:today().slice(0,4)+"/0001",mrNo:today().slice(0,4)+"/0001",token:8,patientName:"MRS. AYESHA BIBI",age:"28",ageUnit:"Years",gender:"Female",date:today(),doctor:"Dr. Sonologist",refBy:"Dr. Ahmed Raza",para:"P2+0",lmp:"",
-type:"fwb",typeName:US_TYPES[2].name,
+type:"fwb",typeName:usType("fwb").name,
 findings:[{name:"GESTATION",items:[{t:"Single pregnancy.",d:""},{t:"Cardiac activity present.",d:""}]},{name:"PRESENTATION / LIE",items:[{t:"Cephalic presentation.",d:""}]},{name:"AMNIOTIC FLUID",items:[{t:"Amniotic fluid is normal.",d:"AFI 12 cm"}]},{name:"PLACENTA",items:[{t:"Placenta posterior wall.",d:""}]}],
 measurements:[{label:"BPD (cm)",value:"8.1"},{label:"FL (cm)",value:"6.2"},{label:"GA by US (weeks)",value:"33w 2d"},{label:"FHR (bpm)",value:"144"}],
 remarks:"Sample report — sirf printer / font test ke liye."}}
@@ -3437,8 +3636,135 @@ const url=await readAsDataURL(file);
 return await new Promise(res=>{const im=new Image();im.onload=()=>{try{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
 const g=c.getContext("2d");if(type==="image/jpeg"){g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height)}g.drawImage(im,0,0,c.width,c.height);res(c.toDataURL(type||"image/png",q||.85))}catch(e){res(url)}};im.onerror=()=>res(url);im.src=url});
 }
-function staffCardsHTML(list){
-const s=slipS(app.settings,"rep");const E=esc;
+/* ===== Offline QR code generator (byte mode, ECC level M, versions 1-10) ===== */
+function zmQRMatrix(text){
+const data=Array.from(new TextEncoder().encode(String(text)));
+const ECC=[10,16,26,18,24,16,18,22,22,26],BLK=[1,1,1,2,2,4,4,4,5,5];
+const raw=v=>{let r=(16*v+128)*v+64;if(v>=2){const n=Math.floor(v/7)+2;r-=(25*n-10)*n-55;if(v>=7)r-=36}return r};
+let ver=1;
+for(;ver<=10;ver++){const cap=Math.floor(raw(ver)/8)-ECC[ver-1]*BLK[ver-1];if(4+(ver<10?8:16)+data.length*8<=cap*8)break}
+if(ver>10)throw new Error("QR text too long");
+const rawCw=Math.floor(raw(ver)/8),eccLen=ECC[ver-1],nBlk=BLK[ver-1],dataCap=rawCw-eccLen*nBlk;
+let bits=[];const put=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push((v>>>i)&1)};
+put(4,4);put(data.length,ver<10?8:16);data.forEach(b=>put(b,8));
+put(0,Math.min(4,dataCap*8-bits.length));while(bits.length%8)bits.push(0);
+const cw=[];for(let i=0;i<bits.length;i+=8){let b=0;for(let j=0;j<8;j++)b=(b<<1)|bits[i+j];cw.push(b)}
+for(let p=0xEC;cw.length<dataCap;p^=0xEC^0x11)cw.push(p);
+const mul=(x,y)=>{let z=0;for(let i=7;i>=0;i--){z=(z<<1)^((z>>>7)*0x11D);z^=((y>>>i)&1)*x}return z};
+const div=(()=>{const r=new Array(eccLen).fill(0);r[eccLen-1]=1;let root=1;for(let i=0;i<eccLen;i++){for(let j=0;j<eccLen;j++){r[j]=mul(r[j],root);if(j+1<eccLen)r[j]^=r[j+1]}root=mul(root,2)}return r})();
+const rem=d=>{const r=new Array(eccLen).fill(0);for(const b of d){const f=b^r.shift();r.push(0);div.forEach((c,i)=>{r[i]^=mul(c,f)})}return r};
+const nShort=nBlk-rawCw%nBlk,shortLen=Math.floor(rawCw/nBlk);
+const blocks=[];let k=0;
+for(let i=0;i<nBlk;i++){const d=cw.slice(k,k+shortLen-eccLen+(i<nShort?0:1));k+=d.length;const e=rem(d);if(i<nShort)d.push(0);blocks.push(d.concat(e))}
+const all=[];
+for(let i=0;i<blocks[0].length;i++)blocks.forEach((b,j)=>{if(i!==shortLen-eccLen||j>=nShort)all.push(b[i])});
+const size=ver*4+17;
+const M=Array.from({length:size},()=>new Array(size).fill(false)),F=Array.from({length:size},()=>new Array(size).fill(false));
+const setF=(x,y,v)=>{M[y][x]=v;F[y][x]=true};
+for(let i=0;i<size;i++){setF(6,i,i%2===0);setF(i,6,i%2===0)}
+const finder=(cx,cy)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const d=Math.max(Math.abs(dx),Math.abs(dy)),x=cx+dx,y=cy+dy;if(x>=0&&x<size&&y>=0&&y<size)setF(x,y,d!==2&&d!==4)}};
+finder(3,3);finder(size-4,3);finder(3,size-4);
+if(ver>1){const n=Math.floor(ver/7)+2,step=Math.ceil((ver*4+4)/(n*2-2))*2,pos=[6];for(let p=size-7;pos.length<n;p-=step)pos.splice(1,0,p);
+pos.forEach((cy,i)=>pos.forEach((cx,j)=>{if((i===0&&j===0)||(i===0&&j===n-1)||(i===n-1&&j===0))return;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)setF(cx+dx,cy+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1)}))}
+const fmt=m=>{const d=(0<<3)|m;let r=d;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);const b=((d<<10)|r)^0x5412,g=i=>((b>>>i)&1)!==0;
+for(let i=0;i<=5;i++)setF(8,i,g(i));setF(8,7,g(6));setF(8,8,g(7));setF(7,8,g(8));for(let i=9;i<15;i++)setF(14-i,8,g(i));
+for(let i=0;i<8;i++)setF(size-1-i,8,g(i));for(let i=8;i<15;i++)setF(8,size-15+i,g(i));setF(8,size-8,true)};
+fmt(0);
+if(ver>=7){let r=ver;for(let i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1F25);const b=(ver<<12)|r;for(let i=0;i<18;i++){const v=((b>>>i)&1)!==0,a=size-11+i%3,c=Math.floor(i/3);setF(a,c,v);setF(c,a,v)}}
+let bi=0;
+for(let right=size-1;right>=1;right-=2){if(right===6)right=5;for(let vert=0;vert<size;vert++)for(let j=0;j<2;j++){const x=right-j,up=((right+1)&2)===0,y=up?size-1-vert:vert;if(!F[y][x]&&bi<all.length*8){M[y][x]=((all[bi>>>3]>>>(7-(bi&7)))&1)!==0;bi++}}}
+const inv=(m,x,y)=>[(x+y)%2===0,y%2===0,x%3===0,(x+y)%3===0,(Math.floor(x/3)+Math.floor(y/2))%2===0,x*y%2+x*y%3===0,(x*y%2+x*y%3)%2===0,((x+y)%2+x*y%3)%2===0][m];
+const mask=m=>{for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!F[y][x]&&inv(m,x,y))M[y][x]=!M[y][x]};
+const penalty=()=>{let p=0;
+for(let pass=0;pass<2;pass++){for(let a=0;a<size;a++){let run=1,line="";for(let b=0;b<size;b++){const v=pass?M[b][a]:M[a][b];line+=v?"1":"0";if(b>0){const pv=pass?M[b-1][a]:M[a][b-1];if(v===pv){run++;if(run===5)p+=3;else if(run>5)p++}else run=1}}
+const m1=line.match(/10111010000/g),m2=line.match(/00001011101/g);p+=40*((m1?m1.length:0)+(m2?m2.length:0))}}
+for(let y=0;y<size-1;y++)for(let x=0;x<size-1;x++){const v=M[y][x];if(v===M[y][x+1]&&v===M[y+1][x]&&v===M[y+1][x+1])p+=3}
+let dark=0;M.forEach(r=>r.forEach(v=>{if(v)dark++}));p+=(Math.ceil(Math.abs(dark*20-size*size*10)/(size*size))-1)*10;return p};
+let best=0,bp=1e9;
+for(let m=0;m<8;m++){mask(m);fmt(m);const p=penalty();if(p<bp){bp=p;best=m}mask(m)}
+mask(best);fmt(best);
+return M}
+function zmQRsvg(text,css){
+try{const M=zmQRMatrix(text),n=M.length,q=3;let d="";
+M.forEach((r,y)=>r.forEach((v,x)=>{if(v)d+="M"+(x+q)+" "+(y+q)+"h1v1h-1z"}));
+return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+(n+2*q)+' '+(n+2*q)+'" shape-rendering="crispEdges" style="'+(css||"")+'"><rect width="100%" height="100%" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>'}
+catch(e){return ""}}
+/* ===== QR scanner (ID card / staff attendance) — camera + USB scanner ===== */
+let _jsqrP=null;
+function loadJsQR(){
+if(window.jsQR)return Promise.resolve(window.jsQR);
+if(_jsqrP)return _jsqrP;
+const urls=["https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js","https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js","https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"];
+_jsqrP=(async()=>{for(const u of urls){try{await loadScript(u);if(window.jsQR)return window.jsQR}catch(e){}}_jsqrP=null;throw new Error("jsQR load failed")})();
+return _jsqrP}
+function zmCardCode(st){return "ZM|"+(st.staffId||"")+"|"+String(st.name||"").replace(/\|/g," ").slice(0,24)}
+function zmParseCode(code){const t=String(code||"").trim();const m=t.match(/^ZM\|([^|]+)/i);return (m?m[1]:t).trim()}
+function findStaffByCode(code){
+const k=zmParseCode(code).toLowerCase();if(!k)return null;
+const dg=k.replace(/\D/g,"");
+return app.staff.find(s=>String(s.staffId||"").toLowerCase()===k||String(s.id||"").toLowerCase()===k||(dg.length>=10&&String(s.cnic||"").replace(/\D/g,"")===dg))||null}
+function staffScanModal(onDone){
+const ov=openModal("📷 Scan Staff ID Card",
+'<div id="sc-wrap" style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden"><video id="sc-v" playsinline muted autoplay style="width:100%;max-height:50vh;display:block;object-fit:cover"></video><div style="position:absolute;inset:16% 18%;border:3px solid rgba(255,255,255,.9);border-radius:14px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
+'<div id="sc-msg" class="hint" style="text-align:center;margin:8px 0">Camera shuru ho raha hai…</div>'+
+'<div class="flex g8"><input class="inp" id="sc-in" placeholder="Ya Staff ID likhein / USB scanner se scan karein, phir Enter" autocomplete="off" style="flex:1"><button class="btn btn-outline" id="sc-go" type="button">OK</button></div>'+
+'<div id="sc-res" class="mt"></div>','<button class="btn btn-neutral" data-close>Close</button>',true);
+const q=s=>ov.querySelector(s),msg=q("#sc-msg"),res=q("#sc-res"),vid=q("#sc-v");
+let stream=null,timer=null,paused=false,changed=false,det=null,busy=false;
+const stop=()=>{clearInterval(timer);timer=null;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}};
+const origRemove=ov.remove.bind(ov);
+ov.remove=()=>{stop();origRemove();if(changed&&onDone){try{onDone()}catch(e){}}};
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+const resume=()=>{res.innerHTML="";paused=false;msg.textContent="QR code camera ke samne laayein…";q("#sc-in").value=""};
+const showStaff=(st,code)=>{
+paused=true;
+if(!st){res.innerHTML='<div class="info-tile" style="border:2px solid #dc2626;background:#fef2f2">❌ Ye code kisi staff se match nahi hua: <b>'+esc(zmParseCode(code))+'</b><div class="mt"><button class="btn btn-primary" id="sc-next">📷 Dobara scan</button></div></div>';q("#sc-next").onclick=resume;return}
+const date=today(),rec=app.attendance.find(a=>a.id===staffAttKey(st.id,date));
+const cur=rec?(ATT_STATUSES.find(x=>x[0]===rec.status)||[])[1]:"";
+const ph=st.photo?'<img src="'+st.photo+'" style="width:58px;height:72px;object-fit:cover;border-radius:8px">':'<div style="width:58px;height:72px;border-radius:8px;background:#e2e8f0;display:grid;place-items:center;font-size:26px;font-weight:800;color:#64748b">'+esc((st.name||"?").charAt(0).toUpperCase())+'</div>';
+const active=st.status==="Active";
+res.innerHTML='<div class="info-tile" style="border:2px solid '+(active?"#16a34a":"#d97706")+'"><div class="flex g12 aic">'+ph+'<div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:800">'+esc(st.name)+'</div><div style="font-size:13px;color:#0e7490;font-weight:700">'+esc(st.designation||"")+'</div><div style="font-size:12px">ID: <b>'+esc(st.staffId)+'</b> • '+esc(st.shift||"-")+'</div><div style="font-size:12px;margin-top:2px">Aaj ('+fmtDate(date)+'): <b>'+(cur||"abhi mark nahi")+'</b></div></div></div>'+
+(active?'<div class="flex g8 fw mt"><button class="btn btn-success" data-mk="P">✔ Present</button><button class="btn btn-outline" data-mk="H">½ Half Day</button><button class="btn btn-outline" data-mk="L">Leave</button><button class="btn btn-danger" data-mk="A">Absent</button></div>':'<div class="mt" style="color:#b45309;font-weight:700">⚠ Ye staff "Left" hai — attendance nahi lagegi.</div>')+
+'<div class="mt"><button class="btn btn-primary" id="sc-next">📷 Agla scan</button></div></div>';
+q("#sc-next").onclick=resume;
+res.querySelectorAll("[data-mk]").forEach(b=>b.onclick=async()=>{
+const status=b.dataset.mk;res.querySelectorAll("button").forEach(x=>x.disabled=true);
+try{await qPut("attendance",{id:staffAttKey(st.id,date),staffId:st.id,staffName:st.name,date:date,status:status,checkIn:(rec&&rec.checkIn)||timeNow(),source:"qr-scan",createdAt:new Date().toISOString()});
+await audit(app.user.username,"UPDATE","attendance",date,st.name+" — QR scan — "+status);
+await loadData();changed=true;toast(st.name+" — "+(ATT_STATUSES.find(x=>x[0]===status)||[])[1]+" lag gayi");
+showStaff(app.staff.find(x=>x.id===st.id)||st,code)}catch(e){toast("Save nahi hui: "+(e.message||e),"error");res.querySelectorAll("button").forEach(x=>x.disabled=false)}})};
+const onCode=code=>{if(!code||paused)return;showStaff(findStaffByCode(code),code)};
+q("#sc-go").onclick=()=>{const v=q("#sc-in").value.trim();if(v){paused=false;onCode(v)}};
+q("#sc-in").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();q("#sc-go").click()}});
+(async()=>{
+try{
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error("no camera api");
+stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280}},audio:false});
+if(!ov.isConnected){stop();return}
+vid.srcObject=stream;await vid.play().catch(()=>{});
+const useBD="BarcodeDetector" in window;
+if(useBD){try{det=new BarcodeDetector({formats:["qr_code"]})}catch(e){det=null}}
+if(!det){msg.textContent="Scanner library load ho rahi hai…";await loadJsQR()}
+msg.textContent="QR code camera ke samne laayein…";
+const cv=document.createElement("canvas"),g=cv.getContext("2d",{willReadFrequently:true});
+timer=setInterval(async()=>{
+if(paused||busy||!vid.videoWidth)return;busy=true;
+try{const w=Math.min(vid.videoWidth,720),h=Math.round(vid.videoHeight*w/vid.videoWidth);cv.width=w;cv.height=h;g.drawImage(vid,0,0,w,h);
+let code="";
+if(det){const r=await det.detect(cv);if(r&&r.length)code=r[0].rawValue||""}
+else if(window.jsQR){const im=g.getImageData(0,0,w,h);const r=window.jsQR(im.data,w,h,{inversionAttempts:"dontInvert"});if(r)code=r.data||""}
+if(code)onCode(code)}catch(e){}
+busy=false},250);
+}catch(e){
+console.warn("scan",e);
+q("#sc-wrap").style.display="none";
+msg.innerHTML="⚠ Camera nahi khula (permission / library). Neeche Staff ID likh kar ya USB scanner se bhi kaam ho jata hai."}
+})();
+setTimeout(()=>{try{q("#sc-in").focus()}catch(e){}},300)}
+/* ===== Staff ID card: A4 (front+back, QR) aur Thermal 58 / 80 mm ===== */
+function staffCardsHTML(list,size){
+const s=slipS(slipS(app.settings,"rep"),"idc");const E=esc;
+if(size==="58"||size==="80")return '<div style="width:100%;color:#000">'+list.map(st=>staffCardThermal(st,s,size)).join("")+'</div>';
 const logo=s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:9mm;width:auto;max-width:15mm;object-fit:contain;background:#fff;border-radius:1.5mm;padding:.5mm">':"";
 const wrap='width:85.6mm;height:54mm;border-radius:3mm;overflow:hidden;position:relative;font-family:Arial,sans-serif;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box';
 const card=st=>{
@@ -3450,17 +3776,46 @@ const front='<div style="'+wrap+';border:.3mm solid #1e3a8a;background:#fff">'+
 '<div style="font-weight:700;color:#0e7490">'+E(st.designation||"")+'</div>'+
 '<div><b>ID:</b> '+E(st.staffId)+'</div>'+(st.phone?'<div><b>Phone:</b> '+E(st.phone)+'</div>':"")+(st.joiningDate?'<div><b>Joined:</b> '+fmtDate(st.joiningDate)+'</div>':"")+(st.bloodGroup?'<div><b>Blood:</b> '+E(st.bloodGroup)+'</div>':"")+'</div></div>'+
 '<div style="position:absolute;left:0;right:0;bottom:0;height:4mm;background:#1e3a8a;color:#fff;font-size:2.3mm;text-align:center;line-height:4mm">'+E(s.phone||s.timing||"")+'</div></div>';
-const back='<div style="'+wrap+';border:.3mm solid #1e3a8a;background:#f8fafc;padding:4mm;font-size:2.7mm;line-height:1.6;color:#0f172a">'+
-'<div style="font-weight:800;color:#1e3a8a;font-size:3.4mm;margin-bottom:1.5mm">'+E(s.clinicName||"")+'</div>'+
+const back='<div style="'+wrap+';border:.3mm solid #1e3a8a;background:#f8fafc;padding:3.5mm;display:flex;gap:3mm;font-size:2.6mm;line-height:1.5;color:#0f172a">'+
+'<div style="flex:1;min-width:0;overflow:hidden"><div style="font-weight:800;color:#1e3a8a;font-size:3.3mm;margin-bottom:1mm">'+E(s.clinicName||"")+'</div>'+
 '<div>Ye card clinic ki milkiyat hai. Gum ho jaye ya mil jaye to wapas karein:</div>'+
 '<div style="margin-top:1mm"><b>'+E(s.address||"")+'</b></div><div><b>'+E(s.phone||"")+'</b></div>'+
-(st.emergency?'<div style="margin-top:1.5mm"><b>Emergency:</b> '+E(st.emergency)+'</div>':"")+(st.address?'<div><b>Address:</b> '+E(st.address)+'</div>':"")+
-'<div style="position:absolute;right:4mm;bottom:5mm;border-top:.3mm solid #475569;padding-top:.8mm;font-size:2.4mm;width:30mm;text-align:center">Authorized Signature</div></div>';
+(st.emergency?'<div style="margin-top:1mm"><b>Emergency:</b> '+E(st.emergency)+'</div>':"")+(st.address?'<div><b>Address:</b> '+E(st.address)+'</div>':"")+'</div>'+
+'<div style="width:24mm;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center"><div>'+zmQRsvg(zmCardCode(st),"width:22mm;height:22mm;display:block")+'<div style="font-size:2mm;margin-top:-.5mm;color:#475569">Scan to verify</div></div><div style="border-top:.3mm solid #475569;padding-top:.6mm;font-size:2.1mm;width:100%">Authorized Signature</div></div></div>';
 return '<div style="display:flex;gap:5mm;margin-bottom:6mm;flex-wrap:wrap">'+front+back+'</div>'};
 return '<div style="width:100%;color:#111">'+list.map(card).join("")+'</div>';
 }
+function staffCardThermal(st,s,size){
+const E=esc,w=size==="58"?54:74,fs=size==="58"?3.1:3.5,pw=size==="58"?20:25,ph=Math.round(pw*1.25),qr=size==="58"?30:38;
+const photo=st.photo?'<img src="'+st.photo+'" style="width:'+pw+'mm;height:'+ph+'mm;object-fit:cover;border:.5mm solid #000;filter:grayscale(1) contrast(1.25)">':'<div style="width:'+pw+'mm;height:'+ph+'mm;border:.5mm solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:'+(pw*.45)+'mm;font-weight:900">'+E((st.name||"?").trim().charAt(0).toUpperCase())+'</div>';
+const line=(l,v)=>v?'<div style="margin:.4mm 0"><b>'+l+':</b> '+E(v)+'</div>':"";
+return '<div style="width:'+w+'mm;box-sizing:border-box;border:.4mm dashed #000;padding:2.2mm;margin:0 0 6mm;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:'+fs+'mm;line-height:1.3;font-weight:700;color:#000;page-break-inside:avoid">'+
+(s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:9mm;width:auto;max-width:100%;object-fit:contain;filter:grayscale(1) contrast(1.4)"><br>':"")+
+'<div style="font-size:'+(fs+.7)+'mm;font-weight:900">'+E(s.clinicName||"")+'</div><div style="font-size:'+(fs-.6)+'mm;letter-spacing:.3mm">STAFF IDENTITY CARD</div>'+
+'<div style="border-top:.3mm dashed #000;margin:1.6mm 0"></div>'+photo+
+'<div style="font-size:'+(fs+1)+'mm;font-weight:900;margin-top:1.5mm;line-height:1.15">'+E(st.name)+'</div>'+
+'<div style="font-size:'+(fs+.2)+'mm">'+E(st.designation||"")+'</div>'+
+'<div style="margin-top:1mm;text-align:left;display:inline-block">'+line("ID",st.staffId)+line("Phone",st.phone)+line("Blood",st.bloodGroup)+line("Joined",st.joiningDate?fmtDate(st.joiningDate):"")+'</div>'+
+'<div style="margin-top:1.5mm">'+zmQRsvg(zmCardCode(st),"width:"+qr+"mm;height:"+qr+"mm")+'</div>'+
+'<div style="font-size:'+(fs-.7)+'mm">Scan to verify</div>'+
+'<div style="border-top:.3mm dashed #000;margin:1.6mm 0"></div><div style="font-size:'+(fs-.7)+'mm">'+E(s.phone||"")+'</div></div>'}
+function idCardModal(list){
+if(!list||!list.length)return;
+let size="A4";
+const ov=openModal("🪪 ID Card — "+(list.length===1?list[0].name:list.length+" staff"),
+'<div class="flex g8 fw mb" id="ic-sizes"></div><div id="ic-prev" style="background:#fff;border:1px solid var(--slate-300);border-radius:8px;padding:12px;overflow:auto;max-height:58vh"></div>'+
+'<p class="hint">Card ke peeche QR code hai — Staff page par "📷 SCAN ID" se scan karke attendance lag jati hai. Thermal printer ke liye 58 ya 80 mm chunein.</p>',
+'<button class="btn btn-neutral" data-close>Close</button><button class="btn btn-dark" id="ic-print">🖨 PRINT</button>',true);
+const draw=()=>{
+ov.querySelector("#ic-sizes").innerHTML=[["A4","🖨 A4 Paper"],["58","🧾 Thermal 58mm"],["80","🧾 Thermal 80mm"]].map(x=>'<button type="button" class="btn '+(size===x[0]?"btn-primary":"btn-outline")+' sm" data-sz="'+x[0]+'">'+x[1]+'</button>').join("");
+ov.querySelectorAll("[data-sz]").forEach(b=>b.onclick=()=>{size=b.dataset.sz;draw()});
+ov.querySelector("#ic-prev").innerHTML=staffCardsHTML(list.slice(0,2),size);
+ov.querySelector("#ic-print").textContent=size==="A4"?"🖨 PRINT A4":"🧾 PRINT "+size+"mm"};
+draw();
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+ov.querySelector("#ic-print").onclick=()=>{printHTML(staffCardsHTML(list,size),size)}}
 function payslipHTML(st,month,r){
-const s=slipS(app.settings,"rep"),cur=s.currency||"Rs.",E=esc;
+const s=slipS(slipS(app.settings,"rep"),"sal"),cur=s.currency||"Rs.",E=esc;
 const row=(a,b,c)=>'<tr><td style="padding:6px 8px;border:1px solid #cbd5e1">'+a+'</td><td style="padding:6px 8px;border:1px solid #cbd5e1;text-align:right">'+(b||"")+'</td><td style="padding:6px 8px;border:1px solid #cbd5e1;text-align:right;color:#be123c">'+(c||"")+'</td></tr>';
 const m=x=>cur+" "+fmtMoney(x);
 return '<div style="font-family:Arial,sans-serif;color:#111;width:100%"><div style="text-align:center">'+(s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:'+(s.logoSize||56)+'px;width:auto;max-width:100%;object-fit:contain"><br>':"")+
@@ -3493,11 +3848,11 @@ const rows=app.staff.map(st=>'<tr><td style="font-weight:800;white-space:nowrap"
 '<td style="font-weight:700;white-space:nowrap">'+cur+" "+fmtMoney(st.salary)+'</td><td><span class="badge '+(st.status==="Active"?"green":"slate")+'">'+esc(st.status)+'</span></td>'+
 '<td><div class="flex g8 fw"><button class="btn btn-neutral sm" data-edit="'+st.id+'">✏️</button><button class="btn btn-primary sm" data-card="'+st.id+'">🪪 ID Card</button>'+
 '<button class="btn '+(st.status==="Active"?"btn-warn":"btn-success")+' sm" data-tog="'+st.id+'">'+(st.status==="Active"?"MARK LEFT":"RE-ACTIVATE")+'</button>'+(can("delete")?'<button class="btn btn-danger sm" data-del="'+st.id+'">🗑</button>':"")+'</div></td></tr>').join("");
-$("#staff-body").innerHTML='<div class="flex g8 fw" style="justify-content:flex-end;margin-bottom:10px"><button class="btn btn-outline sm" id="stf-allcards">🪪 Print All ID Cards</button><button class="btn btn-success sm" id="stf-add">➕ ADD STAFF</button></div>'+
+$("#staff-body").innerHTML='<div class="flex g8 fw" style="justify-content:flex-end;margin-bottom:10px"><button class="btn btn-primary sm" id="stf-scan">📷 SCAN ID</button><button class="btn btn-outline sm" id="stf-allcards">🪪 Print All ID Cards</button><button class="btn btn-success sm" id="stf-add">➕ ADD STAFF</button></div>'+
 '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff ID</th><th>Name</th><th>Designation</th><th>Phone</th><th>Shift</th><th>Monthly Salary</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+(rows||'<tr class="empty-row"><td colspan="8">Abhi koi staff add nahi hua</td></tr>')+'</tbody></table></div>';
 $("#stf-add").onclick=()=>staffModal({id:"",staffId:"",name:"",designation:STAFF_ROLES[0],phone:"",cnic:"",joiningDate:today(),salary:0,shift:s.shifts[0],status:"Active"});
-$("#stf-allcards").onclick=()=>{if(!act.length)return toast("Koi active staff nahi","error");printHTML(staffCardsHTML(act),"A4")};
-$$("[data-card]").forEach(b=>b.onclick=()=>printHTML(staffCardsHTML([app.staff.find(x=>x.id===b.dataset.card)]),"A4"));
+$("#stf-allcards").onclick=()=>{if(!act.length)return toast("Koi active staff nahi","error");idCardModal(act)};$("#stf-scan").onclick=()=>staffScanModal(drawList);
+$$("[data-card]").forEach(b=>b.onclick=()=>idCardModal([app.staff.find(x=>x.id===b.dataset.card)]));
 $$("[data-edit]").forEach(b=>b.onclick=()=>staffModal(app.staff.find(x=>x.id===b.dataset.edit)));
 $$("[data-tog]").forEach(b=>b.onclick=async()=>{const st=app.staff.find(x=>x.id===b.dataset.tog);
 const obj=Object.assign({},st,{status:st.status==="Active"?"Left":"Active",leftDate:st.status==="Active"?today():""});
@@ -3516,7 +3871,7 @@ let cells="";for(let d=1;d<=dim;d++){const v=by[d]||"";cells+='<td class="'+(v?"
 return '<tr><td class="nm">'+esc(st.name)+'</td>'+cells+'<td><b>'+c.P+'</b></td><td><b>'+c.A+'</b></td><td><b>'+c.L+'</b></td><td><b>'+c.H+'</b></td><td><b>'+c.O+'</b></td></tr>'}).join("");
 let head="";for(let d=1;d<=dim;d++)head+="<th>"+d+"</th>";
 $("#staff-body").innerHTML='<div class="grid g2" style="align-items:end;margin-bottom:12px"><div class="field"><label>Attendance Date</label><input class="inp" type="date" id="att-date" value="'+date+'"></div>'+
-'<div class="flex g8 fw" style="justify-content:flex-end"><button class="btn btn-outline sm" data-all="P">✔ All Present</button><button class="btn btn-outline sm" data-all="O">⏸ All Off</button><button class="btn btn-success" id="att-save">💾 SAVE</button></div></div>'+
+'<div class="flex g8 fw" style="justify-content:flex-end"><button class="btn btn-primary sm" id="att-scan">📷 SCAN ID</button><button class="btn btn-outline sm" data-all="P">✔ All Present</button><button class="btn btn-outline sm" data-all="O">⏸ All Off</button><button class="btn btn-success" id="att-save">💾 SAVE</button></div></div>'+
 (active.length?'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Staff</th>'+ATT_STATUSES.map(x=>"<th style='text-align:center'>"+x[1]+"</th>").join("")+'</tr></thead><tbody>'+
 active.map(st=>'<tr><td style="font-weight:700">'+esc(st.name)+'<div style="font-size:11px;color:var(--slate-500);font-weight:400">'+esc(st.staffId)+' • '+esc(st.designation)+'</div></td>'+
 ATT_STATUSES.map(x=>'<td style="text-align:center"><input type="radio" style="width:20px;height:20px;accent-color:'+x[2]+'" name="att-'+st.id+'" value="'+x[0]+'" '+(sel[st.id]===x[0]?"checked":"")+'></td>').join("")+'</tr>').join("")+'</tbody></table></div>'
@@ -3525,7 +3880,7 @@ ATT_STATUSES.map(x=>'<td style="text-align:center"><input type="radio" style="wi
 '<div class="tbl-wrap"><table class="stf-sheet"><thead><tr style="background:rgba(14,116,190,.85);color:#fff"><th style="text-align:left">Staff</th>'+head+'<th>P</th><th>A</th><th>L</th><th>H</th><th>O</th></tr></thead><tbody>'+(sheet||'<tr><td colspan="'+(dim+6)+'">No data</td></tr>')+'</tbody></table></div>';
 $("#att-date").addEventListener("change",e=>{app.staffAttDate=e.target.value||today();drawAttendance()});
 $$("[data-all]").forEach(b=>b.onclick=()=>active.forEach(st=>{const r=document.querySelector('input[name="att-'+st.id+'"][value="'+b.dataset.all+'"]');if(r)r.checked=true}));
-$("#att-save").onclick=async()=>{if(!active.length)return;
+$("#att-scan").onclick=()=>staffScanModal(drawAttendance);$("#att-save").onclick=async()=>{if(!active.length)return;
 const arr=active.map(st=>({id:staffAttKey(st.id,date),staffId:st.id,staffName:st.name,date:date,status:(document.querySelector('input[name="att-'+st.id+'"]:checked')||{}).value||"P",createdAt:new Date().toISOString()}));
 await qBulk("attendance",arr);await audit(app.user.username,"UPDATE","attendance",date,"Attendance saved for "+active.length+" staff");
 await loadData();toast("Attendance saved — "+fmtDate(date));drawAttendance()};
@@ -3599,11 +3954,12 @@ shell();
 }
 function staffModal(st){
 const s=app.settings;let photo=st.photo||"";
+const inRoles=STAFF_ROLES.indexOf(st.designation)>=0,roleSel=(!st.designation||inRoles)?(st.designation||STAFF_ROLES[0]):"Other",roleCustom=(st.designation&&!inRoles)?st.designation:"";
 const ov=openModal(st.id?"Edit Staff — "+st.name:"Add New Staff",
 '<div class="grid g2">'+
-'<div class="field" style="grid-column:span 2"><label>Photo (ID card ke liye)</label><div class="flex g12 aic"><div id="sm-ph" style="width:64px;height:78px;border-radius:8px;border:1px dashed var(--slate-300);background:#fff;display:grid;place-items:center;overflow:hidden;font-size:24px">'+(photo?'<img src="'+photo+'" style="width:100%;height:100%;object-fit:cover">':"👤")+'</div><input type="file" id="sm-file" accept="image/*" capture="user" style="font-size:12px;max-width:200px"></div></div>'+
+'<div class="field" style="grid-column:span 2"><label>Photo (ID card ke liye)</label><div class="flex g12 aic"><div id="sm-ph" style="width:64px;height:78px;border-radius:8px;border:1px dashed var(--slate-300);background:#fff;display:grid;place-items:center;overflow:hidden;font-size:24px">'+(photo?'<img src="'+photo+'" style="width:100%;height:100%;object-fit:cover">':"👤")+'</div><div class="flex g8 fw"><label class="btn btn-primary sm" style="margin:0;color:#fff">📷 Camera<input type="file" class="sm-file" accept="image/*" capture="user" style="display:none"></label><label class="btn btn-outline sm" style="margin:0">🖼 Gallery<input type="file" class="sm-file" accept="image/*" style="display:none"></label><button type="button" class="btn btn-neutral sm" id="sm-ph-rm">✕ Remove</button></div></div></div>'+
 '<div class="field"><label>Full Name <span class="req">*</span></label><input class="inp" id="sm-name" value="'+esc(st.name)+'"></div>'+
-'<div class="field"><label>Designation</label><select class="inp" id="sm-desg">'+STAFF_ROLES.map(x=>'<option '+(st.designation===x?"selected":"")+">"+x+"</option>").join("")+'</select></div>'+
+'<div class="field"><label>Designation</label><select class="inp" id="sm-desg">'+STAFF_ROLES.map(x=>'<option '+(roleSel===x?"selected":"")+">"+x+"</option>").join("")+'</select><input class="inp mt" id="sm-desg-o" placeholder="Designation likhein (jaise Physiotherapist)" value="'+esc(roleCustom)+'" style="'+(roleSel==="Other"?"":"display:none")+'"></div>'+
 '<div class="field"><label>Phone</label><input class="inp" id="sm-phone" inputmode="tel" value="'+esc(st.phone||"")+'"></div>'+
 '<div class="field"><label>CNIC</label><input class="inp" id="sm-cnic" value="'+esc(st.cnic||"")+'" placeholder="42101-1234567-1"></div>'+
 '<div class="field"><label>Joining Date</label><input class="inp" type="date" id="sm-join" value="'+(st.joiningDate||today())+'"></div>'+
@@ -3616,12 +3972,14 @@ const ov=openModal(st.id?"Edit Staff — "+st.name:"Add New Staff",
 '<div class="field"><label>Status</label><select class="inp" id="sm-status"><option value="Active" '+(st.status==="Active"?"selected":"")+'>Active</option><option value="Left" '+(st.status==="Left"?"selected":"")+'>Left</option></select></div></div>',
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="sm-save">💾 SAVE STAFF</button>');
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
-$("#sm-file",ov).addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;photo=await shrinkImg(f,260,"image/jpeg",.82);$("#sm-ph",ov).innerHTML='<img src="'+photo+'" style="width:100%;height:100%;object-fit:cover">'});
+ov.querySelectorAll(".sm-file").forEach(inp=>inp.addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;photo=await shrinkImg(f,320,"image/jpeg",.85);$("#sm-ph",ov).innerHTML='<img src="'+photo+'" style="width:100%;height:100%;object-fit:cover">';e.target.value=""}));
+$("#sm-ph-rm",ov).onclick=()=>{photo="";$("#sm-ph",ov).innerHTML="👤"};
+$("#sm-desg",ov).addEventListener("change",e=>{const o=$("#sm-desg-o",ov);o.style.display=e.target.value==="Other"?"":"none";if(e.target.value==="Other")o.focus()});
 ov.querySelector("#sm-save").onclick=async()=>{
 const name=$("#sm-name",ov).value.trim();if(!name){toast("Staff name is required","error");return}
 const salary=num($("#sm-salary",ov).value);if(salary<=0){toast("Enter a valid monthly salary","error");return}
 const staffId=st.staffId||await createStaffId();
-const obj=Object.assign({},st,{id:st.id||id("stf"),staffId:staffId,name:name,designation:$("#sm-desg",ov).value,phone:$("#sm-phone",ov).value.trim(),
+const obj=Object.assign({},st,{id:st.id||id("stf"),staffId:staffId,name:name,designation:($("#sm-desg",ov).value==="Other"?($("#sm-desg-o",ov).value.trim()||"Other"):$("#sm-desg",ov).value),phone:$("#sm-phone",ov).value.trim(),
 cnic:$("#sm-cnic",ov).value.trim(),joiningDate:$("#sm-join",ov).value,shift:$("#sm-shift",ov).value,salary:salary,otRate:num($("#sm-ot",ov).value),bloodGroup:$("#sm-blood",ov).value.trim(),emergency:$("#sm-emg",ov).value.trim(),address:$("#sm-addr",ov).value.trim(),photo:photo,
 status:$("#sm-status",ov).value,leftDate:st.leftDate||"",createdAt:st.createdAt||new Date().toISOString()});
 await qPut("staff",obj);await audit(app.user.username,st.id?"UPDATE":"CREATE","staff",obj.id,obj.name+" ("+obj.staffId+")");
@@ -3730,7 +4088,7 @@ $("#page").innerHTML='<div class="grid" style="grid-template-columns:2fr 1fr;ali
 '<div class="field"><label>Backup Reminder (days)</label><input class="inp" id="st-bk" inputmode="numeric" value="'+s.backupReminderDays+'"></div>'+
 '<div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:8px;padding:12px"><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--blue-800);margin-bottom:8px">Test Print Sample Slip</p><div class="flex g8 fw">'+
 ["58","80","A4"].map(x=>'<button class="btn btn-outline sm" data-demo="'+x+'">🖨 '+(x==="A4"?"A4":x+"mm")+"</button>").join("")+"</div></div></div></div></div>"+
-slipLogoCardHTML(s)+'<div class="card" style="grid-column:span 2"><div class="card-h"><h2>🏪 Medical Store Slip</h2><div class="sub">Medical Store ki bill slip yahan se edit karein — khali chhora to Clinic wali value use hogi</div></div><div class="card-b"><div class="grid g2">'+
+slipLogoCardHTML(s)+bgCardHTML(s)+'<div class="card" style="grid-column:span 2"><div class="card-h"><h2>🏪 Medical Store Slip</h2><div class="sub">Medical Store ki bill slip yahan se edit karein — khali chhora to Clinic wali value use hogi</div></div><div class="card-b"><div class="grid g2">'+
 '<div class="field" style="grid-column:span 2"><label>Store Name (slip ke upar)</label><input class="inp" id="st-msname" style="font-weight:700" value="'+esc(s.msName||"")+'" placeholder="Khali = automatic (e.g. Jawad Medical Store)"></div>'+
 '<div class="field" style="grid-column:span 2"><label>Store Address</label><input class="inp" id="st-msaddr" value="'+esc(s.msAddress||"")+'" placeholder="Khali = Clinic ka address"></div>'+
 '<div class="field"><label>Store Phone</label><input class="inp" id="st-msphone" value="'+esc(s.msPhone||"")+'" placeholder="Khali = Clinic ka phone"></div>'+
@@ -3762,11 +4120,19 @@ if(o.none){el.textContent="Is slip par logo nahi lagega";md.textContent="🚫 No
 else if(o.url){el.innerHTML='<img src="'+o.url+'">';md.textContent="✔ Is slip ka apna logo";md.style.color="#047857"}
 else{el.innerHTML=logo?'<img src="'+logo+'">':"Common logo abhi set nahi";md.textContent="Common logo use ho raha hai";md.style.color="#475569"}});
 drawSL();
+let bgImg=s.bgImage||"",bgDim=(s.bgDim===undefined||s.bgDim==="")?35:Number(s.bgDim);
+const drawBg=()=>{const e=$("#bg-prev");e.style.backgroundImage=bgImg?'url("'+bgImg+'")':"none";e.textContent=bgImg?"":"Default";applyBg({bgImage:bgImg,bgDim:bgDim})};
+drawBg();
+$("#bg-file").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;bgImg=await shrinkImg(f,1600,"image/jpeg",.8);drawBg();toast("Background set — SAVE SETTINGS dabayein","info");e.target.value=""});
+$("#bg-rm").onclick=()=>{bgImg="";drawBg()};
+$("#bg-dim").addEventListener("input",e=>{bgDim=Number(e.target.value);$("#bg-dimv").textContent=bgDim+"%";drawBg()});
 $$("[data-slfile]").forEach(i=>i.addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const k=i.dataset.slfile;
 const url=await shrinkImg(f,420,"image/png",.9);slipLogos[k]=Object.assign({},slipLogos[k],{url:url,none:false});drawSL();toast("Logo set — SAVE SETTINGS dabayein","info")}));
-$$("[data-slcommon]").forEach(b=>b.onclick=()=>{const k=b.dataset.slcommon;const sz=(slipLogos[k]||{}).size;slipLogos[k]=sz?{size:sz}:undefined;if(!slipLogos[k])delete slipLogos[k];drawSL()});
+const cleanSL=k=>{const o=slipLogos[k];if(!o)return;if(!o.url&&!o.none&&!o.size&&!SL_TXT.some(f=>String(o[f[0]]||"").trim()))delete slipLogos[k]};
+$$("[data-slcommon]").forEach(b=>b.onclick=()=>{const k=b.dataset.slcommon,o=slipLogos[k];if(o){delete o.url;delete o.none;cleanSL(k)}drawSL()});
 $$("[data-slnone]").forEach(b=>b.onclick=()=>{const k=b.dataset.slnone;slipLogos[k]=Object.assign({},slipLogos[k],{none:true});drawSL()});
-$$("[data-slsize]").forEach(i=>i.addEventListener("input",()=>{const k=i.dataset.slsize,v=parseInt(i.value,10)||0;if(v>0)slipLogos[k]=Object.assign({},slipLogos[k],{size:v});else if(slipLogos[k]){delete slipLogos[k].size;if(!slipLogos[k].url&&!slipLogos[k].none)delete slipLogos[k]}}));
+$$("[data-slsize]").forEach(i=>i.addEventListener("input",()=>{const k=i.dataset.slsize,v=parseInt(i.value,10)||0;if(v>0)slipLogos[k]=Object.assign({},slipLogos[k],{size:v});else if(slipLogos[k]){delete slipLogos[k].size;cleanSL(k)}}));
+$$("[data-sltxt]").forEach(i=>i.addEventListener("input",()=>{const p=i.dataset.sltxt.split("|"),k=p[0],f=p[1],v=i.value;if(v.trim()!=="")slipLogos[k]=Object.assign({},slipLogos[k],{[f]:v});else if(slipLogos[k]){delete slipLogos[k][f];cleanSL(k)}}));
 const demo=()=>({patientId:today().slice(0,4)+"/0001",patientName:"MUHAMMAD ALI",age:"22",ageUnit:"Years",gender:"Male",mobile:"0300-1234567",token:8,date:today(),time:timeNow(),shift:"Morning",referredBy:"SELF",doctorName:"Dr. Ahmed Raza",paymentMethod:"Cash",
 items:[{id:"c1",description:"OPD Fees",category:"opd",rate:500,qty:1,amount:500},{id:"c2",description:"CBC",category:"lab",rate:500,qty:1,amount:500},{id:"c3",description:"Ultrasound Abdomen",category:"ultrasound",rate:1500,qty:1,amount:1500}],
 subTotal:2500,discount:0,total:2500,received:2000,due:500,createdBy:"Reception"});
@@ -3777,7 +4143,7 @@ const lines=v=>v.split("\n").map(x=>x.trim()).filter(Boolean);
 const obj=Object.assign({},s,{clinicName:$("#st-name").value.trim()||s.clinicName,tagline:$("#st-tag").value,address:$("#st-addr").value,
 phone:$("#st-phone").value,phone2:$("#st-phone2").value,email:$("#st-email").value,timing:$("#st-timing").value,
 slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,msName:$("#st-msname").value.trim(),msAddress:$("#st-msaddr").value.trim(),msPhone:$("#st-msphone").value.trim(),msFooter:$("#st-msfoot").value.trim(),devFooter:$("#st-dev").value,slipLogos:slipLogos,
-logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
+bgImage:bgImg,bgDim:bgDim,logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
 slipFontSize:parseFloat($("#st-font").value),reportFontSize:parseFloat($("#st-rfont").value),logoSize:parseInt($("#st-logosize").value,10),usThermalSize:$("#st-usth").value,dutyStaffName:$("#st-duty").value,showMrOnSlip:showMr,
 backupReminderDays:num($("#st-bk").value),shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
 await saveSettingsObj(obj);
@@ -3951,13 +4317,16 @@ boot();
   var standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
   if(standalone||!b)return;
   var ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
-  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();dp=e;b.classList.add("show")});
-  window.addEventListener("appinstalled",function(){b.classList.remove("show");hint.style.display="none";dp=null});
-  if(ios)b.classList.add("show");
-  b.onclick=function(){
-    if(dp){dp.prompt();dp.userChoice.finally(function(){dp=null;b.classList.remove("show")});return}
+  var api=window.zmInstall={show:false,click:null};
+  function set(v){api.show=v;b.classList.toggle("show",v);try{document.dispatchEvent(new Event("zm-install"))}catch(e){}}
+  api.click=function(){
+    if(dp){dp.prompt();dp.userChoice.finally(function(){dp=null;set(false)});return}
     hint.innerHTML=ios?"iPhone par install: <b>Share</b> (⬆️) dabayein → <b>Add to Home Screen</b> chunein.":"Browser menu (⋮) mein <b>Install app</b> ya <b>Add to Home screen</b> chunein.";
     hint.style.display="block";setTimeout(function(){hint.style.display="none"},7000)};
+  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();dp=e;set(true)});
+  window.addEventListener("appinstalled",function(){hint.style.display="none";dp=null;set(false)});
+  if(ios)set(true);
+  b.onclick=api.click;
 })();</script>
 <script>if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("/sw.js").catch(function(){});</script>
 <script>
