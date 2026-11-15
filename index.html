@@ -321,7 +321,7 @@ footer.app-foot{font-size:10px;padding:10px}
 .ms-pos .modal{max-width:min(1240px,97vw)!important}
 .pos-wrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:start}
 @media(max-width:900px){.pos-wrap{grid-template-columns:1fr}}
-.pos-bar{display:grid;grid-template-columns:1fr 160px;gap:8px}
+.pos-bar{display:grid;grid-template-columns:1fr 46px 160px;gap:8px}
 .pos-meta{display:flex;justify-content:space-between;align-items:center;margin:8px 0;font-size:12px;color:#475569;gap:8px}
 .pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px;max-height:58vh;overflow:auto;padding:2px}
 .pos-card{position:relative;text-align:left;background:rgba(255,255,255,.94);border:1px solid #dbe5f3;border-radius:14px;padding:10px 10px 36px;cursor:pointer;display:flex;flex-direction:column;gap:3px;box-shadow:0 4px 12px rgba(30,64,175,.07);transition:.12s}
@@ -1851,7 +1851,7 @@ $("#page").innerHTML=
 '<div class="mini-stat" style="background:var(--green-bg);border-color:var(--green-bd);color:#065f46"><div class="lbl">'+(isUS?"Studies in Period":"Patients in Period")+'</div><div class="val" id="tm-count">0</div></div>'+
 '<div class="mini-stat" style="background:var(--violet-bg);border-color:#ddd6fe;color:#5b21b6"><div class="lbl">Collection in Period</div><div class="val" id="tm-amt">—</div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory Test")+' Price List</h2><div class="sub">Prices are added to the patient bill automatically when selected at the counter</div></div>'+
-'<div class="flex g8"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+((isUS||isLAB)?'<button class="btn btn-primary sm" id="tm-report">➕ NEW REPORT (Manual)</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
+'<div class="flex g8 fw"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+((isUS||isLAB)?'<button class="btn btn-outline sm" id="tm-common">📥 ADD COMMON TESTS</button>':"")+((isUS||isLAB)?'<button class="btn btn-primary sm" id="tm-report">➕ NEW REPORT (Manual)</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
 '<div class="card-b"><input class="inp mb" id="tm-q" placeholder="🔍 Search test / category…"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tm-rows"></tbody></table></div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory")+' Work List</h2><div class="sub">Patients who have been charged for these services</div></div>'+
 '<div class="flex g8 fw"><input class="inp" type="date" id="tm-from" style="width:150px" value="'+from+'"><input class="inp" type="date" id="tm-to" style="width:150px" value="'+to+'">'+
@@ -1862,6 +1862,13 @@ $("#tm-from").addEventListener("change",e=>{from=e.target.value;drawWork()});
 $("#tm-to").addEventListener("change",e=>{to=e.target.value;drawWork()});
 if(isUS||isLAB)$("#tm-st").addEventListener("change",drawWork);
 $("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":isINJ?"Injection":"Haematology",type:type,price:0,active:true},type);if(isUS)$("#tm-report").onclick=ultrasoundReportModal;if(isLAB)$("#tm-report").onclick=()=>lbEditor({},()=>drawWork());
+if($("#tm-common"))$("#tm-common").onclick=async()=>{
+const src=isLAB?LAB_EXTRA:usExtra();const have=new Set(app.tests.filter(t=>t.type===type).map(t=>t.name.trim().toLowerCase()));
+const add=src.filter(x=>!have.has(x[0].toLowerCase()));
+if(!add.length){toast("Sab common tests pehle se list mein hain","info");return}
+if(!await confirmBox({title:"Common Tests Add Karein",message:add.length+" naye test add honge (price baad mein ✏️ se badal sakte hain). Jari rakhein?",confirmText:"ADD "+add.length+" TESTS"}))return;
+await qBulk("tests",add.map(x=>({id:id("tst"),name:x[0],category:x[1],type:type,price:x[2],active:true,createdAt:new Date().toISOString()})));
+await audit(app.user.username,"CREATE","tests","bulk",add.length+" common "+type+" tests");await loadData();toast(add.length+" tests add ho gaye");pageTestModule(type)};
 $("#tm-csv").onclick=()=>downloadCSV(type+"_price_list.csv",["Name","Category","Price","Status"],app.tests.filter(t=>t.type===type).map(t=>[t.name,t.category,t.price,t.active?"Active":"Inactive"]));
 $("#tm-wcsv").onclick=()=>downloadCSV(type+"_worklist_"+from+"_"+to+".csv",["Date","Time","Token","MR No","Patient","Doctor","Items","Amount"],workList().map(r=>[r.date,r.time,r.token,padMr(r.patientId),r.name,r.doctor,r.items.join(" | "),r.amount]));
 $("#tm-print").onclick=()=>{const rows=workList();
@@ -2294,8 +2301,199 @@ Store: "labreports" (server.js STORES mein add). Purana server.js ho to reports 
 Test ka format (parameters + normal range): test record ke andar `params` mein. Nayi test sirf naam se add karein — format khud ban jata hai.
 ============================================================ */
 const LB={mode:"store"};
+/* ===== EXTRA LAB TESTS: parameters + normal ranges (pehle match hone wale) ===== */
+const NEG=(n)=>[n,"","Negative","","Negative|Positive"],NR=(n)=>[n,"","Non-Reactive","","Non-Reactive|Reactive"];
+const LB_LIB_NEW=[
+[/torch/i,[["Toxoplasma IgG","","Negative","","Negative|Positive"],["Toxoplasma IgM","","Negative","","Negative|Positive"],["Rubella IgG","","Negative","","Negative|Positive"],["Rubella IgM","","Negative","","Negative|Positive"],["CMV IgG","","Negative","","Negative|Positive"],["CMV IgM","","Negative","","Negative|Positive"],["HSV IgG","","Negative","","Negative|Positive"],["HSV IgM","","Negative","","Negative|Positive"]]],
+[/toxo/i,[NEG("Toxoplasma IgG"),NEG("Toxoplasma IgM")]],
+[/rubella/i,[NEG("Rubella IgG"),NEG("Rubella IgM")]],
+[/\bcmv\b|cytomegalo/i,[NEG("CMV IgG"),NEG("CMV IgM")]],
+[/anti.?hbs|hbs\s*ab|surface antibody/i,[["Anti-HBs Titre","mIU/mL","> 10 (Immune)"]]],
+[/hbeag/i,[NR("HBeAg")]],
+[/hbv.*(dna|pcr)|hepatitis b.*pcr/i,[["HBV DNA (Quantitative PCR)","IU/mL","Not Detected"]]],
+[/hcv.*(rna|pcr)|hepatitis c.*pcr/i,[["HCV RNA (Quantitative PCR)","IU/mL","Not Detected"]]],
+[/anti.?hav|hepatitis a|\bhav\b/i,[NR("Anti-HAV IgM")]],
+[/vdrl|\brpr\b|syphilis|tpha/i,[NR("VDRL / RPR"),NR("TPHA")]],
+[/brucella/i,[NEG("Brucella IgM"),NEG("Brucella IgG")]],
+[/chikungunya|chikun/i,[NEG("Chikungunya IgM"),NEG("Chikungunya IgG")]],
+[/h\.?\s?pylori.*(stool|antigen)|stool.*pylori/i,[NEG("H. Pylori Antigen (Stool)")]],
+[/mantoux|\btst\b/i,[["Mantoux (TST) Induration","mm","< 10"]]],
+[/sputum.*(afb|zn|ziehl)|\bafb\b|ziehl|zn stain/i,[["Sputum AFB (ZN Stain) — Sample 1","","Not Seen","","Not Seen|Scanty|1+|2+|3+"],["Sputum AFB (ZN Stain) — Sample 2","","Not Seen","","Not Seen|Scanty|1+|2+|3+"]]],
+[/c\s*\/\s*s\b|culture|sensitivity/i,[["Specimen","","","","Urine|Blood|Stool|Pus|Wound Swab|Throat Swab|Sputum|Semen|High Vaginal Swab|Other"],["Culture Result","","No Growth","","No Growth|Growth Seen|Mixed Growth"],["Organism Isolated","",""],["Colony Count","","",""],["Sensitive To","",""],["Intermediate To","",""],["Resistant To","",""]]],
+[/semen|sperm/i,[["Volume","mL",">= 1.5"],["Liquefaction Time","min","< 60"],["pH","",">= 7.2"],["Sperm Concentration","million/mL",">= 15"],["Total Sperm Count","million",">= 39"],["Total Motility","%",">= 40"],["Progressive Motility","%",">= 32"],["Normal Morphology","%",">= 4"],["Vitality (Live)","%",">= 58"],["Pus Cells","/HPF","0 - 5"],["RBCs","/HPF","Nil"]]],
+[/gram stain/i,[["Gram Stain Result","","","","No organisms seen|Gram positive cocci|Gram negative bacilli|Gram positive bacilli|Gram negative cocci"],["Pus Cells","/HPF","",""]]],
+[/koh|fungal|fungus/i,[["KOH Preparation","","Negative","","No fungal elements seen|Fungal elements seen"]]],
+[/stool.*(occult|\bob\b)|occult/i,[NEG("Stool Occult Blood")]],
+[/micro.?albumin|\bacr\b/i,[["Urine Albumin","mg/L","< 20"],["Urine Creatinine","mg/dL",""],["Albumin / Creatinine Ratio (ACR)","mg/g","< 30"]]],
+[/24.?h.*(urine|protein)|urine.*24/i,[["Urine Volume (24 hr)","mL","800 - 2000"],["Total Protein (24 hr)","mg/24hr","< 150"],["Creatinine (24 hr)","mg/24hr","800 - 2000"]]],
+[/platelet/i,[["Platelet Count","x10³/µL","150 - 410"],["MPV","fL","7.5 - 11.5"]]],
+[/pcv|hct|h(a)?ematocrit/i,[["PCV / HCT","%","40 - 50","36 - 46"]]],
+[/\btlc\b|\bdlc\b|differential|leuc?ocyte count|\bwbc\b/i,[["Total Leucocyte Count (TLC)","x10³/µL","4.0 - 11.0"],["Neutrophils","%","40 - 75"],["Lymphocytes","%","20 - 45"],["Monocytes","%","2 - 10"],["Eosinophils","%","1 - 6"],["Basophils","%","0 - 1"]]],
+[/\bpbf\b|peripheral|blood film|blood picture|\bbp\b smear/i,[["RBC Morphology","","Normocytic Normochromic"],["WBC Morphology","","Normal"],["Platelets","","Adequate","","Adequate|Reduced|Increased"],["Hemoparasites","","Not Seen","","Not Seen|Seen"],["Impression","",""]]],
+[/reticulocyte|\bretic\b/i,[["Reticulocyte Count","%","0.5 - 2.5"]]],
+[/bleeding|clotting|\bbt\b|\bct\b/i,[["Bleeding Time (BT)","min","2 - 7"],["Clotting Time (CT)","min","4 - 10"]]],
+[/aptt|\bptt\b/i,[["APTT (Patient)","sec","25 - 35"],["APTT (Control)","sec",""]]],
+[/d.?dimer/i,[["D-Dimer","ng/mL FEU","< 500"]]],
+[/sickl/i,[NEG("Sickling Test")]],
+[/g6pd|g-6-pd/i,[["G6PD (Qualitative)","","Normal","","Normal|Deficient"]]],
+[/electrophoresis|hb.?electro/i,[["HbA","%","95 - 98"],["HbA2","%","1.5 - 3.5"],["HbF","%","< 2.0"],["Abnormal Hb (HbS / HbD / HbE)","","Not Detected","","Not Detected|Detected"]]],
+[/coombs|\bdct\b|\bict\b(?!.*malaria)/i,[NEG("Direct Coombs Test (DCT)")]],
+[/eosinophil|\baec\b/i,[["Absolute Eosinophil Count","/µL","40 - 440"]]],
+[/malaria.*(ict|card|antigen|rapid)|(ict|rapid|card).*malaria/i,[NEG("Malaria Antigen — P. falciparum"),NEG("Malaria Antigen — P. vivax")]],
+[/iron stud|iron profile|serum iron|\btibc\b/i,[["Serum Iron","µg/dL","60 - 170","50 - 170"],["TIBC","µg/dL","250 - 450"],["Transferrin Saturation","%","20 - 50"],["Serum Ferritin","ng/mL","30 - 400","13 - 150"]]],
+[/folate|folic/i,[["Serum Folate","ng/mL","3.0 - 17.0"]]],
+[/\b(2|two).?h(r|our|ours)?\b.*(pp|post|sugar|glucose)|\bpp\b|post.?prandial|ppbs|pp.?bs/i,[["Blood Sugar 2 Hr Post Prandial","mg/dL","< 140"]]],
+[/ogtt|tolerance|\bgtt\b/i,[["Fasting Glucose","mg/dL","70 - 100"],["1 Hour Glucose","mg/dL","< 180"],["2 Hour Glucose","mg/dL","< 140"]]],
+[/phosph/i,[["Serum Phosphorus","mg/dL","2.5 - 4.5"]]],
+[/magnes/i,[["Serum Magnesium","mg/dL","1.7 - 2.2"]]],
+[/amylase/i,[["Serum Amylase","U/L","28 - 100"]]],
+[/lipase/i,[["Serum Lipase","U/L","13 - 60"]]],
+[/\bldh\b|lactate dehyd/i,[["LDH","U/L","140 - 280"]]],
+[/ck.?mb/i,[["CK-MB","U/L","< 25"]]],
+[/\bcpk\b|\bck\b|creatine (phospho)?kinase/i,[["CPK (Total)","U/L","39 - 308","26 - 192"]]],
+[/troponin/i,[["Troponin I","ng/mL","< 0.04"]]],
+[/homocysteine/i,[["Homocysteine","µmol/L","5 - 15"]]],
+[/procalcitonin|\bpct\b/i,[["Procalcitonin","ng/mL","< 0.5"]]],
+[/\bana\b|antinuclear/i,[NEG("ANA (Antinuclear Antibody)"),["ANA Titre / Pattern","",""]]],
+[/anti.?ccp|\bccp\b/i,[["Anti-CCP","U/mL","< 20"]]],
+[/ca.?125/i,[["CA-125","U/mL","< 35"]]],
+[/ca.?19.?9/i,[["CA 19-9","U/mL","< 37"]]],
+[/ca.?15.?3/i,[["CA 15-3","U/mL","< 30"]]],
+[/\bcea\b/i,[["CEA","ng/mL","< 5.0"]]],
+[/\bafp\b|alpha.?feto/i,[["AFP","ng/mL","< 10"]]],
+[/\bpsa\b|prostate.?specific/i,[["PSA (Total)","ng/mL","< 4.0"]]],
+[/\bf(ree)?\s*t3\b|free triiodo/i,[["Free T3 (FT3)","pg/mL","2.0 - 4.4"]]],
+[/\bf(ree)?\s*t4\b|free thyrox/i,[["Free T4 (FT4)","ng/dL","0.93 - 1.7"]]],
+[/^\s*(serum\s+)?tsh(\s*\((total|serum)\))?\s*$/i,[["TSH","µIU/mL","0.27 - 4.2"]]],
+[/^\s*(total\s+)?t3(\s*\(total\))?\s*$/i,[["T3 (Triiodothyronine)","ng/mL","0.8 - 2.0"]]],
+[/^\s*(total\s+)?t4(\s*\(total\))?\s*$/i,[["T4 (Thyroxine)","µg/dL","5.1 - 14.1"]]],
+[/prolactin/i,[["Prolactin","ng/mL","4.0 - 15.2","4.8 - 23.3"]]],
+[/\bfsh\b/i,[["FSH","mIU/mL","1.5 - 12.4","3.5 - 12.5 (Follicular)"]]],
+[/^\s*(serum\s+)?lh\s*$|luteinizing/i,[["LH","mIU/mL","1.7 - 8.6","2.4 - 12.6 (Follicular)"]]],
+[/estradiol|\be2\b/i,[["Estradiol (E2)","pg/mL","10 - 40","30 - 400"]]],
+[/progesterone/i,[["Progesterone","ng/mL","< 1.4","0.2 - 1.4 (Follicular)"]]],
+[/testosterone/i,[["Testosterone (Total)","ng/dL","270 - 1070","15 - 70"]]],
+[/beta.?hcg|\bb.?hcg\b|quantitative.*hcg|hcg.*quant/i,[["Beta HCG (Quantitative)","mIU/mL","< 5.0"]]],
+[/\bamh\b|anti.?m[uü]llerian/i,[["AMH","ng/mL","1.0 - 4.0"]]],
+[/cortisol/i,[["Cortisol (Morning)","µg/dL","6.2 - 19.4"]]],
+[/\bpth\b|parathyroid/i,[["PTH (Intact)","pg/mL","15 - 65"]]],
+[/insulin/i,[["Insulin (Fasting)","µIU/mL","2.6 - 24.9"]]],
+[/^\s*(serum\s+)?(total\s+)?cholesterol\s*$/i,[["Total Cholesterol","mg/dL","< 200"]]],
+[/triglycerid/i,[["Triglycerides","mg/dL","< 150"]]],
+[/^\s*(serum\s+)?hdl/i,[["HDL Cholesterol","mg/dL","> 40","> 50"]]],
+[/^\s*(serum\s+)?ldl/i,[["LDL Cholesterol","mg/dL","< 100"]]],
+[/alk(aline)?\s*phos|^\s*alp\s*$/i,[["Alkaline Phosphatase (ALP)","U/L","44 - 147"]]],
+[/\bggt\b|gamma.?gt|gamma glutamyl/i,[["GGT","U/L","10 - 71","6 - 42"]]],
+[/albumin(?!.*creat)/i,[["Serum Albumin","g/dL","3.5 - 5.2"]]],
+[/total protein|^\s*tp\s*$/i,[["Total Protein","g/dL","6.0 - 8.3"]]],
+[/\bbun\b|blood urea nitrogen/i,[["Blood Urea Nitrogen (BUN)","mg/dL","7 - 20"]]],
+[/^\s*(serum\s+)?sodium|^\s*(serum\s+)?potassium|^\s*(serum\s+)?chloride/i,[["Sodium (Na)","mmol/L","135 - 145"],["Potassium (K)","mmol/L","3.5 - 5.0"],["Chloride (Cl)","mmol/L","98 - 107"]]]
+];
+/* ===== Har test ka default NOTE (report me test ke neeche aata hai, edit bhi ho sakta hai) ===== */
+const LB_NOTES=[
+[/\blft\b|liver function|liver profile/i,"1. In an asymptomatic patient, Non-alcoholic fatty liver disease (NAFLD) is the most common cause of raised AST and ALT.\n2. In most liver diseases ALT is higher than AST; exception may be seen in alcoholic hepatitis, cirrhosis and liver neoplasia. In chronic liver disease, AST:ALT ratio > 1 is suggestive of advanced fibrosis.\n3. Raised ALP with raised GGT suggests a hepatobiliary cause; raised ALP with normal GGT suggests bone origin.\n4. Clinical correlation is advised."],
+[/\brft\b|renal function|kidney function|\bkft\b/i,"1. Raised urea and creatinine indicate reduced kidney function (acute or chronic kidney disease); urea alone may also rise with dehydration, high protein diet, GI bleeding or steroids.\n2. Creatinine depends on muscle mass; eGFR should be used to stage kidney disease.\n3. Correlate clinically; repeat the test if there is a doubt."],
+[/lipid/i,"1. Fasting for 10-12 hours is advised before the test.\n2. LDL-C targets depend on patient risk: < 100 mg/dL (average), < 70 mg/dL (high risk, diabetes, heart disease).\n3. Triglycerides > 500 mg/dL increase the risk of pancreatitis."],
+[/hba1c|glyc(o|a)?sylated|a1c/i,"1. HbA1c reflects the average blood glucose over the previous 2-3 months.\n2. Normal < 5.7 %, Pre-diabetes 5.7 - 6.4 %, Diabetes >= 6.5 %. Good control in a diabetic patient: < 7.0 %.\n3. Results may be unreliable in anemia, hemoglobin variants, recent blood loss or transfusion."],
+[/ogtt|tolerance|\bgtt\b/i,"1. Test is done after 8-12 hours fasting with 75 g oral glucose load.\n2. 2-hour value: < 140 mg/dL normal, 140 - 199 mg/dL impaired glucose tolerance, >= 200 mg/dL diabetes mellitus."],
+[/\b(2|two).?h(r|our|ours)?\b.*(pp|post|sugar|glucose)|\bpp\b|post.?prandial|ppbs|pp.?bs/i,"1. Sample should be taken exactly 2 hours after the start of a meal.\n2. Values >= 200 mg/dL suggest diabetes; 140 - 199 mg/dL suggest impaired glucose tolerance."],
+[/sugar.*fast|fast.*sugar|\bfbs\b|fasting.*gluc/i,"1. Patient must be fasting for at least 8 hours.\n2. Fasting glucose: < 100 mg/dL normal, 100 - 125 mg/dL pre-diabetes (impaired fasting glucose), >= 126 mg/dL suggests diabetes (confirm on repeat test)."],
+[/sugar.*random|random.*sugar|\brbs\b|random.*gluc/i,"1. Random glucose >= 200 mg/dL with classic symptoms of diabetes is diagnostic of diabetes mellitus.\n2. Interpret along with fasting glucose and HbA1c."],
+[/\bcbc\b|complete blood (count|picture)|blood complete|\bcp\b/i,"1. Hemoglobin, MCV, MCH and MCHC help in the classification of anemia (microcytic hypochromic, normocytic, macrocytic).\n2. Raised TLC with neutrophilia suggests bacterial infection; lymphocytosis suggests viral infection.\n3. Low platelet count requires clinical correlation and repeat testing / peripheral smear review.\n4. Values vary with age, sex, altitude and pregnancy."],
+[/\besr\b|sedimentation/i,"1. ESR is a non-specific marker of inflammation; it is raised in infection, inflammatory and autoimmune diseases, anemia, pregnancy and malignancy.\n2. A normal ESR does not rule out disease."],
+[/^hb\b|h(a)?emoglobin/i,"1. Low hemoglobin indicates anemia; further evaluation (CBC, iron studies, B12, folate) is advised to find the cause.\n2. High hemoglobin may be seen with dehydration, smoking, high altitude or polycythemia."],
+[/platelet/i,"1. Platelet count < 150 x10³/µL is thrombocytopenia (dengue, viral infections, ITP, drugs, liver disease); counts < 20 x10³/µL carry a risk of spontaneous bleeding.\n2. Clumped platelets can falsely lower the count — confirm on peripheral smear."],
+[/\bpbf\b|peripheral|blood film|blood picture/i,"1. Peripheral smear is examined for red cell, white cell and platelet morphology and for hemoparasites.\n2. Correlate with CBC and clinical findings."],
+[/reticulocyte|\bretic\b/i,"1. Reticulocyte count indicates bone marrow response to anemia; raised in hemolysis and acute blood loss, low in aplastic anemia and iron / B12 deficiency."],
+[/bleeding|clotting|\bbt\b|\bct\b/i,"1. Prolonged BT suggests platelet function defects or thrombocytopenia; prolonged CT suggests clotting factor deficiency.\n2. Results are affected by aspirin and anticoagulant use."],
+[/\bpt\b|inr|prothrombin/i,"1. PT / INR monitors warfarin therapy (target INR is usually 2.0 - 3.0) and liver synthetic function.\n2. Prolonged PT may be due to vitamin K deficiency, liver disease or anticoagulants."],
+[/aptt|\bptt\b/i,"1. Prolonged APTT is seen with heparin therapy, hemophilia (factor VIII / IX deficiency), von Willebrand disease and lupus anticoagulant."],
+[/d.?dimer/i,"1. A normal D-Dimer helps to exclude venous thromboembolism in low-risk patients.\n2. Raised levels are non-specific (infection, pregnancy, surgery, malignancy, recent trauma)."],
+[/^\s*(serum\s+)?(total\s+)?cholesterol|triglycerid|^\s*(serum\s+)?(hdl|ldl)/i,"1. Fasting for 10-12 hours is advised, especially for triglycerides and LDL.\n2. Desirable: Total cholesterol < 200 mg/dL, LDL < 100 mg/dL, triglycerides < 150 mg/dL, HDL > 40 mg/dL (men) / > 50 mg/dL (women).\n3. A full lipid profile is advised for cardiovascular risk assessment."],
+[/eosinophil|\baec\b/i,"1. Raised eosinophil count suggests allergy (asthma, rhinitis, eczema), parasitic infection or drug reaction; counts > 500 /µL need evaluation."],
+[/anti.?hav|hepatitis a|\bhav\b/i,"1. Anti-HAV IgM positive indicates recent / acute hepatitis A infection; IgG positive alone indicates past infection or immunity."],
+[/g6pd/i,"1. G6PD deficiency can cause hemolysis after infection or exposure to certain drugs (primaquine, sulfa drugs, nitrofurantoin) and fava beans.\n2. Test may give a false normal result during or soon after a hemolytic episode or transfusion."],
+[/electrophoresis|hb.?electro/i,"1. Hb electrophoresis is used to diagnose thalassemia and hemoglobin variants (HbS, HbD, HbE).\n2. Raised HbA2 (> 3.5 %) suggests beta thalassemia trait. Iron deficiency may lower HbA2."],
+[/coombs|\bdct\b/i,"1. A positive Direct Coombs Test indicates antibodies / complement on red cells (autoimmune hemolytic anemia, hemolytic disease of newborn, transfusion reaction, some drugs)."],
+[/blood group|abo/i,"1. Blood group is determined by forward grouping on slide / tube method.\n2. Cross-matching is mandatory before any blood transfusion."],
+[/iron stud|iron profile|serum iron|\btibc\b/i,"1. Iron deficiency: low serum iron and ferritin with high TIBC.\n2. Anemia of chronic disease: low iron with normal / high ferritin and low TIBC.\n3. Serum iron shows diurnal variation; morning fasting sample is preferred."],
+[/ferritin/i,"1. Ferritin is the best marker of body iron stores; low ferritin confirms iron deficiency.\n2. Ferritin is an acute-phase reactant and may be falsely raised in infection, inflammation, liver disease and malignancy."],
+[/folate|folic/i,"1. Low folate causes megaloblastic anemia; common causes are poor diet, alcohol, pregnancy and certain drugs."],
+[/b12/i,"1. Low vitamin B12 may cause megaloblastic anemia and neurological symptoms (numbness, tingling, memory problems).\n2. Borderline values (200 - 300 pg/mL) may need MMA / homocysteine testing."],
+[/vitamin d|vit.?d/i,"1. Interpretation: < 20 ng/mL deficiency, 20 - 29 ng/mL insufficiency, 30 - 100 ng/mL sufficient; > 100 ng/mL may be toxic.\n2. Deficiency is common and is linked with bone pain, weakness and rickets / osteomalacia."],
+[/thyroid|\btft\b|\bt3\b|\bt4\b|\btsh\b/i,"1. Raised TSH with low T4 / FT4 suggests primary hypothyroidism; low TSH with raised T3 / T4 suggests hyperthyroidism.\n2. TSH may be affected by illness, pregnancy (trimester-specific ranges) and drugs (biotin, steroids, amiodarone).\n3. Clinical correlation is advised."],
+[/prolactin/i,"1. Raised prolactin may be seen in pituitary adenoma, hypothyroidism, pregnancy, stress and certain drugs (antipsychotics, metoclopramide). Repeat with a resting sample if mildly raised."],
+[/\bfsh\b|^\s*(serum\s+)?lh\s*$|luteinizing/i,"1. FSH / LH are best tested on day 2-3 of the menstrual cycle.\n2. Raised FSH suggests ovarian failure / menopause; LH:FSH ratio > 2 may be seen in PCOS."],
+[/estradiol|\be2\b|progesterone/i,"1. Hormone levels vary with the phase of the menstrual cycle; day of cycle should be mentioned.\n2. Progesterone > 3 ng/mL in the mid-luteal phase indicates ovulation."],
+[/testosterone/i,"1. Sample should preferably be taken in the morning.\n2. Low levels in males suggest hypogonadism; raised levels in females may be seen in PCOS and adrenal disorders."],
+[/beta.?hcg|\bb.?hcg\b|quantitative.*hcg/i,"1. Beta HCG doubles roughly every 48 - 72 hours in early normal pregnancy; slow rise suggests ectopic or failing pregnancy.\n2. Correlate with ultrasound findings."],
+[/pregnan|\bupt\b|\bhcg\b/i,"1. Early morning urine sample gives the best result.\n2. Very early pregnancy may give a false negative result; repeat after 3-5 days if suspicion remains."],
+[/\bamh\b|anti.?m[uü]llerian/i,"1. AMH reflects ovarian reserve; low values suggest reduced reserve, high values may be seen in PCOS."],
+[/cortisol/i,"1. Cortisol shows diurnal variation (highest in the morning); time of sample collection should be noted.\n2. Stress and steroid drugs can affect the result."],
+[/\bpth\b|parathyroid/i,"1. PTH should be interpreted together with serum calcium, phosphorus and vitamin D."],
+[/insulin/i,"1. Fasting insulin is used with fasting glucose to assess insulin resistance (HOMA-IR)."],
+[/uric/i,"1. Raised uric acid may cause gout and kidney stones; common causes are high purine diet, alcohol, obesity, kidney disease and certain drugs.\n2. Uric acid may be normal during an acute gout attack."],
+[/creatinine/i,"1. Creatinine depends on muscle mass, diet and hydration; eGFR gives a better estimate of kidney function.\n2. Raised value suggests reduced kidney function — clinical correlation is advised."],
+[/\burea\b|\bbun\b/i,"1. Urea rises in dehydration, kidney disease, high protein diet, GI bleeding and with steroids; low values may be seen in liver disease and pregnancy."],
+[/electrolyte|^\s*(serum\s+)?(sodium|potassium|chloride)/i,"1. Hemolyzed samples can falsely raise potassium.\n2. Abnormal sodium or potassium may be clinically significant and needs prompt correlation."],
+[/calcium/i,"1. Interpret calcium together with albumin, phosphorus, PTH and vitamin D.\n2. Low albumin lowers total calcium without changing ionized calcium."],
+[/phosph|magnes/i,"1. Interpret together with calcium, kidney function and clinical condition."],
+[/\balt\b|sgpt|\bast\b|sgot/i,"1. Raised ALT / AST indicate liver cell injury (viral hepatitis, fatty liver, drugs, alcohol).\n2. AST may also rise from muscle injury and hemolysis."],
+[/bilirubin/i,"1. Raised indirect bilirubin suggests hemolysis or Gilbert's syndrome; raised direct bilirubin suggests liver disease or bile duct obstruction.\n2. Protect sample from light."],
+[/alk(aline)?\s*phos|^\s*alp\s*$|\bggt\b|gamma/i,"1. Raised ALP / GGT suggest cholestasis or bile duct obstruction; ALP is also raised in bone disease, growth and pregnancy."],
+[/albumin(?!.*creat)|total protein/i,"1. Low albumin may be seen in liver disease, nephrotic syndrome, malnutrition and chronic illness."],
+[/amylase|lipase/i,"1. Raised amylase / lipase (> 3 times upper limit) with abdominal pain suggests acute pancreatitis; lipase is more specific."],
+[/\bldh\b|lactate dehyd/i,"1. LDH is a non-specific marker of tissue damage (hemolysis, liver, muscle and heart disease, malignancy)."],
+[/ck.?mb|\bcpk\b|\bck\b|creatine (phospho)?kinase|troponin/i,"1. Troponin I is the preferred marker of myocardial injury; it rises 3 - 6 hours after onset of chest pain and stays raised for several days.\n2. A single normal result within 3 hours of symptoms does not exclude heart attack — repeat after 3 - 6 hours.\n3. Correlate with ECG and clinical findings."],
+[/homocysteine/i,"1. Raised homocysteine is a risk factor for heart disease and thrombosis; it is affected by B12 / folate deficiency and kidney disease."],
+[/\bcrp\b|c.?reactive|procalcitonin/i,"1. CRP / procalcitonin are markers of inflammation and bacterial infection; they are used to monitor response to treatment.\n2. Normal values do not rule out localized or early infection."],
+[/rheumatoid|\bra\b|ra factor/i,"1. RA factor may be positive in rheumatoid arthritis but also in other autoimmune diseases, chronic infections and healthy elderly people.\n2. Anti-CCP is more specific for rheumatoid arthritis."],
+[/anti.?ccp|\bccp\b/i,"1. Anti-CCP antibodies are highly specific for rheumatoid arthritis and may be present early in the disease."],
+[/\bana\b|antinuclear/i,"1. A positive ANA is found in lupus (SLE) and other autoimmune diseases but also in some healthy people; titre and pattern should be correlated clinically."],
+[/\baso\b/i,"1. Raised ASO titre indicates recent streptococcal infection (rheumatic fever, post-streptococcal glomerulonephritis). A rising titre on repeat testing is more significant."],
+[/widal/i,"1. Widal test is of limited value; a single titre >= 1:160 (O) or higher is considered significant, and a four-fold rise on repeat test after 7 - 10 days is more reliable.\n2. Previous typhoid vaccination or infection can cause false positive results; blood culture is the gold standard."],
+[/typhidot|typhoid/i,"1. Typhidot IgM positive suggests acute typhoid fever; IgG positive alone suggests past infection / vaccination.\n2. Blood culture remains the gold standard for diagnosis."],
+[/dengue/i,"1. NS1 antigen is most useful in the first 5 days of fever; IgM becomes positive after day 5.\n2. Monitor platelet count and hematocrit in confirmed or suspected dengue.\n3. Cross-reactivity with other flaviviruses may occur."],
+[/malaria|\bmp\b|\bmps?\b/i,"1. A negative smear / card does not rule out malaria; repeat testing every 8 - 12 hours (3 times) if fever persists.\n2. Species identification and parasite density are important for treatment."],
+[/chikungunya|chikun/i,"1. IgM becomes positive after about 5 days of fever; PCR is useful in the first week.\n2. Correlate with clinical findings (fever with severe joint pain)."],
+[/brucella/i,"1. IgM suggests acute infection; IgG alone may represent past exposure. Blood culture is confirmatory."],
+[/anti.?hbs|hbs\s*ab|surface antibody/i,"1. Anti-HBs > 10 mIU/mL indicates immunity (vaccination or past infection). Booster is advised if the level is below 10 mIU/mL."],
+[/hbsag|hepatitis b|hbeag/i,"1. A reactive HBsAg indicates hepatitis B infection (acute or chronic); confirmation with HBV DNA PCR, LFT and a hepatology opinion is advised.\n2. Non-reactive result in the window period does not exclude very recent infection."],
+[/hcv|hepatitis c/i,"1. Anti-HCV reactive result indicates exposure to hepatitis C virus; confirmation by HCV RNA PCR is needed to detect active infection.\n2. Treatment is advised on specialist opinion."],
+[/\bhiv\b/i,"1. A reactive screening test must be confirmed by a confirmatory test (Western blot / NAT) before diagnosis.\n2. A non-reactive result in the window period (first 3-4 weeks) does not exclude recent infection."],
+[/vdrl|\brpr\b|syphilis|tpha/i,"1. A reactive VDRL / RPR should be confirmed with a treponemal test (TPHA / FTA-ABS).\n2. False positives may occur in pregnancy, autoimmune diseases and some infections."],
+[/hbv.*(dna|pcr)|hcv.*(rna|pcr)/i,"1. PCR viral load is used to confirm active infection and to monitor response to antiviral treatment.\n2. \"Not Detected\" means the virus is below the detection limit of the assay."],
+[/torch|toxo|rubella|\bcmv\b|cytomegalo/i,"1. IgM positive suggests recent / acute infection; IgG positive suggests past infection or immunity.\n2. In pregnancy, positive IgM should be confirmed with IgG avidity / PCR and discussed with an obstetrician."],
+[/h\.?\s?pylori/i,"1. Stool antigen and urea breath test detect active infection; antibody (serology) may remain positive after eradication.\n2. Antibiotics, PPIs and bismuth should be stopped 2 weeks before stool antigen testing."],
+[/urine.*(routine|r\/?e|complete|exam)|\burine\b.*\bdr\b|urine r/i,"1. Mid-stream, clean-catch urine sample is recommended; examine within 2 hours of collection.\n2. Pus cells > 5 / HPF with bacteria suggest urinary tract infection — urine culture is advised.\n3. Presence of protein or sugar needs further evaluation (kidney function / blood sugar)."],
+[/stool.*(routine|r\/?e|complete|exam)|stool r|\bstool\b/i,"1. Fresh stool sample is required; examine within 1 hour. Single negative sample does not rule out parasites — repeat on 3 consecutive days if suspicion remains.\n2. Presence of pus cells / RBCs suggests invasive diarrhea / dysentery."],
+[/stool.*(occult|\bob\b)|occult/i,"1. Avoid red meat, iron tablets and vitamin C for 3 days before the test. A positive result needs further GI evaluation."],
+[/micro.?albumin|\bacr\b/i,"1. ACR 30 - 300 mg/g indicates microalbuminuria (early kidney damage in diabetes / hypertension); > 300 mg/g indicates overt proteinuria.\n2. Repeat the test after 3 months to confirm; avoid heavy exercise, fever and infection before the test."],
+[/24.?h.*(urine|protein)|urine.*24/i,"1. Collect all urine for 24 hours (discard the first morning sample, then collect everything including the next morning's first sample).\n2. Proper collection is essential for an accurate result."],
+[/semen|sperm/i,"1. Reference values are as per WHO 2021 guidelines.\n2. Sample should be collected after 2 - 7 days of abstinence and examined within 1 hour.\n3. A single abnormal result should be confirmed with a repeat test after 2 - 3 months."],
+[/c\s*\/\s*s\b|culture|sensitivity/i,"1. Collect the sample before starting antibiotics.\n2. Culture and sensitivity result guides the choice of antibiotic; sensitivity is reported as per CLSI guidelines.\n3. No growth after 48 hours of incubation is reported as negative."],
+[/sputum.*(afb|zn|ziehl)|\bafb\b|ziehl|zn stain/i,"1. Collect early morning sputum on 2 consecutive days.\n2. A negative smear does not rule out tuberculosis — GeneXpert / culture is advised if clinical suspicion is high."],
+[/mantoux|\btst\b/i,"1. Induration >= 10 mm is considered positive (>= 5 mm in HIV / immunocompromised). Read after 48 - 72 hours.\n2. BCG vaccination and non-tuberculous mycobacteria can cause false positive results."],
+[/ca.?125|ca.?19.?9|ca.?15.?3|\bcea\b|\bafp\b|alpha.?feto|\bpsa\b|prostate.?specific/i,"1. Tumor markers are not diagnostic by themselves; they are used for follow-up and monitoring of treatment, and must be interpreted with imaging and clinical findings.\n2. Mildly raised values may occur in benign conditions (infection, inflammation, benign tumors)."],
+[/gram stain|koh|fungal|fungus/i,"1. Direct microscopy result should be correlated with culture and clinical findings."],
+[/sickl/i,"1. A positive sickling test should be confirmed by Hb electrophoresis."],
+[/\btlc\b|\bdlc\b|differential|leuc?ocyte count|\bwbc\b/i,"1. Neutrophilia suggests bacterial infection or stress; lymphocytosis suggests viral infection; eosinophilia suggests allergy or parasitic infection."],
+[/pcv|hct|h(a)?ematocrit/i,"1. Raised PCV suggests dehydration or polycythemia; low PCV suggests anemia. PCV rises early in dengue (plasma leakage)."]
+];
+function lbNote(test){const nm=String((test&&test.name)||"");if(test&&typeof test.note==="string")return test.note;for(const e of LB_NOTES){if(e[0].test(nm))return e[1]}return""}
+/* ===== Lab price list ke common tests (naam, category, price) ===== */
+const LAB_EXTRA=[
+["Platelet Count","Haematology",200],["PCV / HCT","Haematology",150],["TLC / DLC (Differential Leucocyte Count)","Haematology",250],["Peripheral Blood Film (PBF)","Haematology",350],["Reticulocyte Count","Haematology",300],["Bleeding Time / Clotting Time (BT/CT)","Haematology",200],["PT / INR (Prothrombin Time)","Haematology",600],["APTT","Haematology",700],["D-Dimer","Haematology",2500],["Sickling Test","Haematology",300],["G6PD (Qualitative)","Haematology",1200],["Hb Electrophoresis","Haematology",2500],["Direct Coombs Test (DCT)","Haematology",1000],["Absolute Eosinophil Count (AEC)","Haematology",300],["Iron Studies (Iron, TIBC, Ferritin)","Haematology",2000],["Serum Ferritin","Haematology",1500],["Serum Folate","Haematology",1800],["Malaria ICT (Card Test)","Microbiology",500],
+["Blood Sugar 2hr Post Prandial (PP)","Biochemistry",250],["OGTT (Glucose Tolerance Test)","Biochemistry",800],["Serum Creatinine","Biochemistry",300],["Blood Urea","Biochemistry",300],["BUN (Blood Urea Nitrogen)","Biochemistry",300],["Uric Acid","Biochemistry",350],["Serum Electrolytes (Na, K, Cl)","Biochemistry",800],["Serum Calcium","Biochemistry",400],["Serum Phosphorus","Biochemistry",400],["Serum Magnesium","Biochemistry",500],["ALT (SGPT)","Biochemistry",300],["AST (SGOT)","Biochemistry",300],["Alkaline Phosphatase (ALP)","Biochemistry",350],["GGT","Biochemistry",500],["Bilirubin Total / Direct","Biochemistry",350],["Serum Albumin","Biochemistry",300],["Total Protein","Biochemistry",300],["Serum Amylase","Biochemistry",800],["Serum Lipase","Biochemistry",1200],["LDH","Biochemistry",800],["CPK (Total)","Biochemistry",1000],["CK-MB","Biochemistry",1200],["Troponin I","Biochemistry",1500],["Total Cholesterol","Biochemistry",300],["Triglycerides","Biochemistry",350],["HDL Cholesterol","Biochemistry",350],["LDL Cholesterol","Biochemistry",350],["Homocysteine","Biochemistry",3000],["Vitamin D (25-OH)","Biochemistry",3500],["Vitamin B12","Biochemistry",2500],["Urine Microalbumin / ACR","Biochemistry",1200],["24 Hour Urine Protein","Biochemistry",800],["Procalcitonin (PCT)","Biochemistry",4500],
+["RA Factor","Serology",800],["ASO Titre","Serology",800],["Anti-CCP","Serology",3500],["ANA (Antinuclear Antibody)","Serology",2500],["Widal Test","Serology",500],["Dengue IgM / IgG","Serology",1500],["HIV (Anti-HIV I & II)","Serology",1000],["VDRL / RPR (Syphilis)","Serology",600],["TPHA","Serology",1200],["Anti-HBs (Hepatitis B Antibody)","Serology",1200],["HBeAg","Serology",1500],["Anti-HAV IgM (Hepatitis A)","Serology",1500],["HBV DNA PCR (Quantitative)","Serology",9000],["HCV RNA PCR (Quantitative)","Serology",9000],["Brucella Antibody (IgM / IgG)","Serology",1500],["Chikungunya IgM / IgG","Serology",2000],["Toxoplasma IgG / IgM","Serology",2500],["Rubella IgG / IgM","Serology",2500],["CMV IgG / IgM","Serology",2500],["TORCH Profile","Serology",8000],["H. Pylori Antibody","Serology",800],["H. Pylori Antigen (Stool)","Serology",1500],["Mantoux Test (TST)","Serology",500],
+["TSH","Hormones",800],["T3 (Total)","Hormones",700],["T4 (Total)","Hormones",700],["Free T3 (FT3)","Hormones",1000],["Free T4 (FT4)","Hormones",1000],["Prolactin","Hormones",1500],["FSH","Hormones",1300],["LH","Hormones",1300],["Estradiol (E2)","Hormones",1500],["Progesterone","Hormones",1500],["Testosterone (Total)","Hormones",1800],["Beta HCG (Quantitative)","Hormones",1500],["AMH","Hormones",5500],["Cortisol (Morning)","Hormones",1800],["PTH (Intact)","Hormones",3500],["Insulin (Fasting)","Hormones",1800],["PSA (Total)","Hormones",1800],["AFP","Hormones",1800],["CEA","Hormones",2200],["CA-125","Hormones",2500],["CA 19-9","Hormones",2500],["CA 15-3","Hormones",2500],
+["Urine Microscopy / Culture & Sensitivity (C/S)","Microbiology",1200],["Blood Culture & Sensitivity","Microbiology",2500],["Stool Culture & Sensitivity","Microbiology",1500],["Pus / Wound Swab C/S","Microbiology",1500],["Throat Swab C/S","Microbiology",1200],["Sputum for AFB (ZN Stain)","Microbiology",500],["Sputum C/S","Microbiology",1500],["Semen Analysis","Clinical Pathology",1200],["Semen C/S","Microbiology",1500],["High Vaginal Swab (HVS) C/S","Microbiology",1500],["Gram Stain","Microbiology",400],["KOH Preparation (Fungal)","Microbiology",400],["Stool Occult Blood","Clinical Pathology",400]
+];
+const US_EXTRA_PRICE={abdomen:1500,obgyn:1800,doppler:3000,small:1500};
+function usExtra(){return US_TYPES.filter(t=>!["abd","pelvis","fwb","custom","dopgen"].includes(t.id)).map(t=>[t.name,"Ultrasound",({anom:3500,nt:3000,twin:2500,foll:1200,ob1:1500,tvs:1500}[t.id])||US_EXTRA_PRICE[t.group]||1500])}
+LAB_EXTRA.forEach(x=>{if(!SEED_TESTS.some(t=>t[0].toLowerCase()===x[0].toLowerCase()))SEED_TESTS.push([x[0],x[1],"lab",x[2]])});
 /* row = [Parameter, Unit, Normal(common/male), Female(optional), Options "a|b"(optional)]; "#Heading" = section heading */
-const LB_LIB=[
+const LB_LIB=LB_LIB_NEW.concat([
 [/hba1c|glyc(o|a)?sylated|a1c/i,[["HbA1c","%","4.0 - 5.6"],["Estimated Average Glucose","mg/dL","68 - 114"]]],
 [/\bcbc\b|complete blood (count|picture)|blood complete|\bcp\b/i,[["Hemoglobin (Hb)","g/dL","13.0 - 17.0","12.0 - 15.0"],["Total Leucocyte Count (TLC)","x10³/µL","4.0 - 11.0"],["RBC Count","x10⁶/µL","4.5 - 5.5","3.8 - 4.8"],["HCT / PCV","%","40 - 50","36 - 46"],["MCV","fL","83 - 101"],["MCH","pg","27 - 32"],["MCHC","g/dL","31.5 - 34.5"],["Platelet Count","x10³/µL","150 - 410"],["RDW-CV","%","11.6 - 14.0"],["#Differential Count"],["Neutrophils","%","40 - 75"],["Lymphocytes","%","20 - 45"],["Monocytes","%","2 - 10"],["Eosinophils","%","1 - 6"],["Basophils","%","0 - 1"]]],
 [/\besr\b|sedimentation/i,[["ESR (1st Hour)","mm/hr","0 - 15","0 - 20"]]],
@@ -2334,7 +2532,7 @@ const LB_LIB=[
 [/h\.?\s?pylori/i,[["H. Pylori","","Negative","","Negative|Positive"]]],
 [/rheumatoid|\bra\b/i,[["RA Factor","IU/mL","< 14"]]],
 [/\baso\b/i,[["ASO Titre","IU/mL","< 200"]]]
-];
+]);
 function lbRaw(test){
 if(test&&Array.isArray(test.params)&&test.params.length)return test.params.map(x=>Object.assign({},x));
 const nm=String((test&&test.name)||"");
@@ -2395,7 +2593,7 @@ const blocks=tests.map(t=>'<div style="margin-top:12px"><div style="background:#
 '<table style="width:100%;border-collapse:collapse;font-size:'+f+'px"><thead><tr style="background:#eef2ff;-webkit-print-color-adjust:exact;print-color-adjust:exact"><th style="text-align:left;padding:4px 8px;border-bottom:1px solid #999;width:38%">Test</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid #999;width:20%">Result</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid #999;width:14%">Unit</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid #999">Normal Range</th></tr></thead><tbody>'+
 t.rows.map(x=>{if(x.h)return '<tr style="break-inside:avoid"><td colspan="4" style="padding:5px 8px 2px;font-weight:800;text-decoration:underline">'+E(x.h)+'</td></tr>';
 const fl=lbFlag(x.v,x.r);return '<tr style="break-inside:avoid"><td style="padding:4px 8px;border-bottom:1px solid #ddd">'+E(x.n)+'</td><td style="padding:4px 8px;border-bottom:1px solid #ddd;'+(fl?'font-weight:900':'font-weight:700')+'">'+E(x.v)+(fl?' <span style="font-size:'+(f-1)+'px">'+(fl==="A"?"*":fl)+'</span>':"")+'</td><td style="padding:4px 8px;border-bottom:1px solid #ddd">'+E(x.u||"")+'</td><td style="padding:4px 8px;border-bottom:1px solid #ddd">'+E(x.r||"")+'</td></tr>'}).join("")+'</tbody></table>'+
-(t.remarks?'<div style="margin-top:4px"><b>Note:</b> '+E(t.remarks)+'</div>':"")+'</div>').join("");
+(t.remarks?'<div style="margin-top:6px;font-size:'+(f-1)+'px;break-inside:avoid"><b>Note:</b><div style="white-space:pre-wrap;margin-top:2px">'+E(t.remarks)+'</div></div>':"")+'</div>').join("");
 return '<div style="font-family:Arial,Helvetica,sans-serif;color:#111;font-size:'+f+'px;line-height:1.4">'+
 '<div style="display:flex;align-items:center;gap:14px;border-bottom:2px solid #1d4ed8;padding-bottom:10px">'+logoH+'<div><div style="font-size:'+(f+8)+'px;font-weight:800">'+clinic+'</div><div style="font-size:'+(f-1)+'px">'+addr+'</div></div></div>'+
 '<h2 style="text-align:center;text-decoration:underline;margin:14px 0 10px;font-size:'+(f+4)+'px">LABORATORY REPORT</h2>'+
@@ -2409,7 +2607,7 @@ const f=size==="58"?Math.min(Math.max(base*.85,9),11.5):Math.min(Math.max(base,1
 const hr='<div style="border-top:1px dashed #000;margin:5px 0"></div>';
 const li=(l,v)=>v?'<div style="margin:1px 0"><b>'+l+':</b> '+v+'</div>':"";
 const fnd=tests.map(t=>'<div style="margin-top:6px;font-weight:900;text-transform:uppercase;border-bottom:1px solid #000">'+E(t.name)+'</div>'+t.rows.map(x=>{if(x.h)return '<div style="margin-top:3px;font-weight:900;text-decoration:underline">'+E(x.h)+'</div>';
-const fl=lbFlag(x.v,x.r);return '<div style="margin:3px 0"><div style="display:flex;justify-content:space-between;gap:6px"><span>'+E(x.n)+'</span><span style="font-weight:900;white-space:nowrap">'+E(x.v)+(x.u?" "+E(x.u):"")+(fl?" "+(fl==="A"?"*":fl):"")+'</span></div>'+(x.r?'<div style="font-size:'+(f-1.5)+'px;font-weight:600">Normal: '+E(x.r)+'</div>':"")+'</div>'}).join("")+(t.remarks?'<div style="margin-top:2px">Note: '+E(t.remarks)+'</div>':"")).join("");
+const fl=lbFlag(x.v,x.r);return '<div style="margin:3px 0"><div style="display:flex;justify-content:space-between;gap:6px"><span>'+E(x.n)+'</span><span style="font-weight:900;white-space:nowrap">'+E(x.v)+(x.u?" "+E(x.u):"")+(fl?" "+(fl==="A"?"*":fl):"")+'</span></div>'+(x.r?'<div style="font-size:'+(f-1.5)+'px;font-weight:600">Normal: '+E(x.r)+'</div>':"")+'</div>'}).join("")+(t.remarks?'<div style="margin-top:2px;font-size:'+(f-1.5)+'px"><b>Note:</b><div style="white-space:pre-wrap">'+E(t.remarks)+'</div></div>':"")).join("");
 return '<div style="width:'+w+';font-family:Arial,Helvetica,sans-serif;color:#000;font-size:'+f+'px;line-height:1.35;font-weight:600;word-break:break-word">'+
 '<div style="text-align:center">'+(s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:'+logo+'px;width:auto;max-width:100%;object-fit:contain;filter:grayscale(1) contrast(1.4)">':"")+'<div style="font-size:'+(f+3)+'px;font-weight:900">'+clinic+'</div><div style="font-size:'+(f-1.5)+'px">'+addr+'</div></div>'+hr+
 '<div style="text-align:center;font-weight:900;font-size:'+(f+1)+'px">LABORATORY REPORT</div>'+hr+
@@ -2444,7 +2642,7 @@ let tests=[];
 if(old){tests=(old.tests||[]).map(t=>({testId:t.testId||"",name:t.name,rows:(t.rows||[]).map(x=>Object.assign({r0:x.r},x)),remarks:t.remarks||"",save:false}))}
 if(visit){visit.items.filter(i=>i.category==="lab").forEach(it=>{
 const te=testOf(it);if(tests.some(t=>(te&&t.testId===te.id)||t.name===it.description))return;
-tests.push({testId:te?te.id:"",name:it.description,rows:lbParams(te||{name:it.description},gender0),remarks:"",save:false})})}
+tests.push({testId:te?te.id:"",name:it.description,rows:lbParams(te||{name:it.description},gender0),remarks:lbNote(te||{name:it.description}),save:false})})}
 const docs=app.doctors.filter(d=>d.active!==false);
 const ov=openModal(old?"Edit Lab Report":"New Lab Report",
 '<div class="grid g2 mb">'+
@@ -2481,7 +2679,7 @@ const cb=ov.querySelector('[data-sv="'+ti+'"]');if(cb&&t.save)cb.checked=true});
 $q("#lbr-gender").onchange=()=>{const g=$q("#lbr-gender").value;tests.forEach(t=>{const te=app.tests.find(x=>x.id===t.testId)||{name:t.name};const raw=lbRaw(te);t.rows.forEach(x=>{if(x.h)return;if(x.r===x.r0){const m=raw.find(y=>y.n===x.n&&!y.h);if(m){const nr=lbResolve(m,g);x.r=nr;x.r0=nr}}})});draw()};
 $q("#lbr-addt").onclick=()=>{const tid=$q("#lbr-addsel").value;if(!tid)return;const te=app.tests.find(t=>t.id===tid);if(!te)return;
 if(tests.some(t=>t.testId===tid)){toast("Ye test pehle se report mein hai","info");return}
-tests.push({testId:te.id,name:te.name,rows:lbParams(te,$q("#lbr-gender").value),remarks:"",save:false});$q("#lbr-addsel").value="";draw()};
+tests.push({testId:te.id,name:te.name,rows:lbParams(te,$q("#lbr-gender").value),remarks:lbNote(te),save:false});$q("#lbr-addsel").value="";draw()};
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
 $q("#lbr-pick").onclick=()=>patientPicker(p=>{pat=p;$q("#lbr-mr").value=padMr(p.patientId);$q("#lbr-name").value=p.name;$q("#lbr-age").value=p.age||"";$q("#lbr-ageunit").value=p.ageUnit||"Years";$q("#lbr-gender").value=p.gender||"Male";$q("#lbr-gender").onchange()});
 draw();
@@ -2883,7 +3081,7 @@ async function pageMedicalStore(){
       '<td>'+money(p.purchasePrice)+'</td><td><b>'+money(p.salePrice)+'</b></td>'+
       '<td><span class="badge '+(qty<=0?"red":low?"amber":"green")+'">'+fmtMoney(qty)+'</span><div class="hint">'+brk+'</div></td>'+
       '<td><button class="btn btn-outline sm" data-med-edit="'+esc(p.id)+'">Edit</button> '+
-      '<button class="btn btn-neutral sm" data-med-buy="'+esc(p.id)+'">Add Stock</button> <button class="btn btn-danger sm" data-med-del="'+esc(p.id)+'">Delete</button></td></tr>';
+      '<button class="btn btn-neutral sm" data-med-buy="'+esc(p.id)+'">Add Stock</button> <button class="btn btn-outline sm" data-med-bc="'+esc(p.id)+'" title="Barcode sticker print">🏷</button> <button class="btn btn-danger sm" data-med-del="'+esc(p.id)+'">Delete</button></td></tr>';
   };
   const stockRows=(list)=>(list||products).map(stockRowHTML).join("");
   const MS_SECTIONS={dashboard:["🏪","Dashboard","Overview of stock, sales and alerts"],stock:["📦","Stock","Medicine inventory"],purchase:["🛒","Purchase","Buy stock from suppliers"],sale:["🧾","New Sale / Bill","Create customer bills and print receipts"],customers:["👥","Customers","Customer records and purchase history"],reports:["📈","Reports","Sales, profit and expiry"]};
@@ -2896,10 +3094,11 @@ async function pageMedicalStore(){
       '<div class="stat"><div class="ico violet-g">🧾</div><div><div class="lbl">Total Sales</div><div class="val">'+sales.length+'</div></div></div>'+
       '<div class="stat"><div class="ico amber-g">⚠️</div><div><div class="lbl">Low / Out of Stock</div><div class="val">'+products.filter(p=>num(p.stock)<=num(p.reorderLevel||5)).length+'</div></div></div></div>':'')+
       '<div class="card"><div class="card-h"><div><h2>'+sec[0]+' '+sec[1]+'</h2><div class="sub">'+sec[2]+'</div></div>'+
-      ((tab==="dashboard"||tab==="stock")?'<div class="flex gap fw"><button class="btn btn-outline sm" id="med-scan">📷 SCAN &amp; ADD</button><button class="btn btn-success sm" id="med-new">＋ ADD MEDICINE</button></div>':'')+'</div>'+
+      ((tab==="dashboard"||tab==="stock")?'<div class="flex gap fw"><button class="btn btn-outline sm" id="med-scan">📷 SCAN &amp; ADD</button><button class="btn btn-outline sm" id="med-bclabels">🏷 BARCODE LABELS</button><button class="btn btn-success sm" id="med-new">＋ ADD MEDICINE</button></div>':'')+'</div>'+
       '<div class="card-b"><div id="med-panel"></div></div></div></div>';
     if(el("med-new"))el("med-new").onclick=()=>medicineModal();
     if(el("med-scan"))el("med-scan").onclick=()=>medicineModal(null,{autoScan:true});
+    if(el("med-bclabels"))el("med-bclabels").onclick=()=>barcodeLabelsModal(products,"",()=>pageMedicalStore());
     renderTab();
   };
   const renderTab=()=>{
@@ -3053,6 +3252,7 @@ async function pageMedicalStore(){
   const bindStockButtons=()=>{
     el("med-panel").querySelectorAll("[data-med-edit]").forEach(b=>b.onclick=()=>medicineModal(products.find(p=>p.id===b.dataset.medEdit)));
     el("med-panel").querySelectorAll("[data-med-buy]").forEach(b=>b.onclick=()=>purchaseModal(products.find(p=>p.id===b.dataset.medBuy)));
+    el("med-panel").querySelectorAll("[data-med-bc]").forEach(b=>b.onclick=()=>barcodeLabelsModal(products,b.dataset.medBc,()=>pageMedicalStore()));
     el("med-panel").querySelectorAll("[data-med-del]").forEach(b=>b.onclick=()=>deleteMedicine(b.dataset.medDel));
   };
   const PRESET_CATS=[["Medicines",["Tablet","Capsule","Syrup","Suspension","Injection","Drip / IV Fluid","Ointment","Cream","Gel","Lotion","Eye Drops","Ear Drops","Nasal Drops / Spray","Drops","Inhaler / Nebulizer","Sachet / Powder","Suppository","Mouthwash","Shampoo / Soap"]],["Other Items",["Surgical Item","Syringe / Needle / Cannula","Bandage / Dressing","Cotton / Gauze","Gloves / Mask","Medical Device","Test Kit / Strips","Baby Care","Nutrition / Supplement","Cosmetics / Personal Care","Other"]]];
@@ -3089,11 +3289,17 @@ async function pageMedicalStore(){
       '<div class="field"><label>Calculated Purchase / Tablet</label><input class="inp" id="mm-buy-unit" disabled value="'+num(p.purchasePrice)+'"></div>'+
       '<div class="field"><label>Calculated Sale / Tablet</label><input class="inp" id="mm-sale-unit" disabled value="'+num(p.salePrice)+'"></div>'+
       '<div class="field"><label>Low Stock Alert At</label><input class="inp" type="number" min="0" id="mm-reorder" value="'+num(p.reorderLevel||5)+'"></div>'+
-      '<div class="field"><label>Barcode</label><input class="inp" id="mm-barcode" inputmode="numeric" value="'+esc(p.barcode||"")+'"></div>'+
+      '<div class="field"><label>Barcode (company ka ya khud ka)</label><input class="inp" id="mm-barcode" autocomplete="off" placeholder="Yahan click karke dabbe ka barcode scan karein" value="'+esc(p.barcode||"")+'"><div class="flex g8 fw" style="margin-top:6px"><button type="button" class="btn btn-outline sm" id="mm-bc-scan">📷 Scan</button><button type="button" class="btn btn-outline sm" id="mm-bc-gen">⚙ Naya Barcode Banayein</button>'+(p.id?'<button type="button" class="btn btn-outline sm" id="mm-bc-print">🏷 Label Print</button>':'')+'</div><div class="hint">Company ka barcode ho to scan karein (SAVE ke baad bill par scan karte hi dawai aa jayegi). Barcode na ho to "Naya Barcode" dabayein aur sticker print karke lagayein.</div></div>'+
       '<div class="field"><label>Rack / Location</label><input class="inp" id="mm-rack" placeholder="e.g. R-01 Front Counter" value="'+esc(p.rack||"")+'"></div>'+
       '<div class="field"><label>Prescription (Rx)</label><label style="display:flex;gap:8px;align-items:center;font-weight:600;text-transform:none"><input type="checkbox" id="mm-rx" '+(p.rx?"checked":"")+' style="width:18px;height:18px"> Rx required (doctor prescription ke saath)</label></div></div>',
       '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="mm-save">SAVE MEDICINE</button>',true);
     ov.querySelector("[data-close]").onclick=()=>ov.remove();
+    {const bi=ov.querySelector("#mm-barcode");
+    const chk=()=>{const v=bi.value.trim();if(!v)return;const d=products.find(x=>x.id!==p.id&&x.barcode&&bcEq(x.barcode,v));if(d)toast("⚠ Ye barcode pehle se '"+d.name+"' par lagi hai","error")};
+    bi.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();chk();bi.blur()}});bi.addEventListener("change",chk);
+    ov.querySelector("#mm-bc-scan").onclick=()=>barcodeScanModal("📷 Dawai ka barcode scan karein",c=>{bi.value=c;chk();toast("Barcode mil gaya: "+c+" — SAVE MEDICINE dabayein","info")});
+    ov.querySelector("#mm-bc-gen").onclick=()=>{bi.value=bcNextInternal(products);toast("Naya barcode ban gaya — SAVE MEDICINE dabayein, phir 🏷 se sticker print karein","info")};
+    const pb=ov.querySelector("#mm-bc-print");if(pb)pb.onclick=()=>{if(bi.value.trim()!==String(p.barcode||"")){toast("Pehle SAVE MEDICINE dabayein, phir label print karein","error");return}if(!p.barcode){toast("Pehle barcode bharein / banayein aur save karein","error");return}barcodeLabelsModal(products,p.id,()=>pageMedicalStore())};}
     {const catSel=ov.querySelector("#mm-category");let lastCat=catSel.value;
     catSel.onchange=async()=>{
       if(catSel.value!=="__new__"){lastCat=catSel.value;return}
@@ -3202,7 +3408,7 @@ async function pageMedicalStore(){
     const rows=[{productId:selected?.id||"",qty:1,cost:num(selected?.purchasePrice)||0}];
     const ov=openModal("New Medicine Purchase",
       '<div class="grid g2"><div class="field"><label>Supplier *</label><input class="inp" id="mp-supplier" placeholder="Supplier / distributor"></div><div class="field"><label>Supplier Invoice</label><input class="inp" id="mp-invoice"></div><div class="field"><label>Purchase Date</label><input class="inp" type="date" id="mp-date" value="'+today()+'"></div><div class="field"><label>Paid Amount</label><input class="inp" type="number" id="mp-paid" min="0" value="0"></div></div>'+
-      '<div class="field"><label>Medicine</label><select class="inp" id="mp-product">'+products.map(p=>'<option value="'+esc(p.id)+'" '+(p.id===rows[0].productId?"selected":"")+'>'+esc(p.name)+' (stock '+num(p.stock)+')</option>').join("")+'</select></div>'+
+      '<div class="field"><label>Barcode scan se medicine chunein</label><div class="flex g8"><input class="inp" id="mp-bc" placeholder="Scanner se scan karein ya 📷 dabayein, Enter" autocomplete="off" style="flex:1"><button type="button" class="btn btn-outline sm" id="mp-bc-cam">📷</button></div><div class="hint">Barcode pehle se linked ho to medicine khud select ho jati hai. Naya dabba ho to pehle neeche se medicine chunein, phir uska barcode scan karein — barcode save ho jayega.</div></div><div class="field"><label>Medicine</label><select class="inp" id="mp-product">'+products.map(p=>'<option value="'+esc(p.id)+'" '+(p.id===rows[0].productId?"selected":"")+'>'+esc(p.name)+' (stock '+num(p.stock)+')</option>').join("")+'</select></div>'+
       '<div class="grid g3"><div class="field"><label>Quantity</label><input class="inp" type="number" min="1" id="mp-qty" value="1"></div><div class="field"><label>Purchase Unit</label><select class="inp" id="mp-unit"><option value="tablet">Tablet / Unit</option><option value="strip">Strip</option><option value="box">Box</option></select></div><div class="field"><label>Cost / selected unit</label><input class="inp" type="number" min="0" id="mp-cost" value="'+rows[0].cost+'"></div><div class="field"><label>Total</label><input class="inp" id="mp-total" disabled value="'+rows[0].cost+'"></div></div>',
       '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="mp-save">SAVE PURCHASE & STOCK</button>',true);
     const unitFactor=(p,u)=>u==="box"?Math.max(1,num(p.boxStrips)||1)*Math.max(1,num(p.stripSize)||1):u==="strip"?Math.max(1,num(p.stripSize)||1):1;
@@ -3210,6 +3416,14 @@ async function pageMedicalStore(){
     ov.querySelector("#mp-qty").oninput=calc;ov.querySelector("#mp-cost").oninput=calc;
     const updatePurchaseCost=()=>{const x=products.find(p=>p.id===ov.querySelector("#mp-product").value),u=ov.querySelector("#mp-unit").value;ov.querySelector("#mp-cost").value=x?num(x.purchasePrice)*unitFactor(x,u):0;calc()};
     ov.querySelector("#mp-product").onchange=updatePurchaseCost;ov.querySelector("#mp-unit").onchange=updatePurchaseCost;
+    const mpFind=async code=>{code=String(code||"").trim();if(!code)return;
+      const x=products.find(p=>p.barcode&&bcEq(p.barcode,code));
+      if(x){ov.querySelector("#mp-product").value=x.id;updatePurchaseCost();toast(x.name+" select ho gayi","info");const qe=ov.querySelector("#mp-qty");qe.focus();qe.select();return}
+      const cur=products.find(p=>p.id===ov.querySelector("#mp-product").value);if(!cur)return;
+      if(await confirmBox({title:"Naya Barcode",message:"Barcode "+code+" kisi medicine se linked nahi. Kya ise '"+cur.name+"' ke sath save karein? Agli dafa scan karte hi ye medicine aa jayegi.",confirmText:"HAAN, SAVE KAREIN"})){
+        cur.barcode=code;await qPut("inventory",{...cur,barcode:code,updatedAt:new Date().toISOString()});toast("Barcode save ho gaya","info")}};
+    ov.querySelector("#mp-bc").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const v=e.target.value;e.target.value="";mpFind(v)}});
+    ov.querySelector("#mp-bc-cam").onclick=()=>barcodeScanModal("📷 Barcode scan karein",mpFind);
     ov.querySelector("[data-close]").onclick=()=>ov.remove();
     ov.querySelector("#mp-save").onclick=async()=>{
       const product=products.find(p=>p.id===ov.querySelector("#mp-product").value),qty=num(ov.querySelector("#mp-qty").value),unit=ov.querySelector("#mp-unit").value,baseQty=qty*unitFactor(product,unit),cost=num(ov.querySelector("#mp-cost").value),total=qty*cost,supplier=ov.querySelector("#mp-supplier").value.trim();
@@ -3409,7 +3623,7 @@ async function pageMedicalStore(){
     const cats=[...new Set(products.map(p=>p.category).filter(Boolean))].sort();
     const ov=openModal("🧾 Medical Store — POS Bill",
       '<div class="pos-wrap"><div class="pos-left">'+
-        '<div class="pos-bar"><input class="inp" id="pos-q" placeholder="🔍 Scan barcode / search medicine (Enter = add)" autocomplete="off"><select class="inp" id="pos-cat"><option value="">All Categories</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join("")+'</select></div>'+
+        '<div class="pos-bar"><input class="inp" id="pos-q" placeholder="🔍 Scan barcode / search medicine (Enter = add)" autocomplete="off"><button type="button" class="btn btn-outline" id="pos-scan" title="Camera se barcode scan" style="padding:0">📷</button><select class="inp" id="pos-cat"><option value="">All Categories</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join("")+'</select></div>'+
         '<div class="pos-meta"><span id="pos-count"></span><button type="button" class="btn btn-outline sm" id="pos-held">⏸ Held (0)</button></div>'+
         '<div class="pos-grid" id="pos-grid"></div></div>'+
       '<div class="pos-right"><div class="pos-h">🛒 Current Sale</div><div id="pos-cart"></div>'+
@@ -3483,16 +3697,33 @@ async function pageMedicalStore(){
       }).join("")||'<div class="hint" style="grid-column:1/-1;text-align:center;padding:20px">Koi medicine nahi mili</div>';
     };
     const refreshHeldBtn=()=>{Q("#pos-held").textContent="⏸ Held ("+getHeld().length+")"};
+    /* ---- unknown barcode: medicine se link karein ---- */
+    const posUnknownCode=code=>{
+      const ov=openModal("Naya Barcode — Medicine se Link karein",
+        '<div class="info-tile mb"><b>Barcode: <span style="font-family:monospace">'+esc(code)+'</span></b><div class="hint">Ye barcode kisi medicine se linked nahi hai. Neeche se medicine chunein — agli dafa ye dabba scan karte hi bill mein khud aa jayega.</div></div><input class="inp mb" id="lk-q" placeholder="🔍 Medicine search…" autocomplete="off"><div id="lk-list" style="max-height:44vh;overflow:auto"></div>',
+        '<button class="btn btn-neutral" data-close>Cancel</button>',true);
+      ov.querySelector("[data-close]").onclick=()=>ov.remove();
+      const draw=()=>{const q=ov.querySelector("#lk-q").value.trim().toLowerCase();
+        const list=products.filter(p=>!q||((p.name||"")+" "+(p.generic||"")+" "+(p.company||"")).toLowerCase().includes(q)).slice(0,40);
+        ov.querySelector("#lk-list").innerHTML=list.map(p=>'<button type="button" class="btn btn-outline block" style="text-align:left;margin-bottom:6px" data-lk="'+esc(p.id)+'"><b>'+esc(p.name)+'</b> <span class="hint">'+esc(p.generic||"")+' · '+esc(p.company||"")+(p.barcode?' · 🏷 '+esc(p.barcode):'')+'</span></button>').join("")||'<div class="hint">Koi medicine nahi mili</div>';
+        ov.querySelectorAll("[data-lk]").forEach(b=>b.onclick=async()=>{const p=products.find(x=>x.id===b.dataset.lk);if(!p)return;
+          if(p.barcode&&!await confirmBox({title:"Barcode badlein?",message:"'"+p.name+"' par pehle se barcode "+p.barcode+" hai. Naya barcode "+code+" laga dein?",confirmText:"HAAN, BADLEIN"}))return;
+          p.barcode=code;await qPut("inventory",{...p,barcode:code,updatedAt:new Date().toISOString()});
+          try{await audit(app.user.username,"UPDATE","inventory",p.id,"Barcode linked "+code)}catch(e){}
+          ov.remove();toast("Barcode link ho gaya","info");addProduct(p.id)})};
+      ov.querySelector("#lk-q").oninput=draw;draw();setTimeout(()=>ov.querySelector("#lk-q").focus(),200)};
     /* ---- search ---- */
     Q("#pos-q").oninput=drawGrid;Q("#pos-cat").onchange=drawGrid;
     Q("#pos-q").onkeydown=e=>{
       if(e.key!=="Enter")return;e.preventDefault();
-      const v=Q("#pos-q").value.trim();if(!v)return;const digits=v.replace(/\D/g,"");
-      const exact=digits.length>=8?products.find(p=>p.barcode&&String(p.barcode).replace(/\D/g,"")===digits):null;
+      const v=Q("#pos-q").value.trim();if(!v)return;
+      const exact=products.find(p=>p.barcode&&bcEq(p.barcode,v));
       const hit=exact||(shown.length===1?shown[0]:null);
       if(hit){addProduct(hit.id);Q("#pos-q").value="";drawGrid()}
+      else if(!shown.length&&/^(?=.*\d)[A-Za-z0-9\-_.]{6,}$/.test(v)){Q("#pos-q").value="";drawGrid();posUnknownCode(v)}
       else toast(shown.length?"Kai medicine milin — card par click karein":"Medicine nahi mili","error");
     };
+    Q("#pos-scan").onclick=()=>barcodeScanModal("📷 Barcode scan karein",code=>{const p=products.find(x=>x.barcode&&bcEq(x.barcode,code));if(p){addProduct(p.id);toast(p.name+" bill mein add","info")}else posUnknownCode(code)});
     Q("#pos-grid").onclick=e=>{const c=e.target.closest("[data-add]");if(c)addProduct(c.dataset.add)};
     /* ---- cart ---- */
     const cartEl=Q("#pos-cart");
@@ -3691,6 +3922,118 @@ M.forEach((r,y)=>r.forEach((v,x)=>{if(v)d+="M"+(x+q)+" "+(y+q)+"h1v1h-1z"}));
 return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+(n+2*q)+' '+(n+2*q)+'" shape-rendering="crispEdges" style="'+(css||"")+'"><rect width="100%" height="100%" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>'}
 catch(e){return ""}}
 /* ===== QR scanner (ID card / staff attendance) — camera + USB scanner ===== */
+/* ===== BARCODE: EAN-13 / Code128 generator, internal codes, label print, camera scan ===== */
+const BC_L=["0001101","0011001","0010011","0111101","0100011","0110001","0101111","0111011","0110111","0001011"];
+const BC_G=["0100111","0110011","0011011","0100001","0011101","0111001","0000101","0010001","0001001","0010111"];
+const BC_R=["1110010","1100110","1101100","1000010","1011100","1001110","1010000","1000100","1001000","1110100"];
+const BC_PAR=["LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG","LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL"];
+const BC_128="212222,222122,222221,121223,121322,131222,122213,122312,132212,221213,221312,231212,112232,122132,122231,113222,123122,123221,223211,221132,221231,213212,223112,312131,311222,321122,321221,312212,322112,322211,212123,212321,232121,111323,131123,131321,112313,132113,132311,211313,231113,231311,112133,112331,132131,113123,113321,133121,313121,211331,231131,213113,213311,213131,311123,311321,331121,312113,312311,332111,314111,221411,431111,111224,111422,121124,121421,141122,141221,112214,112412,122114,122411,142112,142211,241211,221114,413111,241112,134111,111242,121142,121241,114212,124112,124211,411212,421112,421211,212141,214121,412121,111143,111341,131141,114113,114311,411113,411311,113141,114131,311141,411131,211412,211214,211232,2331112".split(",");
+function bcEanCheck(d){let s=0;for(let i=0;i<12;i++)s+=(+d[i])*(i%2?3:1);return (10-s%10)%10}
+function bcIsEan13(c){return /^\d{13}$/.test(c)&&bcEanCheck(c)===+c[12]}
+function bcNorm(c){return String(c==null?"":c).trim().toLowerCase()}
+function bcEq(a,b){a=bcNorm(a);b=bcNorm(b);if(!a||!b)return false;if(a===b)return true;if(/^\d+$/.test(a)&&/^\d+$/.test(b))return a.replace(/^0+/,"")===b.replace(/^0+/,"");return false}
+function bcBits(code){
+code=String(code);
+if(bcIsEan13(code)){const par=BC_PAR[+code[0]];let b="101";for(let i=1;i<=6;i++)b+=(par[i-1]==="L"?BC_L:BC_G)[+code[i]];b+="01010";for(let i=7;i<=12;i++)b+=BC_R[+code[i]];return b+"101"}
+const vals=[104];for(const ch of code){const v=ch.charCodeAt(0)-32;if(v<0||v>95)throw new Error("char");vals.push(v)}
+let sum=104;for(let i=1;i<vals.length;i++)sum+=i*vals[i];vals.push(sum%103);vals.push(106);
+let bits="";vals.forEach(v=>{let bar=true;for(const ch of BC_128[v]){bits+=(bar?"1":"0").repeat(+ch);bar=!bar}});return bits}
+function bcSVG(code,wMm,hMm){
+try{const bits=bcBits(code),q=10,w=bits.length+q*2;let d="",i=0;
+while(i<bits.length){if(bits[i]==="1"){let j=i;while(j<bits.length&&bits[j]==="1")j++;d+="M"+(q+i)+" 0h"+(j-i)+"v1h-"+(j-i)+"z";i=j}else i++}
+const mod=wMm/w;
+return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' 1" preserveAspectRatio="none" shape-rendering="crispEdges" style="width:'+wMm+'mm;height:'+hMm+'mm;display:block;margin:0 auto"><rect width="'+w+'" height="1" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>'}
+catch(e){return '<div style="font-size:9px">Barcode nahi ban saka</div>'}}
+function bcNextInternal(products){
+let max=200000000000;
+(products||[]).forEach(p=>{const c=String(p.barcode||"");if(/^2\d{12}$/.test(c)&&bcIsEan13(c)){const n=+c.slice(0,12);if(n>max)max=n}});
+const base=String(max+1);return base+bcEanCheck(base)}
+function bcLabelHTML(items,size,opts){
+opts=opts||{};const s=app.settings,store=esc(s.msName||s.clinicName||"");
+const thermal=size==="58"||size==="80",W=size==="58"?50:size==="80"?70:46;
+const one=it=>{const p=it.p,code=String(p.barcode),ss=Math.max(1,Number(p.stripSize)||1),pr=Number(p.salePrice||0)*ss;
+const wMm=bcIsEan13(code)?(thermal?(size==="58"?34:40):36):Math.min(W-4,thermal?(size==="58"?44:60):40);
+return '<div style="width:'+W+'mm;box-sizing:border-box;padding:1.5mm;text-align:center;font-family:Arial,sans-serif;color:#000;'+(thermal?"margin:0 auto 3mm;border-bottom:.3mm dashed #000;":"border:.2mm dashed #999;")+'page-break-inside:avoid;break-inside:avoid;overflow:hidden">'+
+'<div style="font-size:2.4mm;font-weight:700;line-height:1.1">'+store+'</div>'+
+'<div style="font-size:3mm;font-weight:800;line-height:1.15;max-height:7mm;overflow:hidden;margin:.5mm 0">'+esc(p.name)+'</div>'+
+bcSVG(code,wMm,9)+
+'<div style="font-size:2.8mm;letter-spacing:.3mm;font-family:monospace;font-weight:700">'+esc(code)+'</div>'+
+(opts.price?'<div style="font-size:3.2mm;font-weight:900">Rs. '+fmtMoney(pr)+(ss>1?' <span style="font-size:2.2mm;font-weight:600">/ strip</span>':'')+'</div>':'')+'</div>'};
+let html="";items.forEach(it=>{for(let i=0;i<Math.max(1,it.copies||1);i++)html+=one(it)});
+return thermal?'<div style="width:100%">'+html+'</div>':'<div style="display:flex;flex-wrap:wrap;gap:2mm;width:100%">'+html+'</div>'}
+function barcodeLabelsModal(products,pre,onSaved){
+const sel={};(pre?[pre]:[]).forEach(id=>sel[id]=1);const cop={};
+let size="A4",price=true,q="";
+const ov=openModal("🏷 Barcode Labels (Sticker) Print",
+'<div class="hint mb">Jin dawaiyon par company ka barcode nahi hai unke liye software khud barcode bana deta hai. Sticker print karke dabbe / strip par lagayein, phir scanner se scan karein.</div>'+
+'<div class="flex g8 fw mb"><input class="inp" id="bl-q" placeholder="🔍 Medicine search…" style="flex:1;min-width:160px"><select class="inp" id="bl-size" style="width:170px"><option value="A4">A4 Sticker Sheet</option><option value="58">Thermal Roll 58mm</option><option value="80">Thermal Roll 80mm</option></select></div>'+
+'<div class="flex g8 fw mb aic"><label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" id="bl-price" checked> Price chhapein</label><button class="btn btn-outline sm" id="bl-nobc">☑ Bina-barcode wale chunein</button><button class="btn btn-outline sm" id="bl-clr">✕ Clear</button><span id="bl-cnt" class="hint"></span></div>'+
+'<div style="max-height:46vh;overflow:auto" class="tbl-wrap"><table class="tbl"><thead><tr><th></th><th>Medicine</th><th>Barcode</th><th style="width:70px">Copies</th></tr></thead><tbody id="bl-rows"></tbody></table></div>',
+'<button class="btn btn-neutral" data-close>Close</button><button class="btn btn-dark" id="bl-print">🖨 PRINT LABELS</button>',true);
+const Q=s=>ov.querySelector(s);
+const draw=()=>{const list=(products||[]).filter(p=>!q||((p.name||"")+" "+(p.barcode||"")).toLowerCase().includes(q)).slice(0,300);
+Q("#bl-rows").innerHTML=list.map(p=>'<tr><td><input type="checkbox" data-s="'+esc(p.id)+'" '+(sel[p.id]?"checked":"")+'></td><td>'+esc(p.name)+'</td><td style="font-family:monospace;font-size:12px">'+(p.barcode?esc(p.barcode):'<span class="badge amber">Auto banega</span>')+'</td><td><input class="inp" type="number" min="1" max="500" style="padding:4px" data-c="'+esc(p.id)+'" value="'+(cop[p.id]||1)+'"></td></tr>').join("")||'<tr class="empty-row"><td colspan="4">Koi medicine nahi</td></tr>';
+Q("#bl-cnt").textContent=Object.keys(sel).length+" selected";
+ov.querySelectorAll("[data-s]").forEach(c=>c.onchange=()=>{if(c.checked)sel[c.dataset.s]=1;else delete sel[c.dataset.s];Q("#bl-cnt").textContent=Object.keys(sel).length+" selected"});
+ov.querySelectorAll("[data-c]").forEach(c=>c.oninput=()=>{cop[c.dataset.c]=Math.max(1,parseInt(c.value,10)||1)})};
+draw();
+Q("#bl-q").oninput=e=>{q=e.target.value.trim().toLowerCase();draw()};
+Q("#bl-size").onchange=e=>size=e.target.value;Q("#bl-price").onchange=e=>price=e.target.checked;
+Q("#bl-nobc").onclick=()=>{(products||[]).forEach(p=>{if(!p.barcode)sel[p.id]=1});draw()};
+Q("#bl-clr").onclick=()=>{Object.keys(sel).forEach(k=>delete sel[k]);draw()};
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+Q("#bl-print").onclick=async()=>{
+const ids=Object.keys(sel);if(!ids.length){toast("Pehle medicine chunein","error");return}
+const btn=Q("#bl-print");btn.disabled=true;
+try{let changed=false;const items=[];
+for(const id of ids){const p=(products||[]).find(x=>x.id===id);if(!p)continue;
+if(!p.barcode){p.barcode=bcNextInternal(products);await qPut("inventory",Object.assign({},p,{barcode:p.barcode,updatedAt:new Date().toISOString()}));changed=true}
+items.push({p:p,copies:cop[id]||1})}
+if(changed){try{await audit(app.user.username,"UPDATE","inventory","barcode","Auto barcode generated")}catch(e){}}
+ov.remove();
+if(changed&&onSaved)try{onSaved()}catch(e){}
+printHTML(bcLabelHTML(items,size,{price:price}),size==="A4"?"A4":size);
+}catch(e){toast("Print nahi hua: "+(e.message||e),"error");btn.disabled=false}}}
+/* ---- camera + USB barcode scanner (kisi bhi barcode / QR ke liye) ---- */
+let _zxP=null;
+function loadZXing(){
+if(window.ZXing)return Promise.resolve(window.ZXing);
+if(_zxP)return _zxP;
+const urls=["https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js","https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"];
+_zxP=(async()=>{for(const u of urls){try{await loadScript(u);if(window.ZXing)return window.ZXing}catch(e){}}_zxP=null;throw new Error("zxing load failed")})();
+return _zxP}
+function barcodeScanModal(title,onCode){
+const ov=openModal(title||"📷 Barcode Scan",
+'<div style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden" id="bs-wrap"><video id="bs-v" playsinline muted autoplay style="width:100%;max-height:48vh;display:block;object-fit:cover"></video><div style="position:absolute;left:8%;right:8%;top:38%;height:24%;border:3px solid rgba(255,255,255,.9);border-radius:10px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
+'<div id="bs-msg" class="hint" style="text-align:center;margin:8px 0">Camera shuru ho raha hai…</div>'+
+'<div class="flex g8"><input class="inp" id="bs-in" placeholder="Ya yahan click karke USB scanner se scan karein / barcode likhein, Enter" autocomplete="off" style="flex:1"><button class="btn btn-outline" id="bs-go" type="button">OK</button></div>',
+'<button class="btn btn-neutral" data-close>Close</button>',true);
+const q=s=>ov.querySelector(s),msg=q("#bs-msg"),vid=q("#bs-v");
+let stream=null,timer=null,done=false,busy=false;
+const stop=()=>{clearInterval(timer);timer=null;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}};
+const orig=ov.remove.bind(ov);ov.remove=()=>{stop();orig()};
+ov.querySelector("[data-close]").onclick=()=>ov.remove();
+const got=code=>{code=String(code||"").trim();if(!code||done)return;done=true;try{if(navigator.vibrate)navigator.vibrate(60)}catch(e){}ov.remove();onCode(code)};
+q("#bs-go").onclick=()=>got(q("#bs-in").value);
+q("#bs-in").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();got(q("#bs-in").value)}});
+(async()=>{try{
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error("no camera");
+stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280}},audio:false});
+if(!ov.isConnected){stop();return}
+vid.srcObject=stream;await vid.play().catch(()=>{});
+let det=null,zx=null;
+if("BarcodeDetector" in window){try{det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128","code_39","itf","codabar","data_matrix","qr_code"]})}catch(e){det=null}}
+if(!det){msg.textContent="Scanner library load ho rahi hai…";zx=await loadZXing()}
+msg.textContent="Barcode ko laal patti ke andar rakhein…";
+const cv=document.createElement("canvas"),g=cv.getContext("2d",{willReadFrequently:true});
+let reader=null;if(zx){reader=new zx.MultiFormatReader();const h=new Map();h.set(zx.DecodeHintType.POSSIBLE_FORMATS,[zx.BarcodeFormat.EAN_13,zx.BarcodeFormat.EAN_8,zx.BarcodeFormat.UPC_A,zx.BarcodeFormat.UPC_E,zx.BarcodeFormat.CODE_128,zx.BarcodeFormat.CODE_39,zx.BarcodeFormat.ITF,zx.BarcodeFormat.DATA_MATRIX,zx.BarcodeFormat.QR_CODE]);h.set(zx.DecodeHintType.TRY_HARDER,true);reader.setHints(h)}
+timer=setInterval(async()=>{if(done||busy||!vid.videoWidth)return;busy=true;
+try{const w=Math.min(vid.videoWidth,960),hh=Math.round(vid.videoHeight*w/vid.videoWidth);cv.width=w;cv.height=hh;g.drawImage(vid,0,0,w,hh);
+if(det){const r=await det.detect(cv);if(r&&r.length)got(r[0].rawValue)}
+else if(reader){try{const lum=new zx.HTMLCanvasElementLuminanceSource(cv),bm=new zx.BinaryBitmap(new zx.HybridBinarizer(lum));const r=reader.decode(bm);if(r)got(r.getText())}catch(e){}}}catch(e){}
+busy=false},280);
+}catch(e){console.warn("barcode scan",e);q("#bs-wrap").style.display="none";msg.innerHTML="⚠ Camera nahi khula (permission / library). Neeche USB scanner se scan karein ya barcode likhein."}})();
+setTimeout(()=>{try{q("#bs-in").focus()}catch(e){}},300)}
 let _jsqrP=null;
 function loadJsQR(){
 if(window.jsQR)return Promise.resolve(window.jsQR);
