@@ -1004,6 +1004,9 @@ ov.querySelector("#cf-no").onclick=()=>{ov.remove();res(false)};
 yes.onclick=()=>{ov.remove();res(true)};
 });
 }
+/* double-click guard: Save button do dafa dabne se record dobara na bane */
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest(".modal-overlay .modal-f button, .modal-overlay .modal-b button.btn-success, .modal-overlay .modal-b button.btn-primary");
+if(!b||b.hasAttribute("data-close"))return;const now=Date.now();if(b._zt&&now-b._zt<1800){e.stopImmediatePropagation();e.preventDefault();return}b._zt=now},true);
 function openModal(title,bodyHTML,footerHTML,wide){
 const ov=document.createElement("div");ov.className="modal-overlay";
 ov.innerHTML='<div class="modal '+(wide?"wide":"")+'"><div class="modal-h"><h3>'+esc(title)+'</h3><button class="modal-x">×</button></div><div class="modal-b">'+bodyHTML+'</div>'+(footerHTML?'<div class="modal-f">'+footerHTML+"</div>":"")+"</div>";
@@ -2766,6 +2769,7 @@ ov.querySelector("[data-close]").onclick=()=>ov.remove();
 ov.querySelector("#tt-save").onclick=async()=>{
 const name=$("#tt-name",ov).value.trim();
 if(!name){toast("Test name is required","error");return}
+{const ty=$("#tt-type",ov).value;if(app.tests.some(x=>x.id!==t.id&&x.type===ty&&String(x.name).trim().toLowerCase()===name.toLowerCase())){toast("⚠ '"+name+"' pehle se list mein hai — dobara add nahi ho sakta","error");return}}
 const obj=Object.assign({},t,{id:t.id||id("tst"),name:name,category:$("#tt-cat",ov).value,type:$("#tt-type",ov).value,
 price:num($("#tt-price",ov).value),active:$("#tt-active",ov).value==="active",createdAt:t.createdAt||new Date().toISOString()});
 await qPut("tests",obj);await audit(app.user.username,t.id?"UPDATE":"CREATE","tests",obj.id,name+" — "+obj.price);
@@ -3400,6 +3404,7 @@ async function pageMedicalStore(){
     }}
     ov.querySelector("#mm-save").onclick=async()=>{
       const name=ov.querySelector("#mm-name").value.trim();if(!name){toast("Medicine name is required","error");return}
+      {const co=(ov.querySelector("#mm-company")||{value:""}).value.trim().toLowerCase();if(products.some(x=>x.id!==p.id&&String(x.name).trim().toLowerCase()===name.toLowerCase()&&String(x.company||"").trim().toLowerCase()===co)){toast("⚠ '"+name+"' pehle se stock mein hai — dobara add nahi ho sakta","error");return}}
       const obj={...p,id:p.id||id("med"),kind:"product",name,rx:ov.querySelector("#mm-rx").checked,rack:ov.querySelector("#mm-rack").value.trim(),generic:ov.querySelector("#mm-generic").value.trim(),category:ov.querySelector("#mm-category").value.trim(),stripSize:Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1),boxStrips:Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1),company:ov.querySelector("#mm-company").value.trim(),batch:ov.querySelector("#mm-batch").value.trim(),expiry:ov.querySelector("#mm-expiry").value,purchasePrice:num(ov.querySelector("#mm-buy-box").value)/(Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1)*Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)),salePrice:num(ov.querySelector("#mm-sale-box").value)/(Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1)*Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)),stock:p.id?num(p.stock):num(ov.querySelector("#mm-stock").value)*(ov.querySelector("#mm-stock-unit").value==="box"?Math.max(1,num(ov.querySelector("#mm-box-strips").value)||1)*Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1):ov.querySelector("#mm-stock-unit").value==="strip"?Math.max(1,num(ov.querySelector("#mm-strip-size").value)||1):1),reorderLevel:num(ov.querySelector("#mm-reorder").value),barcode:ov.querySelector("#mm-barcode").value.trim(),updatedAt:new Date().toISOString()};
       await qPut("inventory",obj);await audit(app.user.username,p.id?"UPDATE":"CREATE","inventory",obj.id,"Medicine "+name);ov.remove();await pageMedicalStore();
     };
