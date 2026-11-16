@@ -1854,7 +1854,7 @@ $("#page").innerHTML=
 '<div class="mini-stat" style="background:var(--green-bg);border-color:var(--green-bd);color:#065f46"><div class="lbl">'+(isUS?"Studies in Period":"Patients in Period")+'</div><div class="val" id="tm-count">0</div></div>'+
 '<div class="mini-stat" style="background:var(--violet-bg);border-color:#ddd6fe;color:#5b21b6"><div class="lbl">Collection in Period</div><div class="val" id="tm-amt">—</div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory Test")+' Price List</h2><div class="sub">Prices are added to the patient bill automatically when selected at the counter</div></div>'+
-'<div class="flex g8 fw"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+((isUS||isLAB)?'<button class="btn btn-outline sm" id="tm-common">📥 ADD COMMON TESTS</button>':"")+((isUS||isLAB)?'<button class="btn btn-primary sm" id="tm-report">➕ NEW REPORT (Manual)</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
+'<div class="flex g8 fw"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+((isUS||isLAB)?'<button class="btn btn-outline sm" id="tm-common">📥 ADD COMMON TESTS</button>':"")+'<button class="btn btn-outline sm" id="tm-dedup">🧹 DUPLICATE HATAYEIN</button>'+((isUS||isLAB)?'<button class="btn btn-primary sm" id="tm-report">➕ NEW REPORT (Manual)</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
 '<div class="card-b"><input class="inp mb" id="tm-q" placeholder="🔍 Search test / category…"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tm-rows"></tbody></table></div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory")+' Work List</h2><div class="sub">Patients who have been charged for these services</div></div>'+
 '<div class="flex g8 fw"><input class="inp" type="date" id="tm-from" style="width:150px" value="'+from+'"><input class="inp" type="date" id="tm-to" style="width:150px" value="'+to+'">'+
@@ -1865,6 +1865,13 @@ $("#tm-from").addEventListener("change",e=>{from=e.target.value;drawWork()});
 $("#tm-to").addEventListener("change",e=>{to=e.target.value;drawWork()});
 if(isUS||isLAB)$("#tm-st").addEventListener("change",drawWork);
 $("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":isINJ?"Injection":"Haematology",type:type,price:0,active:true},type);if(isUS)$("#tm-report").onclick=ultrasoundReportModal;if(isLAB)$("#tm-report").onclick=()=>lbEditor({},()=>drawWork());
+$("#tm-dedup").onclick=async()=>{
+const grp={};app.tests.filter(t=>t.type===type).slice().sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||"")).forEach(t=>{const k=String(t.name).trim().toLowerCase();(grp[k]=grp[k]||[]).push(t)});
+const del=[];Object.values(grp).forEach(g=>{if(g.length>1){const keep=g.find(x=>num(x.price)>0)||g[0];g.forEach(x=>{if(x!==keep)del.push(x)})}});
+if(!del.length){toast("Koi duplicate test nahi mila ✅","info");return}
+if(!await confirmBox({title:"Duplicate Hatayein",message:del.length+" duplicate test mile (ek hi naam ke). Har naam ka ek test rakha jayega, baqi hata diye jayenge. Purani reports par asar nahi hoga. Jari rakhein?",confirmText:"HAAN, HATAYEIN"}))return;
+for(const x of del)await qDel("tests",x.id);
+await audit(app.user.username,"DELETE","tests","bulk","Removed "+del.length+" duplicate "+type+" tests");await loadData();toast(del.length+" duplicate hata diye");pageTestModule(type)};
 if($("#tm-common"))$("#tm-common").onclick=async()=>{
 const src=isLAB?LAB_EXTRA:usExtra();const have=new Set(app.tests.filter(t=>t.type===type).map(t=>t.name.trim().toLowerCase()));
 const add=src.filter(x=>!have.has(x[0].toLowerCase()));
@@ -3072,7 +3079,10 @@ async function pageMedicalStore(){
     sales=all.filter(x=>x.kind==="sale");
     customers=all.filter(x=>x.kind==="customer");
     customCats=all.filter(x=>x.kind==="category");
+    {const used=customers.map(c=>parseInt(String(c.customerNo||"").replace(/\D/g,""),10)||0);let mx=Math.max(0,...used);
+     for(const c of customers.slice().sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||""))){if(!c.customerNo){c.customerNo="C-"+String(++mx).padStart(4,"0");try{await qPut("inventory",c)}catch(e){}}}}
   };
+  const nextCustNo=()=>"C-"+String(Math.max(0,...customers.map(c=>parseInt(String(c.customerNo||"").replace(/\D/g,""),10)||0))+1).padStart(4,"0");
   const stockOf=(p)=>products.filter(x=>x.id===p.id).reduce((a)=>a,0) + num(p.stock||0);
   const expState=p=>{if(!p.expiry)return"";if(p.expiry<today())return"expired";return p.expiry<=new Date(Date.now()+90*86400000).toISOString().slice(0,10)?"soon":"ok"};
   const stockRowHTML=p=>{
@@ -3098,7 +3108,7 @@ async function pageMedicalStore(){
       '<div class="stat"><div class="ico violet-g">🧾</div><div><div class="lbl">Total Sales</div><div class="val">'+sales.length+'</div></div></div>'+
       '<div class="stat"><div class="ico amber-g">⚠️</div><div><div class="lbl">Low / Out of Stock</div><div class="val">'+products.filter(p=>num(p.stock)<=num(p.reorderLevel||5)).length+'</div></div></div></div>':'')+
       '<div class="card"><div class="card-h"><div><h2>'+sec[0]+' '+sec[1]+'</h2><div class="sub">'+sec[2]+'</div></div>'+
-      ((tab==="dashboard"||tab==="stock")?'<div class="flex gap fw"><button class="btn btn-outline sm" id="med-scan">📷 SCAN &amp; ADD</button><button class="btn btn-outline sm" id="med-bclabels">🏷 BARCODE LABELS</button><button class="btn btn-success sm" id="med-new">＋ ADD MEDICINE</button></div>':'')+'</div>'+
+      ((tab==="stock")?'<div class="flex gap fw"><button class="btn btn-outline sm" id="med-scan">📷 SCAN &amp; ADD</button><button class="btn btn-outline sm" id="med-bclabels">🏷 BARCODE LABELS</button><button class="btn btn-success sm" id="med-new">＋ ADD MEDICINE</button></div>':'')+'</div>'+
       '<div class="card-b"><div id="med-panel"></div></div></div></div>';
     if(el("med-new"))el("med-new").onclick=()=>medicineModal();
     if(el("med-scan"))el("med-scan").onclick=()=>medicineModal(null,{autoScan:true});
@@ -3115,8 +3125,7 @@ async function pageMedicalStore(){
       const low=products.filter(x=>num(x.stock)<=num(x.reorderLevel||5)).slice(0,8);
       const exp=products.filter(x=>x.expiry&&x.expiry<=lim).sort((a,b)=>a.expiry.localeCompare(b.expiry)).slice(0,8);
       const recent=sales.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).slice(0,8);
-      panel.innerHTML='<div class="flex fw g8 mb"><button class="btn btn-primary" id="d-bill">🧾 New Bill</button><button class="btn btn-success" id="d-buy">🛒 New Purchase</button><button class="btn btn-neutral" id="d-stock">📦 View Stock</button></div>'+
-      '<div class="grid g4 mb">'+
+      panel.innerHTML='<div class="grid g4 mb">'+
       '<div class="mini-stat" style="background:var(--green-bg);border-color:var(--green-bd)"><div class="lbl">Today Sales</div><div class="val">'+money(todaySales.reduce((a,x)=>a+num(x.total),0))+'</div></div>'+
       '<div class="mini-stat" style="background:var(--blue-50);border-color:var(--blue-100)"><div class="lbl">Today Bills</div><div class="val">'+todaySales.length+'</div></div>'+
       '<div class="mini-stat" style="background:var(--amber-bg);border-color:var(--amber-bd)"><div class="lbl">Total Due (Udhaar)</div><div class="val">'+money(dueAll)+'</div></div>'+
@@ -3127,8 +3136,7 @@ async function pageMedicalStore(){
       (exp.length?exp.map(x=>'<tr><td>'+esc(x.name)+'</td><td><span class="badge amber">'+esc(x.expiry)+'</span></td></tr>').join(""):'<tr class="empty-row"><td colspan="2">No near-expiry medicine</td></tr>')+'</tbody></table></div></div></div>'+
       '<h3 class="mb">Recent Bills</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Bill No.</th><th>Date</th><th>Customer</th><th>Total</th><th>Due</th><th>Print</th></tr></thead><tbody>'+
       (recent.length?recent.map(x=>'<tr><td class="mr">'+esc(x.billNo)+'</td><td>'+fmtDate(x.date)+'</td><td>'+esc(x.customerName)+'</td><td>'+money(x.total)+'</td><td>'+money(x.due)+'</td><td><button class="btn btn-neutral sm" data-med-print="'+esc(x.id)+'">🖨</button></td></tr>').join(""):'<tr class="empty-row"><td colspan="6">No bills yet</td></tr>')+'</tbody></table></div>';
-      el("d-bill").onclick=()=>go("ms_sale");el("d-buy").onclick=()=>purchaseModal();el("d-stock").onclick=()=>go("ms_stock");
-      panel.querySelectorAll("[data-med-print]").forEach(b=>b.onclick=()=>{const x=sales.find(v=>v.id===b.dataset.medPrint);if(x)printSale(x)});
+            panel.querySelectorAll("[data-med-print]").forEach(b=>b.onclick=()=>{const x=sales.find(v=>v.id===b.dataset.medPrint);if(x)printSale(x)});
     }else if(tab==="stock"){
       const cats=[...new Set(products.map(p=>p.category).filter(Boolean))].sort();
       panel.innerHTML='<div class="ms-filters"><input class="inp" id="med-search" placeholder="🔍 Search name, generic, company, batch, barcode, rack...">'+
@@ -3184,9 +3192,9 @@ async function pageMedicalStore(){
       panel.querySelectorAll("[data-sale-edit]").forEach(b=>b.onclick=()=>editSale(sales.find(s=>s.id===b.dataset.saleEdit)));
       panel.querySelectorAll("[data-sale-del]").forEach(b=>b.onclick=()=>deleteSale(b.dataset.saleDel));
     }else if(tab==="customers"){
-      panel.innerHTML='<div class="field"><input class="inp" id="med-customer-search" placeholder="Search customer by name or mobile..."></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Customer</th><th>Mobile</th><th>Address</th><th>Total Bills</th><th>Total Purchase</th><th>Outstanding</th><th>Action</th></tr></thead><tbody id="med-customer-rows">'+
-      customers.map(c=>{const cs=sales.filter(s=>s.customerId===c.id);return '<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.mobile||"—")+'</td><td>'+esc(c.address||"—")+'</td><td>'+cs.length+'</td><td>'+money(cs.reduce((a,s)=>a+num(s.total),0))+'</td><td>'+money(cs.reduce((a,s)=>a+Math.max(0,num(s.total)-num(s.paid)),0))+'</td><td><button class="btn btn-outline sm" data-cust-history="'+esc(c.id)+'">History</button> <button class="btn btn-danger sm" data-cust-del="'+esc(c.id)+'">Delete</button></td></tr>'}).join("")+
-      (customers.length?"":'<tr class="empty-row"><td colspan="7">Customer records will appear here after their first bill.</td></tr>')+'</tbody></table></div>';
+      panel.innerHTML='<div class="field"><input class="inp" id="med-customer-search" placeholder="Search customer by ID, name or mobile..."></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>ID</th><th>Customer</th><th>Mobile</th><th>Address</th><th>Total Bills</th><th>Total Purchase</th><th>Outstanding</th><th>Action</th></tr></thead><tbody id="med-customer-rows">'+
+      customers.map(c=>{const cs=sales.filter(s=>s.customerId===c.id);return '<tr><td><b style="font-family:monospace">'+esc(c.customerNo||"—")+'</b></td><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.mobile||"—")+'</td><td>'+esc(c.address||"—")+'</td><td>'+cs.length+'</td><td>'+money(cs.reduce((a,s)=>a+num(s.total),0))+'</td><td>'+money(cs.reduce((a,s)=>a+Math.max(0,num(s.total)-num(s.paid)),0))+'</td><td><button class="btn btn-outline sm" data-cust-history="'+esc(c.id)+'">History</button> <button class="btn btn-danger sm" data-cust-del="'+esc(c.id)+'">Delete</button></td></tr>'}).join("")+
+      (customers.length?"":'<tr class="empty-row"><td colspan="8">Customer records will appear here after their first bill.</td></tr>')+'</tbody></table></div>';
       panel.querySelectorAll("[data-cust-del]").forEach(b=>b.onclick=()=>deleteCustomer(b.dataset.custDel));
       panel.querySelectorAll("[data-cust-history]").forEach(b=>b.onclick=()=>customerHistory(customers.find(c=>c.id===b.dataset.custHistory)));
       el("med-customer-search").oninput=e=>{const q=e.target.value.toLowerCase();el("med-customer-rows").querySelectorAll("tr").forEach(tr=>tr.style.display=tr.innerText.toLowerCase().includes(q)?"":"none")};
@@ -3633,6 +3641,7 @@ async function pageMedicalStore(){
         '<div class="pos-grid" id="pos-grid"></div></div>'+
       '<div class="pos-right"><div class="pos-h">🛒 Current Sale</div><div id="pos-cart"></div>'+
         '<div class="pos-seg"><button type="button" data-st="walk" class="on">🚶 Walk-in</button><button type="button" data-st="credit">📒 Credit / Udhaar</button></div>'+
+        '<div class="field"><label>🔎 Purana Customer — ID / Naam / Mobile</label><input class="inp" id="ms-cid" list="ms-cid-list" autocomplete="off" placeholder="Jaise C-0003 ya naam likhein, phir Enter"><datalist id="ms-cid-list">'+customers.map(c=>'<option value="'+esc((c.customerNo||"")+" · "+c.name+(c.mobile?" · "+c.mobile:""))+'"></option>').join("")+'</datalist></div>'+
         '<div class="grid g2"><div class="field"><label>Mobile</label><input class="inp" id="ms-mobile" inputmode="tel" placeholder="03xxxxxxxxx"></div><div class="field"><label>Customer Name</label><input class="inp" id="ms-name" placeholder="Walk-in Customer"></div></div>'+
         '<div class="hint" id="ms-customer-history" style="margin:-4px 0 8px"></div>'+
         '<div class="field"><label>Address (optional)</label><input class="inp" id="ms-address"></div>'+
@@ -3756,13 +3765,24 @@ async function pageMedicalStore(){
       saleType=b.dataset.st;ov.querySelectorAll("[data-st]").forEach(x=>x.classList.toggle("on",x===b));
       Q("#ms-method").value=saleType==="credit"?"Credit / Due":"Cash";paidTouched=false;updateTotals();
     });
+    let selCust=null;
+    const showCust=c=>{const hint=Q("#ms-customer-history");selCust=c;
+        Q("#ms-name").value=c.name;Q("#ms-address").value=c.address||"";
+        const old=sales.filter(x=>x.customerId===c.id),due=old.reduce((a,x)=>a+Math.max(0,num(x.total)-num(x.paid)),0);
+        hint.innerHTML="🆔 <b>"+esc(c.customerNo||"")+"</b> — Existing customer, "+old.length+" bills"+(due>0?' · <b style="color:#b45309">Purani baqaya: '+money(due)+'</b>':'')+' <button type="button" id="ms-show-history" class="btn btn-outline sm">History</button>';
+        Q("#ms-show-history").onclick=()=>customerHistory(c)};
+    const findCust=v=>{v=String(v||"").trim();if(!v)return null;const low=v.toLowerCase();const code=(v.split("·")[0]||"").trim().toLowerCase();const dg=v.replace(/\D/g,"");
+      return customers.find(c=>c.customerNo&&(c.customerNo.toLowerCase()===code||(dg&&!/[a-z]/i.test(v.replace(/c-?/i,""))&&v.length<=6&&parseInt(c.customerNo.replace(/\D/g,""),10)===parseInt(dg,10))))||customers.find(c=>c.mobile&&dg.length>=7&&c.mobile.replace(/\D/g,"")===dg)||customers.find(c=>c.name&&c.name.toLowerCase()===low)||null};
+    const doCid=()=>{const v=Q("#ms-cid").value;if(!v.trim())return;const c=findCust(v);if(c){Q("#ms-mobile").value=c.mobile||"";showCust(c);Q("#ms-cid").value=(c.customerNo||"")+" · "+c.name}else toast("Is ID / naam ka customer nahi mila","error")};
+    Q("#ms-cid").addEventListener("change",doCid);Q("#ms-cid").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doCid()}});
     Q("#ms-mobile").oninput=()=>{
       const m=Q("#ms-mobile").value.trim(),c=customers.find(x=>m&&x.mobile===m),hint=Q("#ms-customer-history");
-      if(c){Q("#ms-name").value=c.name;Q("#ms-address").value=c.address||"";
+      if(c){showCust(c);}
+      else if(false){Q("#ms-name").value=c.name;Q("#ms-address").value=c.address||"";
         const old=sales.filter(x=>x.customerId===c.id),due=old.reduce((a,x)=>a+Math.max(0,num(x.total)-num(x.paid)),0);
         hint.innerHTML="Existing customer — "+old.length+" bills"+(due>0?' · <b style="color:#b45309">Purani baqaya: '+money(due)+'</b>':'')+' <button type="button" id="ms-show-history" class="btn btn-outline sm">History</button>';
         Q("#ms-show-history").onclick=()=>customerHistory(c);
-      }else hint.textContent="";
+      }else{hint.textContent="";if(selCust&&selCust.mobile!==m)selCust=null}
     };
     Q("#ms-discount").oninput=updateTotals;
     Q("#ms-paid").oninput=()=>{paidTouched=true;updateTotals()};
@@ -3803,7 +3823,7 @@ async function pageMedicalStore(){
       for(const x of cart){const p=prod(x.productId);if(!p||usedBase(x.productId)>num(p.stock)){toast("Stock badal gaya — dobara check karein","error");return}}
       const t=calc(),subtotal=t.sub,discount=t.disc,total=t.total,paid=Math.min(total,num(Q("#ms-paid").value)),due=Math.max(0,r2(total-paid));
       const nameRaw=Q("#ms-name").value.trim(),mobile=Q("#ms-mobile").value.trim(),address=Q("#ms-address").value.trim();
-      if((saleType==="credit"||due>0)&&(!nameRaw||!mobile)){toast("Udhaar / baqaya ke liye customer ka naam aur mobile zaroori hai","error");return}
+      if((saleType==="credit"||due>0)&&(!nameRaw||(!mobile&&!selCust))){toast("Udhaar / baqaya ke liye customer ka naam aur mobile zaroori hai","error");return}
       const doctor=Q("#ms-doctor").value.trim(),rxNo=Q("#ms-rxno").value.trim();
       if(cart.some(x=>x.rx)&&!doctor){
         if(!await confirmBox({title:"Prescription (Rx)",message:"Is bill mein Rx wali dawai hai lekin doctor ka naam nahi likha. Phir bhi save karein?",confirmText:"SAVE ANYWAY"}))return;
@@ -3812,8 +3832,8 @@ async function pageMedicalStore(){
       try{
         const name=nameRaw||"Walk-in Customer";let customer=null;
         if(nameRaw||mobile){
-          customer=customers.find(x=>mobile&&x.mobile===mobile);
-          if(!customer)customer={id:id("cust"),kind:"customer",name,mobile,address,createdAt:new Date().toISOString()};
+          customer=(selCust&&customers.find(x=>x.id===selCust.id))||customers.find(x=>mobile&&x.mobile===mobile);
+          if(!customer)customer={id:id("cust"),kind:"customer",customerNo:nextCustNo(),name,mobile,address,createdAt:new Date().toISOString()};
           else customer=Object.assign({},customer,{name,address,updatedAt:new Date().toISOString()});
         }
         const bill={id:id("sale"),kind:"sale",billNo:"MS-"+today().replace(/-/g,"")+"-"+String(sales.length+1).padStart(4,"0"),date:today(),time:timeNow(),customerId:customer?customer.id:"",customerName:name,mobile,address,method:Q("#ms-method").value,saleType,doctor,rxNo,
@@ -4009,7 +4029,7 @@ _zxP=(async()=>{for(const u of urls){try{await loadScript(u);if(window.ZXing)ret
 return _zxP}
 function barcodeScanModal(title,onCode){
 const ov=openModal(title||"📷 Barcode Scan",
-'<div style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden" id="bs-wrap"><video id="bs-v" playsinline muted autoplay style="width:100%;max-height:48vh;display:block;object-fit:cover"></video><div style="position:absolute;left:8%;right:8%;top:38%;height:24%;border:3px solid rgba(255,255,255,.9);border-radius:10px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
+'<div style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden;aspect-ratio:4/3;max-height:46vh;width:100%;margin:0 auto" id="bs-wrap"><video id="bs-v" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover"></video><div style="position:absolute;left:8%;right:8%;top:38%;height:24%;border:3px solid rgba(255,255,255,.9);border-radius:10px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
 '<div id="bs-msg" class="hint" style="text-align:center;margin:8px 0">Camera shuru ho raha hai…</div>'+
 '<div class="flex g8"><input class="inp" id="bs-in" placeholder="Ya yahan click karke USB scanner se scan karein / barcode likhein, Enter" autocomplete="off" style="flex:1"><button class="btn btn-outline" id="bs-go" type="button">OK</button></div>',
 '<button class="btn btn-neutral" data-close>Close</button>',true);
@@ -4054,7 +4074,7 @@ const dg=k.replace(/\D/g,"");
 return app.staff.find(s=>String(s.staffId||"").toLowerCase()===k||String(s.id||"").toLowerCase()===k||(dg.length>=10&&String(s.cnic||"").replace(/\D/g,"")===dg))||null}
 function staffScanModal(onDone){
 const ov=openModal("📷 Scan Staff ID Card",
-'<div id="sc-wrap" style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden"><video id="sc-v" playsinline muted autoplay style="width:100%;max-height:50vh;display:block;object-fit:cover"></video><div style="position:absolute;inset:16% 18%;border:3px solid rgba(255,255,255,.9);border-radius:14px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
+'<div id="sc-wrap" style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden;aspect-ratio:1/1;max-height:46vh;margin:0 auto"><video id="sc-v" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover"></video><div style="position:absolute;inset:16% 18%;border:3px solid rgba(255,255,255,.9);border-radius:14px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
 '<div id="sc-msg" class="hint" style="text-align:center;margin:8px 0">Camera shuru ho raha hai…</div>'+
 '<div class="flex g8"><input class="inp" id="sc-in" placeholder="Ya Staff ID likhein / USB scanner se scan karein, phir Enter" autocomplete="off" style="flex:1"><button class="btn btn-outline" id="sc-go" type="button">OK</button></div>'+
 '<div id="sc-res" class="mt"></div>','<button class="btn btn-neutral" data-close>Close</button>',true);
