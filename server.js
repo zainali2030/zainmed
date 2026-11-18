@@ -133,6 +133,14 @@ async function syncAdmin(c) {
     fullName: c.admin_user + " (Administrator)", role: "admin",
     permissions: ALL_PERMS.filter(p => p !== "users" && p !== "settings"), active: true, createdAt: "2025-01-01T00:00:00.000Z"
   };
+  /* Owner ne admin ki permissions custom ki hon to unhein barkarar rakho */
+  try {
+    const [old] = await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?", [c.code, ADMIN_ID]);
+    if (old.length) {
+      const o = typeof old[0].data === "string" ? JSON.parse(old[0].data) : old[0].data;
+      if (o && o.custom) { user.custom = true; user.permissions = o.permissions || user.permissions; user.denied = o.denied || []; }
+    }
+  } catch (e) {}
   await pool.query(
     "INSERT INTO records (clinic,store,id,data) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
     [c.code, "users", ADMIN_ID, JSON.stringify(user)]);
