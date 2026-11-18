@@ -526,15 +526,16 @@ body:has(.modal-overlay) #zm-dock{display:none!important}
 }
 @media(min-width:1024px){.content{padding-right:76px}}
 @media print{#zm-dock,#zm-bnav,#zm-docbar{display:none!important}body::before{display:none!important}}
-/* ===== Neon glow buttons (hover par rainbow glow) - sidebar par nahi ===== */
-.btn,.icon-btn{position:relative;isolation:isolate;overflow:hidden}
-.btn::before,.icon-btn::before{content:"";position:absolute;top:-2px;left:-2px;z-index:-1;width:calc(100% + 4px);height:calc(100% + 4px);background:linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000);background-size:400%;filter:blur(5px);border-radius:inherit;animation:glowing 20s linear infinite;opacity:0;transition:opacity .3s ease-in-out;pointer-events:none}
-.btn:hover:not(:disabled)::before,.icon-btn:hover:not(:disabled)::before{opacity:1}
-.btn-neutral:hover:not(:disabled),.btn-outline:hover:not(:disabled),.icon-btn:hover:not(:disabled){color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}
-.sidebar .btn::before,.sidebar .icon-btn::before{display:none}
+/* ===== Neon glow (hover par rainbow glow) - sidebar aur mobile bottom-nav par nahi ===== */
+:where(button,.btn,.icon-btn,.test-chip,.net-pill):where(:not(.nav-item,.sidebar *,#zm-bnav *)){position:relative;isolation:isolate;overflow:hidden}
+:where(button,.btn,.icon-btn,.test-chip,.net-pill):where(:not(.nav-item,.sidebar *,#zm-bnav *))::before{content:"";position:absolute;top:-2px;left:-2px;z-index:-1;width:calc(100% + 4px);height:calc(100% + 4px);background:linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000);background-size:400%;filter:blur(5px);border-radius:inherit;animation:glowing 20s linear infinite;opacity:0;transition:opacity .3s ease-in-out;pointer-events:none}
+:where(button,.btn,.icon-btn,.test-chip,.net-pill):where(:not(.nav-item,.sidebar *,#zm-bnav *)):hover:not(:disabled)::before{opacity:1}
+:where(.btn-neutral,.btn-outline,.icon-btn,.test-chip,.ag-chip,.net-pill):hover:not(:disabled){color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+.test-chip:hover .price{color:#fff}
+.tbl tbody tr:hover td{background-image:linear-gradient(90deg,rgba(255,0,0,.16),rgba(255,115,0,.16),rgba(255,251,0,.16),rgba(72,255,0,.16),rgba(0,255,213,.16),rgba(0,43,255,.16),rgba(122,0,255,.16),rgba(255,0,200,.16),rgba(255,0,0,.16));background-size:400vw 100%;background-attachment:fixed;animation:glowing 20s linear infinite}
 @keyframes glowing{0%{background-position:0 0}50%{background-position:400% 0}100%{background-position:0 0}}
-@media(prefers-reduced-motion:reduce){.btn::before,.icon-btn::before{animation:none}}
-@media print{.btn::before,.icon-btn::before{display:none!important}}
+@media(prefers-reduced-motion:reduce){:where(button,.btn,.icon-btn,.test-chip,.net-pill)::before,.tbl tbody tr:hover td{animation:none}}
+@media print{:where(button,.btn,.icon-btn,.test-chip,.net-pill)::before{display:none!important}.tbl tbody tr:hover td{background-image:none!important}}
 </style>
 </head>
 <body>
