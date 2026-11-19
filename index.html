@@ -532,25 +532,17 @@ body:has(.modal-overlay) #zm-dock{display:none!important}
 :where(button,.btn,.icon-btn,.test-chip,.net-pill):where(:not(.nav-item,.sidebar *,#zm-bnav *)):hover:not(:disabled)::before{opacity:1}
 :where(.btn-neutral,.btn-outline,.icon-btn,.test-chip,.ag-chip,.net-pill):hover:not(:disabled){color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}
 .test-chip:hover .price{color:#fff}
-/* row hover: water ripple (see WATER block) */
+.tbl tbody tr:hover td{background-image:linear-gradient(90deg,rgba(255,0,0,.16),rgba(255,115,0,.16),rgba(255,251,0,.16),rgba(72,255,0,.16),rgba(0,255,213,.16),rgba(0,43,255,.16),rgba(122,0,255,.16),rgba(255,0,200,.16),rgba(255,0,0,.16));background-size:400vw 100%;background-attachment:fixed;animation:glowing 20s linear infinite}
 @keyframes glowing{0%{background-position:0 0}50%{background-position:400% 0}100%{background-position:0 0}}
 @media(prefers-reduced-motion:reduce){:where(button,.btn,.icon-btn,.test-chip,.net-pill)::before,.tbl tbody tr:hover td{animation:none}}
 @media print{:where(button,.btn,.icon-btn,.test-chip,.net-pill)::before{display:none!important}.tbl tbody tr:hover td{background-image:none!important}}
-/* ===== WATER effect: mouse jahan ho wahan paani ki lehrein (ripples) ===== */
-@property --ph{syntax:"<length>";inherits:false;initial-value:0px}
-@keyframes waterRing{from{--ph:0px}to{--ph:38px}}
-@keyframes waterWave{from{background-position:0 0,0 11px}to{background-position:90px 0,0 11px}}
-.card,.stat,.nav-item,#zm-bnav button{position:relative}
-.stat{overflow:hidden;isolation:isolate}
-:where(.card,.stat,.nav-item,#zm-bnav button)::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .35s ease;z-index:1;background:radial-gradient(circle 120px at var(--wx,50%) var(--wy,50%),rgba(125,211,252,.28),transparent 70%),repeating-radial-gradient(circle at var(--wx,50%) var(--wy,50%),rgba(56,189,248,0) var(--ph),rgba(56,189,248,.30) calc(var(--ph) + 7px),rgba(56,189,248,0) calc(var(--ph) + 14px),rgba(56,189,248,0) calc(var(--ph) + 38px));animation:waterRing 2.4s linear infinite}
-:where(.card,.stat,.nav-item,#zm-bnav button):hover::after{opacity:1}
-.stat::before{content:"";position:absolute;left:0;right:0;top:0;height:100%;z-index:0;pointer-events:none;transform:translateY(100%);transition:transform .7s cubic-bezier(.22,.8,.3,1);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='12' viewBox='0 0 90 12'%3E%3Cpath d='M0 6 Q22.5 0 45 6 T90 6 V12 H0Z' fill='%2338bdf8' fill-opacity='.32'/%3E%3C/svg%3E") repeat-x 0 0/90px 12px,linear-gradient(rgba(56,189,248,.30),rgba(14,165,233,.14)) no-repeat 0 11px/100% 100%;animation:waterWave 2.6s linear infinite}
-.stat:hover::before{transform:translateY(52%)}
-.stat>*{position:relative;z-index:2}
-.tbl tbody tr:hover td{background-image:radial-gradient(circle 150px at var(--cx,50%) var(--cy,50%),rgba(125,211,252,.35),transparent 70%),repeating-radial-gradient(circle at var(--cx,50%) var(--cy,50%),rgba(56,189,248,0) var(--ph),rgba(56,189,248,.30) calc(var(--ph) + 7px),rgba(56,189,248,0) calc(var(--ph) + 14px),rgba(56,189,248,0) calc(var(--ph) + 38px));background-attachment:fixed;animation:waterRing 2.4s linear infinite}
-.inp:hover:not(.login-glass *):not(:disabled),.inp:focus:not(.login-glass *){border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.3),0 0 14px rgba(56,189,248,.35);background-image:radial-gradient(circle 90px at var(--wx,50%) var(--wy,50%),rgba(125,211,252,.35),transparent 70%),repeating-radial-gradient(circle at var(--wx,50%) var(--wy,50%),rgba(56,189,248,0) var(--ph),rgba(56,189,248,.30) calc(var(--ph) + 7px),rgba(56,189,248,0) calc(var(--ph) + 14px),rgba(56,189,248,0) calc(var(--ph) + 38px));animation:waterRing 2.4s linear infinite}
-@media(prefers-reduced-motion:reduce){:where(.card,.stat,.nav-item,#zm-bnav button)::after,.stat::before,.tbl tbody tr:hover td,.inp:hover,.inp:focus{animation:none}}
-@media print{:where(.card,.stat,.nav-item,#zm-bnav button)::after,.stat::before{display:none!important}.tbl tbody tr:hover td{background-image:none!important}}
+/* ===== Rainbow border line (mouse hover/focus) - all boxes, inputs, sidebar ===== */
+.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button{position:relative}
+:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after{content:"";position:absolute;inset:0;padding:2px;border-radius:inherit;background:linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000);background-size:400%;animation:glowing 20s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s ease-in-out;pointer-events:none;z-index:3}
+:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button):hover::after{opacity:1}
+.inp:hover:not(.login-glass *):not(:disabled):not([readonly]),.inp:focus:not(.login-glass *){border:2px solid transparent;padding:9px 11px;background:linear-gradient(rgba(255,255,255,.96),rgba(255,255,255,.96)) padding-box,linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000) border-box;background-size:auto,400%;animation:glowing 20s linear infinite;box-shadow:0 0 12px rgba(56,189,248,.4)}
+@media(prefers-reduced-motion:reduce){:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after,.inp:hover,.inp:focus{animation:none}}
+@media print{:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after{display:none!important}}
 </style>
 </head>
 <body>
@@ -5231,12 +5223,6 @@ function build(wrap){
 }
 function scan(){var w=document.querySelector(".login-wrap");if(w)build(w)}
 new MutationObserver(scan).observe(document.body,{childList:true,subtree:true});scan();
-})();
-</script>
-<script>
-/* water effect: mouse position track */
-(function(){var SEL=".stat,.card,.nav-item,.inp,#zm-bnav button,.tbl tbody tr",raf=0,lx=0,ly=0,lt=null;
-document.addEventListener("pointermove",function(e){lx=e.clientX;ly=e.clientY;lt=e.target;if(raf)return;raf=requestAnimationFrame(function(){raf=0;var n=lt&&lt.closest?lt.closest(SEL):null;while(n){var r=n.getBoundingClientRect();n.style.setProperty("--wx",(lx-r.left)+"px");n.style.setProperty("--wy",(ly-r.top)+"px");n.style.setProperty("--cx",lx+"px");n.style.setProperty("--cy",ly+"px");n=n.parentElement?n.parentElement.closest(SEL):null}})},{passive:true});
 })();
 </script>
 </body></html>
