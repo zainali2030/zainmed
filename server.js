@@ -13,6 +13,7 @@ const mysql = require("mysql2/promise");
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
+const crypto = require("crypto");
 
 /* ---------- CONFIG: config.json ya environment variables ---------- */
 let CFG = {};
@@ -29,8 +30,10 @@ const DB = {
   ssl:      ["1","true","yes"].includes(String(pick("DB_SSL", "dbSsl", "")).toLowerCase()) ? { minVersion: "TLSv1.2", rejectUnauthorized: true } : undefined
 };
 const IS_VERCEL = !!process.env.VERCEL;   /* Vercel par server.listen() nahi chalta, app export hoti hai */
-const MASTER_KEY  = pick("MASTER_KEY", "masterKey", "ChangeMe@123");   /* master panel ka password */
-const MASTER_USER = pick("MASTER_USER", "masterUser", "owner");                  /* owner ka naam */
+const MASTER_KEY  = pick("MASTER_KEY", "masterKey", "");   /* required: unique random secret */
+const MASTER_USER = pick("MASTER_USER", "masterUser", "owner");
+const AUTH_SECRET = pick("AUTH_SECRET", "authSecret", "");
+const SESSION_TTL_SECONDS = 8 * 60 * 60;                  /* owner ka naam */
 const WEBHOOK_KEY = pick("WEBHOOK_KEY", "webhookKey", "");               /* WhatsApp / n8n webhook ki key */
 const GEMINI_KEY  = pick("GEMINI_API_KEY", "geminiKey", "");
 const GEMINI_MODEL= pick("GEMINI_MODEL", "geminiModel", "gemini-2.5-flash");
@@ -45,6 +48,7 @@ const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultr
                    "appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const DEFAULT_CLINIC = "abraj";
 const ADMIN_ID = "usr_faheem_admin";
+const LOGIN_ATTEMPTS = new Map();
 
 let pool = null;
 
@@ -101,12 +105,20 @@ async function initDB() {
     "address VARCHAR(300) NOT NULL DEFAULT '', " +
     "phone VARCHAR(60) NOT NULL DEFAULT '', " +
     "admin_user VARCHAR(60) NOT NULL, " +
-    "admin_pass VARCHAR(100) NOT NULL, " +
+    "admin_pass VARCHAR(255) NOT NULL, " +
     "active TINYINT NOT NULL DEFAULT 1, " +
     "expiry DATE NULL, " +
     "note VARCHAR(300) NOT NULL DEFAULT '', " +
     "clinic_type VARCHAR(20) NOT NULL DEFAULT 'clinic', " +
     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // Passwords in the clinics table are migrated to salted scrypt hashes (one-way).
+  await pool.query("ALTER TABLE clinics MODIFY admin_pass VARCHAR(255) NOT NULL");
+  const [clinicPasswords] = await pool.query("SELECT code,admin_pass FROM clinics");
+  for (const cp of clinicPasswords) {
+    if (cp.admin_pass && !String(cp.admin_pass).startsWith("scrypt$"))
+      await pool.query("UPDATE clinics SET admin_pass=? WHERE code=?", [hashPassword(cp.admin_pass), cp.code]);
+  }
 
   const [typeCols] = await pool.query(
     "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='clinics' AND COLUMN_NAME='clinic_type'",
@@ -128,21 +140,16 @@ async function initDB() {
 
 /* Har clinic ka admin account server khud bana/update kar deta hai */
 async function syncAdmin(c) {
-  const user = {
-    id: ADMIN_ID, username: c.admin_user, password: c.admin_pass,
+  const [existing] = await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?", [c.code, ADMIN_ID]);
+  const old = existing.length ? parseRow(existing[0]) : null;
+  const storedPass = String(c.admin_pass || "");
+  const user = Object.assign({}, old || {}, {
+    id: ADMIN_ID, username: c.admin_user,
+    password: old && old.password ? old.password : (storedPass.startsWith("scrypt$") ? storedPass : hashPassword(storedPass)),
     fullName: c.admin_user + " (Administrator)", role: "admin",
-    permissions: ALL_PERMS.filter(p => p !== "users" && p !== "settings"), active: true, createdAt: "2025-01-01T00:00:00.000Z"
-  };
-  /* Owner ne admin ki permissions custom ki hon to unhein barkarar rakho */
-  try {
-    const [old] = await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?", [c.code, ADMIN_ID]);
-    if (old.length) {
-      const o = typeof old[0].data === "string" ? JSON.parse(old[0].data) : old[0].data;
-      if (o && o.custom) { user.custom = true; user.permissions = o.permissions || user.permissions; user.denied = o.denied || []; }
-    }
-  } catch (e) {}
-  await pool.query(
-    "INSERT INTO records (clinic,store,id,data) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
+    permissions: ALL_PERMS.slice(), active: true, createdAt: old && old.createdAt || "2025-01-01T00:00:00.000Z"
+  });
+  await pool.query("INSERT INTO records (clinic,store,id,data) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
     [c.code, "users", ADMIN_ID, JSON.stringify(user)]);
 }
 
@@ -152,7 +159,7 @@ async function getClinic(code) {
   const hit = clinicCache.get(code);
   if (hit && Date.now() - hit.t < 10000) return hit.v;
   const [rows] = await pool.query(
-    "SELECT code,name,address,phone,admin_user,admin_pass,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note,clinic_type FROM clinics WHERE code=?", [code]);
+    "SELECT code,name,address,phone,admin_user,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note,clinic_type FROM clinics WHERE code=?", [code]);
   const v = rows.length ? rows[0] : null;
   clinicCache.set(code, { t: Date.now(), v });
   return v;
@@ -165,9 +172,69 @@ function clinicProblem(c) {
   return null;
 }
 
+/* ---------- AUTHENTICATION + SIGNED SESSIONS ---------- */
+function b64url(v) { return Buffer.from(v).toString("base64url"); }
+function signToken(payload) {
+  const head = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = b64url(JSON.stringify(payload));
+  const data = head + "." + body;
+  const sig = crypto.createHmac("sha256", AUTH_SECRET).update(data).digest("base64url");
+  return data + "." + sig;
+}
+function verifyToken(token) {
+  try {
+    const parts = String(token || "").split(".");
+    if (parts.length !== 3) return null;
+    const data = parts[0] + "." + parts[1];
+    const expected = crypto.createHmac("sha256", AUTH_SECRET).update(data).digest();
+    const actual = Buffer.from(parts[2], "base64url");
+    if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
+    const p = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    if (!p.exp || p.exp <= Math.floor(Date.now() / 1000)) return null;
+    return p;
+  } catch (_) { return null; }
+}
+function safeEqual(a, b) {
+  const aa = Buffer.from(String(a || "")); const bb = Buffer.from(String(b || ""));
+  return aa.length === bb.length && crypto.timingSafeEqual(aa, bb);
+}
+function checkPassword(stored, supplied) {
+  const v = String(stored || "");
+  if (v.startsWith("scrypt$")) {
+    const parts = v.split("$"); if (parts.length !== 3) return false;
+    try { const salt = Buffer.from(parts[1], "hex"); const expected = Buffer.from(parts[2], "hex");
+      const actual = crypto.scryptSync(String(supplied || ""), salt, expected.length);
+      return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+    } catch (_) { return false; }
+  }
+  // Legacy password support: successful login upgrades the stored password to scrypt.
+  return safeEqual(v, supplied);
+}
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(String(password), salt, 64);
+  return "scrypt$" + salt.toString("hex") + "$" + hash.toString("hex");
+}
+function hasMasterCredentials(req) {
+  return securitySetupReady() && String(req.get("x-master-user") || "").trim().toLowerCase() === String(MASTER_USER).toLowerCase() && safeEqual(req.get("x-master-key"), MASTER_KEY);
+}
+function rateLimitLogin(key) {
+  const now = Date.now(); let x = LOGIN_ATTEMPTS.get(key) || { count: 0, until: 0 };
+  if (x.until > now) return Math.ceil((x.until - now) / 1000);
+  if (x.until && x.until <= now) x = { count: 0, until: 0 };
+  return 0;
+}
+
 /* ---------- express app ---------- */
 const app = express();
-app.use(cors());
+app.use(cors({ origin: true, methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "X-Clinic", "X-Master-User", "X-Master-Key"] }));
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 /* JSON jawab gzip ho kar jata hai (data 5-10 guna chhota => zyada clinics ho to bhi server/net halka rehta hai) */
 app.use((req, res, next) => {
   if (!/gzip/.test(String(req.headers["accept-encoding"] || ""))) return next();
@@ -248,8 +315,8 @@ function ensureReady() {
   return readyP;
 }
 app.get("/api/health", async (req, res) => {
-  try { await ensureReady(); res.json({ ok: true, db: "connected", host: DB.host, port: DB.port, ssl: !!DB.ssl, database: DB.database }); }
-  catch (e) { res.status(503).json({ ok: false, db: "FAILED", error: errMsg(e), host: DB.host, port: DB.port, ssl: !!DB.ssl, database: DB.database, user: DB.user }); }
+  try { await ensureReady(); res.json({ ok: true, db: "connected" }); }
+  catch (e) { res.status(503).json({ ok: false, db: "FAILED", error: "Database unavailable. Check server configuration." }); }
 });
 app.use("/api", async (req, res, next) => {
   try { await ensureReady(); next(); }
@@ -263,21 +330,72 @@ app.get("/api/clinic/:code", async (req, res) => {
     const c = await getClinic(code);
     const p = clinicProblem(c);
     if (p) return res.status(p.status).json({ error: p.msg });
-    res.json({ code: c.code, name: c.name, address: c.address, phone: c.phone, adminUser: c.admin_user, expiry: c.expiry, type: c.clinic_type || "clinic" });
+    res.json({ code: c.code, name: c.name, address: c.address, phone: c.phone, expiry: c.expiry, type: c.clinic_type || "clinic" });
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 
+/* ---------- AUTH API: credentials are checked on the server before any clinic data is released ---------- */
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    if (!securitySetupReady()) return res.status(503).json({ error: "Security setup incomplete. Set MASTER_USER, MASTER_KEY and a different AUTH_SECRET (both secrets minimum 32 random characters), then redeploy." });
+    const code = cleanCode(req.body && req.body.clinic);
+    const username = String(req.body && req.body.username || "").trim();
+    const password = String(req.body && req.body.password || "");
+    const key = (req.ip || "unknown") + ":" + code + ":" + username.toLowerCase();
+    const wait = rateLimitLogin(key);
+    if (wait) return res.status(429).json({ error: "Too many login attempts. Try again in " + wait + " seconds." });
+    if (!validCode(code) || !username || !password) return res.status(400).json({ error: "Clinic ID, username aur password zaroori hain." });
+    const clinic = await getClinic(code); const cp = clinicProblem(clinic);
+    if (cp) return res.status(cp.status).json({ error: cp.msg });
+    const [rows] = await pool.query("SELECT id,data FROM records WHERE clinic=? AND store='users'", [code]);
+    let user = null;
+    for (const row of rows) { const u = parseRow(row); if (u && String(u.username || "").toLowerCase() === username.toLowerCase()) { user = u; break; } }
+    if (!user || user.active === false || !checkPassword(user.password, password)) {
+      const prev = LOGIN_ATTEMPTS.get(key) || { count: 0, until: 0 }; prev.count++;
+      if (prev.count >= 8) { prev.until = Date.now() + 15 * 60 * 1000; prev.count = 0; }
+      LOGIN_ATTEMPTS.set(key, prev);
+      return res.status(401).json({ error: "Username ya password ghalat hai, ya account disabled hai." });
+    }
+    LOGIN_ATTEMPTS.delete(key);
+    // Upgrade legacy plaintext credentials immediately after successful authentication.
+    if (!String(user.password || "").startsWith("scrypt$")) {
+      user.password = hashPassword(password);
+      await pool.query("UPDATE records SET data=? WHERE clinic=? AND store='users' AND id=?", [JSON.stringify(user), code, rowIdFor(rows, user)]).catch(() => {});
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const payload = { sub: String(user.id), clinic: code, role: String(user.role || "staff"), permissions: Array.isArray(user.permissions) ? user.permissions : [], denied: Array.isArray(user.denied) ? user.denied : [], iat: now, exp: now + SESSION_TTL_SECONDS };
+    const token = signToken(payload);
+    const publicUser = Object.assign({}, user); delete publicUser.password;
+    res.json({ token, expiresIn: SESSION_TTL_SECONDS, user: publicUser });
+  } catch (e) { res.status(500).json({ error: "Login service error." }); }
+});
+app.get("/api/auth/me", (req, res) => {
+  if (!securitySetupReady()) return res.status(503).json({ error: "Server security setup is incomplete. Check MASTER_USER, MASTER_KEY and AUTH_SECRET." });
+  const token = String(req.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const session = verifyToken(token);
+  if (!session) return res.status(401).json({ error: "Session expired. Please sign in again." });
+  res.json({ userId: session.sub, clinic: session.clinic, role: session.role, permissions: session.permissions, expiresAt: session.exp });
+});
+function rowIdFor(rows, user) { const r = rows.find(x => { const u = parseRow(x); return u && String(u.id) === String(user.id); }); return r ? r.id : String(user.id); }
+
 /* ---------- MASTER panel API (sirf Zain Ali ke liye) ---------- */
+function secretConfigured(v) {
+  const x = String(v || "").trim();
+  return x.length >= 32 && !/^(SET_|REPLACE_|CHANGE_|YOUR_)/i.test(x) && !/^(password|secret|changeme)/i.test(x);
+}
+function securitySetupReady() {
+  return !!String(MASTER_USER || "").trim() && secretConfigured(MASTER_KEY) && secretConfigured(AUTH_SECRET) && !safeEqual(MASTER_KEY, AUTH_SECRET);
+}
 function masterAuth(req, res, next) {
   const u = String(req.get("x-master-user") || "").trim().toLowerCase();
-  if (u !== String(MASTER_USER).toLowerCase() || req.get("x-master-key") !== MASTER_KEY)
-    return res.status(401).json({ error: "Owner name ya password galat hai" });
+  if (!securitySetupReady() || u !== String(MASTER_USER).toLowerCase() || !safeEqual(req.get("x-master-key"), MASTER_KEY))
+    return res.status(401).json({ error: "Owner credentials invalid or MASTER_KEY is not securely configured (minimum 32 characters)." });
   next();
 }
 app.get("/api/master/clinics", masterAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      "SELECT code,name,address,phone,admin_user,admin_pass,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note,clinic_type," +
+      "SELECT code,name,address,phone,admin_user,active,DATE_FORMAT(expiry,'%Y-%m-%d') AS expiry,note,clinic_type," +
       "DATE_FORMAT(created_at,'%Y-%m-%d') AS created FROM clinics ORDER BY created_at");
     const [cnt] = await pool.query("SELECT clinic, store, COUNT(*) AS n FROM records WHERE store IN ('patients','visits') GROUP BY clinic, store");
     rows.forEach(r => {
@@ -301,7 +419,7 @@ app.post("/api/master/clinics", masterAuth, async (req, res) => {
     await pool.query(
       "INSERT INTO clinics (code,name,address,phone,admin_user,admin_pass,active,expiry,note,clinic_type) VALUES (?,?,?,?,?,?,1,?,?,?)",
       [code, String(b.name).trim(), String(b.address || "").trim(), String(b.phone || "").trim(),
-       String(b.adminUser).trim(), String(b.adminPass).trim(), b.expiry || null, String(b.note || "").trim(), clinicType]);
+       String(b.adminUser).trim(), hashPassword(String(b.adminPass).trim()), b.expiry || null, String(b.note || "").trim(), clinicType]);
     clinicCache.delete(code);
     await syncAdmin(await getClinic(code).then(c => ({ code: c.code, admin_user: c.admin_user, admin_pass: c.admin_pass })));
     res.json({ ok: true, code });
@@ -318,7 +436,7 @@ app.put("/api/master/clinics/:code", masterAuth, async (req, res) => {
     const address = b.address !== undefined ? String(b.address).trim() : c.address;
     const phone = b.phone !== undefined ? String(b.phone).trim() : c.phone;
     const adminUser = b.adminUser ? String(b.adminUser).trim() : c.admin_user;
-    const adminPass = b.adminPass ? String(b.adminPass).trim() : c.admin_pass;
+    const adminPass = b.adminPass ? hashPassword(String(b.adminPass).trim()) : c.admin_pass;
     const active = b.active !== undefined ? (b.active ? 1 : 0) : c.active;
     const note = b.note !== undefined ? String(b.note).trim() : c.note;
     const clinicType = b.type === "medicalstore" ? "medicalstore" : (b.type === "clinic" ? "clinic" : (c.clinic_type || "clinic"));
@@ -330,6 +448,11 @@ app.put("/api/master/clinics/:code", masterAuth, async (req, res) => {
       await pool.query("UPDATE clinics SET name=?,address=?,phone=?,admin_user=?,admin_pass=?,active=?,note=?,clinic_type=? WHERE code=?",
         [name, address, phone, adminUser, adminPass, active, note, clinicType, code]);
     clinicCache.delete(code);
+    if (b.adminPass) {
+      const [adminRows] = await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?", [code, ADMIN_ID]);
+      if (adminRows.length) { const au = parseRow(adminRows[0]) || {}; au.password = adminPass; au.username = adminUser; au.fullName = adminUser + " (Administrator)";
+        await pool.query("UPDATE records SET data=? WHERE clinic=? AND store='users' AND id=?", [JSON.stringify(au), code, ADMIN_ID]); }
+    }
     await syncAdmin({ code, admin_user: adminUser, admin_pass: adminPass });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
@@ -354,7 +477,7 @@ app.delete("/api/master/clinics/:code", masterAuth, async (req, res) => {
 /* ---------- OWNER GUARD: users aur settings sirf owner badal sakta hai ---------- */
 function isOwnerReq(req) {
   const u = String(req.get("x-master-user") || "").trim().toLowerCase();
-  return u === String(MASTER_USER).toLowerCase() && req.get("x-master-key") === MASTER_KEY;
+  return securitySetupReady() && u === String(MASTER_USER).toLowerCase() && safeEqual(req.get("x-master-key"), MASTER_KEY);
 }
 /* ============================================================
    AI AGENT
@@ -364,7 +487,9 @@ function isOwnerReq(req) {
 ============================================================ */
 async function loadStore(clinic, store) {
   const [rows] = await pool.query("SELECT data FROM records WHERE clinic=? AND store=?", [clinic, store]);
-  return rows.map(parseRow).filter(Boolean);
+  const out = rows.map(parseRow).filter(Boolean);
+  if (store === "users") out.forEach(u => { if (u && typeof u === "object") delete u.password; });
+  return out;
 }
 const sum = (arr, f) => arr.reduce((t, x) => t + (Number(f(x)) || 0), 0);
 
@@ -612,8 +737,41 @@ app.use("/api", async (req, res, next) => {
     const p = clinicProblem(c);
     if (p) return res.status(p.status).json({ error: p.msg });
     req.clinic = code;
+    // Master panel calls remain separately protected by masterAuth. All other clinic APIs require a signed staff session.
+    if (!hasMasterCredentials(req)) {
+      const bearer = String(req.get("authorization") || "").replace(/^Bearer\s+/i, "");
+      const session = verifyToken(bearer);
+      if (!session || session.clinic !== code) return res.status(401).json({ error: "Authentication required. Please sign in again." });
+      // Re-read the current account on each protected request so disabling a user or changing permissions takes effect immediately.
+      const [accountRows] = await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=? LIMIT 1", [code, session.sub]);
+      const account = accountRows.length ? parseRow(accountRows[0]) : null;
+      if (!account || account.active === false) return res.status(401).json({ error: "This account is disabled or no longer exists. Please contact your administrator." });
+      req.auth = session;
+      const storeMatch = req.path.match(/^\/([^/]+)/);
+      const store = storeMatch && storeMatch[1];
+      const permissionByStore = { patients: "patients", visits: "newvisit", doctors: "doctors", tests: "lab", labreports: "lab", usreports: "ultrasound", inventory: "inventory", expenses: "expenses", payments: "billing", appointments: "appointments", leads: "leads", staff: "staff", attendance: "staff", users: "users", settings: "settings", audit: "reports", counters: "newvisit" };
+      const required = permissionByStore[store] || (store === "agent" ? "agent" : store === "scan-medicine" || store === "scan-bill" ? "inventory" : store === "seq" ? "newvisit" : null);
+      const perms = Array.isArray(account.permissions) ? account.permissions : [];
+      const denied = Array.isArray(account.denied) ? account.denied : [];
+      session.role = String(account.role || session.role);
+      session.permissions = perms;
+      session.denied = denied;
+      if ((store === "stores" || store === "backup") && session.role !== "admin" && session.role !== "owner") return res.status(403).json({ error: "Only administrators can access complete clinic backups." });
+      if (session.role !== "admin" && session.role !== "owner" && required && !perms.includes(required) && !perms.includes("*") )
+        return res.status(403).json({ error: "You do not have permission to access this module." });
+      if ((store === "users" || store === "settings") && session.role !== "admin" && session.role !== "owner")
+        return res.status(403).json({ error: "Only clinic administrators can manage users and settings." });
+      if (required && session.role !== "admin" && session.role !== "owner") {
+        let action = req.method === "DELETE" ? "delete" : (req.method === "PUT" || req.method === "POST") ? "add" : "view";
+        if (req.method === "PUT") {
+          const rid = recId(req.body); if (rid) { const [exists] = await pool.query("SELECT 1 FROM records WHERE clinic=? AND store=? AND id=? LIMIT 1", [code, store, rid]); action = exists.length ? "edit" : "add"; }
+        }
+        if (action !== "view" && denied.includes(action + ":" + required)) return res.status(403).json({ error: "You do not have permission to " + action + " records in this module." });
+        if (action === "view" && denied.includes("view:" + required)) return res.status(403).json({ error: "You do not have permission to view this module." });
+      }
+    }
     const gm = req.path.match(/^\/(users|settings)(\/|$)/);
-    if (gm && req.method !== "GET" && !isOwnerReq(req)) {
+    if (gm && req.method !== "GET" && !isOwnerReq(req) && !(req.auth && req.auth.role === "admin")) {
       let allow = false;
       if (gm[1] === "settings" && req.method === "PUT") {            /* sirf pehli dafa default settings banne dein */
         const [ex] = await pool.query("SELECT 1 FROM records WHERE clinic=? AND store='settings' LIMIT 1", [code]);
@@ -764,6 +922,19 @@ app.post("/api/agent", async (req, res) => {
 });
 app.get("/api/agent/status", (req, res) => res.json({ ai: !!(GEMINI_KEY || CLAUDE_KEY), provider: GEMINI_KEY ? "Gemini" : CLAUDE_KEY ? "Claude" : "none" }));
 
+/* ---------- full backup: admin-only endpoint; includes password hashes for faithful restore ---------- */
+app.get("/api/backup", async (req, res) => {
+  if (!req.auth || req.auth.role !== "admin") return res.status(403).json({ error: "Only clinic administrators can export full backups." });
+  try {
+    const out = {};
+    for (const store of STORES) {
+      const [rows] = await pool.query("SELECT data FROM records WHERE clinic=? AND store=?", [req.clinic, store]);
+      out[store] = rows.map(parseRow).filter(Boolean);
+    }
+    res.json({ data: out, warning: "Contains salted password hashes. Store this backup securely." });
+  } catch (e) { res.status(500).json({ error: "Backup export failed." }); }
+});
+
 /* ---------- full data ---------- */
 app.get("/api/stores", async (req, res) => {
   try {
@@ -800,6 +971,17 @@ app.post("/api/seq/:key", async (req, res) => {
 });
 
 /* ---------- generic store APIs ---------- */
+async function prepareUserWrite(clinic, obj) {
+  const copy = Object.assign({}, obj);
+  const id = recId(copy);
+  const [oldRows] = await pool.query("SELECT data FROM records WHERE clinic=? AND store='users' AND id=?", [clinic, id]);
+  const old = oldRows.length ? parseRow(oldRows[0]) : null;
+  const supplied = String(copy.password || "");
+  if (supplied) copy.password = supplied.startsWith("scrypt$") ? supplied : hashPassword(supplied);
+  else if (old && old.password) copy.password = old.password;
+  else throw new Error("New user must have a password.");
+  return copy;
+}
 const okStore = (req, res) => { if (STORES.indexOf(req.params.store) < 0) { res.status(404).json({ error: "Unknown store" }); return false; } return true; };
 
 app.get("/api/:store", async (req, res) => {
@@ -811,17 +993,22 @@ app.get("/api/:store/:id", async (req, res) => {
   if (!okStore(req, res)) return;
   try {
     const [rows] = await pool.query("SELECT data FROM records WHERE clinic=? AND store=? AND id=?", [req.clinic, req.params.store, req.params.id]);
-    res.json(rows.length ? parseRow(rows[0]) : null);
+    const item = rows.length ? parseRow(rows[0]) : null;
+    if (item && req.params.store === "users") delete item.password;
+    res.json(item);
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 app.put("/api/:store", async (req, res) => {
   if (!okStore(req, res)) return;
-  const id = recId(req.body);
+  let record = req.body;
+  const id = recId(record);
   if (!id) return res.status(400).json({ error: "Record needs id or key" });
   try {
+    if (req.params.store === "users") record = await prepareUserWrite(req.clinic, record);
     await pool.query("INSERT INTO records (clinic,store,id,data) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
-      [req.clinic, req.params.store, id, JSON.stringify(req.body)]);
-    res.json(req.body);
+      [req.clinic, req.params.store, id, JSON.stringify(record)]);
+    const response = Object.assign({}, record); if (req.params.store === "users") delete response.password;
+    res.json(response);
   } catch (e) { res.status(500).json({ error: errMsg(e) }); }
 });
 app.post("/api/:store/bulk", async (req, res) => {
@@ -836,7 +1023,9 @@ app.post("/api/:store/bulk", async (req, res) => {
         chunk.flatMap(r => [req.clinic, req.params.store, r.id, r.data]));
       saved += chunk.length; chunk = []; bytes = 0;
     };
-    for (const obj of arr) {
+    for (const input of arr) {
+      let obj = input;
+      if (req.params.store === "users") obj = await prepareUserWrite(req.clinic, input);
       const id = recId(obj); if (!id) continue;
       const data = JSON.stringify(obj);
       chunk.push({ id, data }); bytes += data.length;
@@ -888,7 +1077,7 @@ if (IS_VERCEL || require.main !== module) {
         console.log(" Master panel : http://localhost:" + PORT + "/master.html");
         console.log(" Database     : MySQL -> " + DB.database);
         console.log(" AI Agent     : " + (GEMINI_KEY ? "Gemini (" + GEMINI_MODEL + ")" : CLAUDE_KEY ? "Claude (" + CLAUDE_MODEL + ")" : "OFFLINE mode (AI key nahi lagi)"));
-        if (MASTER_KEY === "ChangeMe@123") console.log(" WARNING      : config.json mein masterKey zaroor badal lein!");
+        if (!securitySetupReady()) console.log(" SECURITY     : MASTER_USER, MASTER_KEY and a different AUTH_SECRET must be configured (32+ random characters).");
         console.log(" Software developed by " + DEV_CONTACT);
         console.log("==================================================");
       });
