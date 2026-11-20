@@ -536,13 +536,6 @@ body:has(.modal-overlay) #zm-dock{display:none!important}
 @keyframes glowing{0%{background-position:0 0}50%{background-position:400% 0}100%{background-position:0 0}}
 @media(prefers-reduced-motion:reduce){:where(button,.btn,.icon-btn,.test-chip,.net-pill)::before,.tbl tbody tr:hover td{animation:none}}
 @media print{:where(button,.btn,.icon-btn,.test-chip,.net-pill)::before{display:none!important}.tbl tbody tr:hover td{background-image:none!important}}
-/* ===== Rainbow border line (mouse hover/focus) - all boxes, inputs, sidebar ===== */
-.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button{position:relative}
-:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after{content:"";position:absolute;inset:0;padding:2px;border-radius:inherit;background:linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000);background-size:400%;animation:glowing 20s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s ease-in-out;pointer-events:none;z-index:3}
-:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button):hover::after{opacity:1}
-.inp:hover:not(.login-glass *):not(:disabled):not([readonly]),.inp:focus:not(.login-glass *){border:2px solid transparent;padding:9px 11px;background:linear-gradient(rgba(255,255,255,.96),rgba(255,255,255,.96)) padding-box,linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000) border-box;background-size:auto,400%;animation:glowing 20s linear infinite;box-shadow:0 0 12px rgba(56,189,248,.4)}
-@media(prefers-reduced-motion:reduce){:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after,.inp:hover,.inp:focus{animation:none}}
-@media print{:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after{display:none!important}}
 </style>
 </head>
 <body>
@@ -842,7 +835,7 @@ opt=opt||{};
 if(!opt.force&&!netOK()){API_OK=false;const e=new Error("Internet nahi hai — offline mode");e.net=true;throw e}
 let r;const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),opt.timeout||12000);
 try{
-r=await fetch(API_BASE+path,{method:method,signal:ctl.signal,headers:Object.assign({"Content-Type":"application/json","X-Clinic":CLINIC||""},ownerCreds()?{"x-master-user":ownerCreds().u,"x-master-key":ownerCreds().k}:{}),body:body===undefined?undefined:JSON.stringify(body)});
+r=await fetch(API_BASE+path,{method:method,signal:ctl.signal,headers:Object.assign({"Content-Type":"application/json","X-Clinic":CLINIC||""},sessionStorage.getItem("zm_auth_token")?{"Authorization":"Bearer "+sessionStorage.getItem("zm_auth_token")}: {},ownerCreds()?{"x-master-user":ownerCreds().u,"x-master-key":ownerCreds().k}:{}),body:body===undefined?undefined:JSON.stringify(body)});
 }catch(e){
 clearTimeout(tm);API_OK=false;NET.offlineUntil=Date.now()+8000;setNetState();
 const er=new Error(e&&e.name==="AbortError"?"Server ne bohat der tak jawab nahi diya (timeout). Dobara try karein.":"Server se connection nahi hua ("+(API_BASE||location.host)+"). Offline mode mein kaam chal sakta hai.");er.net=true;throw er}
@@ -1035,15 +1028,15 @@ async function removeRecord(store,key){await qDel(store,key);await loadData()}
 async function saveSettingsObj(obj){await qPut("settings",Object.assign({},obj,{key:"app"}));app.settings=Object.assign({},DEFAULT_SETTINGS,obj,{key:"app"})}
 /* ---- Per-module action permissions: Add / Edit / Delete (user.denied = ["edit:lab","delete:ultrasound"]) ---- */
 function curModule(){const r=app.route||"dashboard";const n=NAV.find(x=>x.key===r);return n?n.perm:r}
-function canAct(act,mod){const u=app.user;if(!u||u.role==="owner"||(u.role==="admin"&&!u.custom))return true;mod=mod||curModule();return (u.denied||[]).indexOf(act+":"+mod)<0}
+function canAct(act,mod){const u=app.user;if(!u||u.role==="owner"||u.role==="admin")return true;mod=mod||curModule();return (u.denied||[]).indexOf(act+":"+mod)<0}
 function btnAct(b){const attrs=Array.prototype.map.call(b.attributes,a=>a.name),vals=Array.prototype.map.call(b.attributes,a=>String(a.value)),txt=(b.textContent||"").trim();
 if(attrs.some(n=>/^data-[a-z-]*(del|delete|remove)/.test(n))||vals.some(v=>/^(del|delete|remove)$/i.test(v))||/🗑/.test(txt)||/^delete$/i.test(txt))return"delete";
 if(attrs.some(n=>/^data-[a-z-]*edit/.test(n))||vals.some(v=>/^edit$/i.test(v))||/^✏/.test(txt)||/^edit$/i.test(txt))return"edit";
 if(/^[＋➕]/.test(txt)||/^\+\s/.test(txt)||/-(add|new)$/.test(b.id||""))return"add";
 const m=curModule();if(m==="settings"||m==="backup"||m==="agent"){if(/delete|remove|clear|reset|✕/i.test(txt))return"delete";if(/save|💾|upload|import|restore|apply|update|change|set\b|🖼|📷|logo|picture/i.test(txt)||/(save|upload|import|restore)/i.test(b.id||""))return"edit"}return""}
 document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("button");if(!b||!app.user||b.hasAttribute("data-close"))return;const a=btnAct(b);if(a&&!canAct(a)){e.stopImmediatePropagation();e.preventDefault();toast("Aap ko is kaam ("+({add:"Add",edit:"Edit",delete:"Delete"})[a]+") ki ijazat nahi hai","error")}},true);
-let _actT=null;new MutationObserver(()=>{clearTimeout(_actT);_actT=setTimeout(()=>{const u=app.user;if(!u||!(u.denied||[]).length||(u.role==="admin"&&!u.custom)||u.role==="owner")return;document.querySelectorAll("button").forEach(b=>{if(b.dataset.zact===undefined){b.dataset.zact=btnAct(b)}const a=b.dataset.zact;if(a&&!canAct(a))b.style.display="none"})},120)}).observe(document.documentElement,{childList:true,subtree:true});
-function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users")return false;if(app.user.role==="medicalstore")return perm==="inventory";if(app.user.role==="lab")return perm==="lab";if(app.user.role==="admin"&&!app.user.custom)return true;return (app.user.permissions||[]).indexOf(perm)>=0}
+let _actT=null;new MutationObserver(()=>{clearTimeout(_actT);_actT=setTimeout(()=>{const u=app.user;if(!u||!(u.denied||[]).length||u.role==="admin"||u.role==="owner")return;document.querySelectorAll("button").forEach(b=>{if(b.dataset.zact===undefined){b.dataset.zact=btnAct(b)}const a=b.dataset.zact;if(a&&!canAct(a))b.style.display="none"})},120)}).observe(document.documentElement,{childList:true,subtree:true});
+function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users")return false;if(app.user.role==="medicalstore")return perm==="inventory";if(app.user.role==="lab")return perm==="lab";if(app.user.role==="admin")return true;return (app.user.permissions||[]).indexOf(perm)>=0}
 function backupDue(){const s=app.settings;if(!s.backupReminderDays)return false;
 if(!s.lastBackupAt)return app.visits.length>0;
 return daysBetween(s.lastBackupAt.slice(0,10),today())>=s.backupReminderDays}
@@ -1280,25 +1273,15 @@ let info;
 try{info=await api("GET","/api/clinic/"+encodeURIComponent(code));try{localStorage.setItem("zm_info_"+code,JSON.stringify(info))}catch(x){}}
 catch(e){if(e.net){info=cachedInfo(code);if(!info)return fail("Internet nahi hai. Is device par pehli dafa login ke liye internet zaroori hai.")}else throw e}
 CLINIC=code;CLINIC_INFO=info;try{localStorage.setItem("mcms_clinic",code)}catch(x){}
-await obLoad();
-await seed();await loadData();
-if(!netOK()&&!app.users.length)return fail("Offline hai aur is device par is clinic ka data saved nahi. Pehli dafa internet se login karein.");
-/* FIRST-TIME ADMIN SETUP: agar is clinic mein koi admin account hi nahi hai to dale gaye username/password se admin ban jayega */
-if(!app.users.some(x=>x.role==="admin"&&x.active!==false)&&!app.users.some(x=>x.username.toLowerCase()===un.toLowerCase())){
-if(selectedRole!=="admin")return fail("First login par Admin select karein. Doctor / Receptionist / Medical Store IDs Admin banata hai.");
-if(pw.length<4)return fail("Is clinic mein abhi koi Admin nahi hai. Admin banane ke liye kam az kam 4 harf ka password likhein.");
-const okc=await confirmBox({title:"Admin Account Setup",message:'Is clinic ('+code+') mein abhi koi Admin account nahi hai. Kya username "'+un+'" aur aapke dale hue password se naya Admin account banayein?',confirmText:"CREATE ADMIN"});
-if(!okc)return fail("Admin account nahi bana. Sahi username likhein ya dobara try karein.");
-const adm={id:id("usr"),username:un,password:pw,fullName:un,role:"admin",permissions:ALL_PERMS.slice(),active:true,createdAt:new Date().toISOString()};
-await qPut("users",adm);await loadData();
-}
-const u=app.users.find(x=>x.username.toLowerCase()===un.toLowerCase());
-if(!u)return fail("User not found (username check karein — is clinic mein yeh user nahi hai)");
-if(u.role!==selectedRole)return fail("Aap ne ghalat Login As select kiya hai. Is username ka account: "+u.role);
-if(u.password!==pw)return fail("Incorrect password");
-if(!u.active)return fail("This account is disabled");
-app.user=u;sessionStorage.setItem("abraj_session_user",u.id);
-await audit(u.username,"LOGIN","users",u.id,"Signed in");
+// Credentials are verified by the backend; no patient or staff records are downloaded before authentication.
+const auth=await api("POST","/api/auth/login",{clinic:code,username:un,password:pw},{force:true,timeout:15000});
+if(!auth||!auth.token||!auth.user) return fail("Secure login failed. Please try again.");
+sessionStorage.setItem("zm_auth_token",auth.token);
+app.user=auth.user;
+if(app.user.role!==selectedRole){sessionStorage.removeItem("zm_auth_token");app.user=null;return fail("Aap ne ghalat Login As select kiya hai. Is username ka account: "+auth.user.role)}
+sessionStorage.setItem("abraj_session_user",app.user.id);
+await obLoad();await seed();await loadData();
+await audit(app.user.username,"LOGIN","users",app.user.id,"Signed in");
 go("dashboard");
 }catch(ex){fail(ex.message)}
 });
@@ -1331,7 +1314,7 @@ mount('<aside class="sidebar hidden-m" id="sidebar">'+
 $("#hbtn").onclick=()=>{$("#sidebar").classList.toggle("hidden-m");$("#backdrop").classList.toggle("show")};
 $("#backdrop").onclick=()=>{$("#sidebar").classList.add("hidden-m");$("#backdrop").classList.remove("show")};
 if($("#ai-top"))$("#ai-top").onclick=()=>go("agent");
-$("#logout-btn").onclick=()=>{if(isOwner()){sessionStorage.removeItem("abraj_owner");location.href="/master.html";return}app.user=null;sessionStorage.removeItem("abraj_session_user");renderLogin()};
+$("#logout-btn").onclick=()=>{if(isOwner()){sessionStorage.removeItem("abraj_owner");location.href="/master.html";return}app.user=null;sessionStorage.removeItem("abraj_session_user");sessionStorage.removeItem("zm_auth_token");renderLogin()};
 $$("[data-nav]").forEach(b=>b.onclick=()=>{ $("#sidebar").classList.add("hidden-m");$("#backdrop").classList.remove("show");go(b.dataset.nav)});
 $$("[data-navgrp]").forEach(b=>b.onclick=()=>{const sub=$("#nav-sub-"+b.dataset.navgrp);const o=!sub.classList.contains("open");sub.classList.toggle("open",o);b.classList.toggle("open",o);app.msOpen=o});
 if(_clockTimer)clearInterval(_clockTimer);
@@ -4852,9 +4835,9 @@ const draw=()=>{
 $("#us-rows").innerHTML=app.users.map(u=>
 '<tr><td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--blue-800)">'+esc(u.username)+'</td><td style="font-weight:600">'+esc(u.fullName)+"</td>"+
 '<td><span class="badge '+(u.role==="admin"?"violet":u.role==="doctor"?"blue":"slate")+'">'+u.role.toUpperCase()+"</span></td>"+
-'<td style="font-size:11px;color:var(--slate-600)">'+(u.role==="admin"&&!u.custom?"Full access to all modules":u.permissions.map(p=>PERM_LABELS[p]||p).join(", "))+"</td>"+
+'<td style="font-size:11px;color:var(--slate-600)">'+(u.role==="admin"?"Full access to all modules":u.permissions.map(p=>PERM_LABELS[p]||p).join(", "))+"</td>"+
 '<td><span class="badge '+(u.active?"green":"red")+'">'+(u.active?"Active":"Disabled")+"</span></td>"+
-"<td>"+(u.id===ADMIN_ID?'<div class="flex g8"><button class="btn btn-neutral sm" data-edit="'+u.id+'">✏️</button></div>':
+"<td>"+(u.id===ADMIN_ID?'<span class="badge violet">FIXED — LOCKED</span>':
 '<div class="flex g8"><button class="btn btn-neutral sm" data-edit="'+u.id+'">✏️</button><button class="btn '+(u.active?"btn-warn":"btn-success")+' sm" data-tog="'+u.id+'">'+(u.active?"OFF":"ON")+'</button><button class="btn btn-danger sm" data-del="'+u.id+'">🗑</button></div>')+"</td></tr>").join("");
 $$("[data-edit]").forEach(b=>b.onclick=()=>userModal(app.users.find(x=>x.id===b.dataset.edit)));
 $$("[data-tog]").forEach(b=>b.onclick=async()=>{const u=app.users.find(x=>x.id===b.dataset.tog);await qPut("users",Object.assign({},u,{active:!u.active}));await loadData();pageUsers()});
@@ -4877,18 +4860,18 @@ draw();
 function userModal(u){
 const ov=openModal(u.id?"Edit User — "+u.username:"Add New User",
 '<div class="grid g2">'+
-'<div class="field"><label>Username <span class="req">*</span></label><input class="inp" id="um-user" value="'+esc(u.username)+'" autocomplete="off'+(u.id===ADMIN_ID?'" readonly title="Username/password clinic setup se control hote hain':'')+'"></div>'+
-'<div class="field"><label>Password <span class="req">*</span></label><input class="inp" id="um-pass" value="'+esc(u.password)+'" autocomplete="new-password'+(u.id===ADMIN_ID?'" readonly title="Username/password clinic setup se control hote hain':'')+'"></div>'+
+'<div class="field"><label>Username <span class="req">*</span></label><input class="inp" id="um-user" value="'+esc(u.username)+'" autocomplete="off"></div>'+
+'<div class="field"><label>Password <span class="req">*</span></label><input class="inp" id="um-pass" value="" placeholder="'+(u.id?"Leave blank to keep current password":"Enter a password")+'" autocomplete="new-password"></div>'+
 '<div class="field"><label>Full Name</label><input class="inp" id="um-name" value="'+esc(u.fullName)+'"></div>'+
-'<div class="field"><label>Role</label><select class="inp" id="um-role"'+(u.id===ADMIN_ID?' disabled':'')+'><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option><option value=\"medicalstore\" "+(u.role==="medicalstore"?"selected":"")+">Medical Store — Medical Store only</option><option value=\"lab\" "+(u.role==="lab"?"selected":"")+">Lab — Lab module only</option></select></div></div>"+
+'<div class="field"><label>Role</label><select class="inp" id="um-role"><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option><option value=\"medicalstore\" "+(u.role==="medicalstore"?"selected":"")+">Medical Store — Medical Store only</option><option value=\"lab\" "+(u.role==="lab"?"selected":"")+">Lab — Lab module only</option></select></div></div>"+
 '<div><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--slate-600);margin-bottom:8px">Module Permissions</p><div id="um-perms"></div></div>',
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="um-save">💾 SAVE USER</button>');
-let role=u.role,perms=(u.id===ADMIN_ID&&!u.custom?ALL_PERMS.slice():u.permissions.slice()),denied=(u.denied||[]).slice();
+let role=u.role,perms=u.permissions.slice(),denied=(u.denied||[]).slice();
 const drawPerms=()=>{
 const box=$("#um-perms",ov);
 if(role==="medicalstore"){perms=MEDICAL_STORE_PERMS.slice();box.innerHTML='<p style="background:rgba(219,234,254,.65);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:13px;color:#1e40af">This account can access Medical Store only. All clinic modules, users and settings remain hidden.</p>';return}
 if(role==="lab"){perms=LAB_PERMS.slice();box.innerHTML='<p style="background:rgba(219,234,254,.65);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:13px;color:#1e40af">Is account ko sirf Lab module ka access milega (Lab work list, lab reports, test list). Baaki modules, users aur settings hidden rahenge.</p>';return}
-if(role==="admin"&&u.id!==ADMIN_ID){box.innerHTML='<p style="background:var(--violet-bg);border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:13px;color:#5b21b6">Administrators automatically have full access to every module including delete and backup.</p>';return}
+if(role==="admin"){box.innerHTML='<p style="background:var(--violet-bg);border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:13px;color:#5b21b6">Administrators automatically have full access to every module including delete and backup.</p>';return}
 box.innerHTML='<div class="grid g2">'+ALL_PERMS.map(p=>
 '<label style="display:flex;align-items:center;gap:8px;border:1px solid var(--slate-200);border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer"><input type="checkbox" data-perm="'+p+'" '+(perms.indexOf(p)>=0?"checked":"")+' style="width:16px;height:16px"><span'+(p==="delete"?' style="font-weight:600;color:#be123c"':"")+">"+(PERM_LABELS[p]||p)+"</span>"+(["delete","users"].indexOf(p)<0?'<span class="uacts" style="margin-left:auto;display:flex;gap:8px;font-size:11px;'+(perms.indexOf(p)>=0?"":"opacity:.35;pointer-events:none")+'">'+[["add","➕ Add"],["edit","✏️ Edit"],["delete","🗑 Delete"]].map(a=>'<label style="display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" data-act="'+a[0]+":"+p+'" '+(denied.indexOf(a[0]+":"+p)<0?"checked":"")+' style="width:14px;height:14px">'+a[1]+"</label>").join("")+"</span>":"")+"</label>").join("")+"</div><p style=\"font-size:11px;color:var(--slate-600);margin-top:8px\">Module ke saath ➕ Add / ✏️ Edit / 🗑 Delete alag alag de ya band kar sakte hain. Tick hataya to wo button us user ko nazar nahi aayega.</p>";
 $$("[data-act]",ov).forEach(cb=>cb.addEventListener("change",()=>{const k=cb.dataset.act;denied=denied.filter(x=>x!==k);if(!cb.checked)denied.push(k)}));
@@ -4899,11 +4882,11 @@ $("#um-role",ov).addEventListener("change",e=>{role=e.target.value;
 perms=role==="admin"?ALL_PERMS.slice():role==="doctor"?DOCTOR_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():role==="lab"?LAB_PERMS.slice():RECEPTION_PERMS.slice();drawPerms()});
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
 ov.querySelector("#um-save").onclick=async()=>{
-if(u.id===ADMIN_ID){const ao=Object.assign({},u,{permissions:perms.slice(),denied:denied.filter(k=>perms.indexOf(k.split(":")[1])>=0),custom:true,fullName:$("#um-name",ov).value.trim()||u.fullName});await qPut("users",ao);await audit(app.user.username,"UPDATE","users",ao.id,u.username+" (admin permissions)");await loadData();toast("Administrator access updated");ov.remove();pageUsers();return}
+if(u.id===ADMIN_ID){toast("The fixed administrator account cannot be edited","error");return}
 const un=$("#um-user",ov).value.trim(),pw=$("#um-pass",ov).value.trim();
 if(un.toLowerCase()===ADMIN_USER.toLowerCase()){toast("That username is reserved for the fixed administrator account","error");return}
 if(!un){toast("Username is required","error");return}
-if(!pw){toast("Password is required","error");return}
+if(!pw&&!u.id){toast("Password is required for a new user","error");return}
 if(app.users.some(x=>x.username.toLowerCase()===un.toLowerCase()&&x.id!==u.id)){toast("That username already exists","error");return}
 const obj={id:u.id||id("usr"),username:un,password:pw,fullName:$("#um-name",ov).value.trim()||un,role:role,
 denied:(role==="admin"?[]:denied.filter(k=>perms.indexOf(k.split(":")[1])>=0)),permissions:role==="admin"?ALL_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():role==="lab"?LAB_PERMS.slice():perms,active:u.active!==undefined?u.active:true,createdAt:u.createdAt||new Date().toISOString()};
@@ -5046,8 +5029,10 @@ counts.map(c=>"<tr><td style=\"font-weight:600\">"+c[0]+'</td><td style="font-fa
 '<div><p style="font-weight:700;color:#9f1239">Erase entire server database</p><p style="font-size:12px;color:#be123c">Removes all records from the MySQL database. Requires typing a confirmation word.</p></div>'+
 '<button class="btn btn-danger" id="bk-erase">🗑 ERASE DATABASE</button></div></div></div>';
 $("#bk-json").onclick=async()=>{
-const data={};for(const st of STORES)data[st]=await qGetAll(st);
-const pkg={app:"ZAINMED_MCMS",version:3,exportedAt:new Date().toISOString(),data:data};
+if(!netOK()){toast("Complete secure backup ke liye server se online connect hona zaroori hai.","error");return}
+const backup=await api("GET","/api/backup",undefined,{timeout:90000});
+const data=backup.data||{};
+const pkg={app:"ZAINMED_MCMS",version:4,exportedAt:new Date().toISOString(),data:data,securityNote:"Contains salted password hashes. Keep this backup private."};
 download((CLINIC||"clinic").toUpperCase()+"_BACKUP_"+today()+"_"+new Date().getHours()+String(new Date().getMinutes()).padStart(2,"0")+".json",JSON.stringify(pkg,null,2),"application/json");
 await saveSettingsObj(Object.assign({},app.settings,{lastBackupAt:new Date().toISOString()}));
 await audit(app.user.username,"BACKUP","database","all","Exported backup");
@@ -5148,13 +5133,13 @@ if(!CLINIC){renderLogin();return}
 try{CLINIC_INFO=await api("GET","/api/clinic/"+encodeURIComponent(CLINIC));try{localStorage.setItem("zm_info_"+CLINIC,JSON.stringify(CLINIC_INFO))}catch(x){}}
 catch(e){if(e.net){const ci=cachedInfo(CLINIC);if(ci)CLINIC_INFO=ci;else throw e}
 else{CLINIC="";CLINIC_INFO=null;try{localStorage.removeItem("mcms_clinic")}catch(x){}renderLogin(e.message);return}}
-await obLoad();
-await seed();
-await loadData();
 const oc=ownerCreds();
-if(oc){let okOwner=true;try{await api("GET","/api/master/clinics")}catch(e){if(e&&e.net){/* offline: owner session barkarar rakho */}else{okOwner=false;sessionStorage.removeItem("abraj_owner")}}if(okOwner)app.user={id:"owner",username:oc.u,fullName:"Owner ("+oc.u+")",role:"owner",permissions:ALL_PERMS.slice(),active:true}}
-const sid=sessionStorage.getItem("abraj_session_user");
-if(!app.user&&sid){const u=await qGet("users",sid);if(u&&u.active)app.user=u}
+if(oc){let okOwner=true;try{await api("GET","/api/master/clinics",undefined,{force:true})}catch(e){if(e&&e.net){/* offline owner access is not granted without server verification */okOwner=false}else{okOwner=false;sessionStorage.removeItem("abraj_owner")}}if(okOwner)app.user={id:"owner",username:oc.u,fullName:"Owner ("+oc.u+")",role:"owner",permissions:ALL_PERMS.slice(),active:true}}
+if(!app.user){
+ const token=sessionStorage.getItem("zm_auth_token");
+ if(token){try{const me=await api("GET","/api/auth/me",undefined,{force:true});if(me&&me.clinic===CLINIC){await obLoad();await seed();await loadData();app.user=app.users.find(u=>String(u.id)===String(me.userId))||{id:me.userId,username:"staff",fullName:"Staff",role:me.role,permissions:me.permissions,active:true};}}catch(e){sessionStorage.removeItem("zm_auth_token");sessionStorage.removeItem("abraj_session_user")}}
+}
+if(app.user&&app.user.role!=="owner"&&!app.users.length){await obLoad();await seed();await loadData()}
 /* hash routing (supports #emr:MRNO) */
 const applyHash=()=>{
 const h=location.hash.replace(/^#/,"");
