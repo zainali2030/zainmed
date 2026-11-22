@@ -3406,7 +3406,7 @@ draw();
 DELIVERY / MEDICAL EXPENSE BILL  (token number nahi — hospital style bill)
 Store: "deliverybills" (server.js STORES mein bhi add hai)
 ============================================================ */
-const DLV_DOCTOR_DEFAULT="Dr. Abdullah Ghulam Khan (DHMS)";
+function dlvDocName(d){if(!d)return"";const n=String(d.name||"").replace(/^dr\.?\s+/i,"").trim();return "Dr. "+n+(d.qualification?" ("+String(d.qualification).trim()+")":"")}
 const DLV_TYPES={nvd:"Normal Vaginal Delivery (NVD)",lscs:"Caesarean Section (LSCS)"};
 function dlvWords(n){
 n=Math.round(Number(n)||0);if(n<=0)return"Zero";
@@ -3441,36 +3441,87 @@ row(label,num(b.procedure))+row("Doctor's Charges",num(b.doctorCharges))+row("Nu
 '<table style="width:100%;border-collapse:collapse;margin-top:14px">'+info("Delivery Type",label)+info("Delivery Date",b.deliveryDate?fmtDate(b.deliveryDate):"")+info("Payment Status",b.paymentStatus||"")+'</table>'+
 '<div style="font-size:13px;font-style:italic;margin-top:22px">This bill is issued for the patient\'s husband\'s company medical reimbursement record.</div>'+
 '<table style="width:100%;border-collapse:collapse;margin-top:34px"><tr>'+
-'<td style="vertical-align:top;width:50%"><div style="font-weight:900;font-size:14px">Authorized Doctor:</div><div style="font-size:14px;font-weight:700;margin-top:3px">'+esc(b.authDoctor||DLV_DOCTOR_DEFAULT)+'</div><div style="margin-top:34px;font-size:14px">Signature: ____________________</div></td>'+
+'<td style="vertical-align:top;width:50%"><div style="font-weight:900;font-size:14px">Authorized Doctor:</div><div style="font-size:14px;font-weight:700;margin-top:3px">'+esc(b.authDoctor||"")+'</div><div style="margin-top:34px;font-size:14px">Signature: ____________________</div></td>'+
 '<td style="vertical-align:bottom;width:50%;text-align:right"><div style="font-size:14px">Official Stamp: ____________________</div></td></tr></table>'+
 '</div></div>'}
-function printDelivery(b){printHTML(dlvHTML(b,app.settings),"A4")}
+function dlvThermalHTML(b,s,size){
+const cur=s.currency||"Rs.";const w=size==="58"?"54mm":"74mm";const fs=size==="58"?11.5:12.5;
+const label=b.deliveryLabel||DLV_TYPES[b.deliveryType]||"Delivery";const total=dlvTotal(b);
+const hr='<div style="border-top:2px dashed #000;margin:5px 0"></div>';
+const ln=(l,v,big)=>'<div style="display:flex;justify-content:space-between;gap:8px;font-size:'+(big?fs*1.2:fs)+'px;font-weight:'+(big?900:700)+';padding:1px 0;line-height:1.25"><span>'+esc(l)+'</span><span style="white-space:nowrap">'+esc(v)+'</span></div>';
+const fl=(l,v)=>v?'<div style="font-size:'+fs+'px;line-height:1.25;padding:1px 0"><span style="font-weight:700">'+esc(l)+':</span> <b>'+esc(v)+'</b></div>':'';
+const logoH=Math.max(24,Math.min(60,Number(s.logoSize)||48));
+const logo=s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="display:block;margin:0 auto 2px;height:'+logoH+'px;width:auto;max-width:100%;object-fit:contain"/></div>':'';
+return '<div style="width:'+w+';margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#000;font-weight:700">'+logo+
+'<div style="text-align:center;font-weight:900;font-size:'+(fs*1.35)+'px;line-height:1.15;text-transform:uppercase">'+esc(s.clinicName||"")+'</div>'+
+(s.address?'<div style="text-align:center;font-size:'+(fs*.85)+'px;line-height:1.2">'+esc(s.address)+'</div>':'')+
+((s.phone||s.phone2)?'<div style="text-align:center;font-size:'+(fs*.85)+'px">Cell: '+esc(s.phone||"")+(s.phone2?" / "+esc(s.phone2):"")+'</div>':'')+
+'<div style="text-align:center;font-weight:900;font-size:'+fs+'px;margin:5px 0;padding:3px 0;border-top:2px solid #000;border-bottom:2px solid #000">DELIVERY / MEDICAL EXPENSE BILL</div>'+
+ln("Bill No.",b.billNo||"-")+ln("Date",fmtDate(b.date))+hr+
+fl("Patient",b.patientName)+fl("Husband",b.husbandName)+fl("CNIC",b.cnic)+fl("Contact",b.contact)+hr+
+'<div style="font-size:'+fs+'px;font-weight:900;margin-bottom:2px">Treatment Details</div>'+
+ln(label,fmtMoney(num(b.procedure)))+ln("Doctor's Charges",fmtMoney(num(b.doctorCharges)))+ln("Nursing Charges",fmtMoney(num(b.nursingCharges)))+ln("Hospital / Room",fmtMoney(num(b.roomCharges)))+ln("Medicines & Other",fmtMoney(num(b.otherCharges)))+hr+
+ln("TOTAL ("+cur+")",fmtMoney(total),true)+
+'<div style="font-size:'+(fs*.9)+'px;margin-top:2px"><b>In words:</b> '+esc(dlvWords(total))+' Rupees Only</div>'+hr+
+fl("Delivery Type",label)+fl("Delivery Date",b.deliveryDate?fmtDate(b.deliveryDate):"")+fl("Payment",b.paymentStatus)+
+'<div style="font-size:'+(fs*.85)+'px;font-style:italic;margin-top:5px;line-height:1.25">This bill is issued for the patient\'s husband\'s company medical reimbursement record.</div>'+hr+
+'<div style="font-size:'+fs+'px;font-weight:900">Authorized Doctor:</div><div style="font-size:'+fs+'px">'+esc(b.authDoctor||"")+'</div>'+
+'<div style="margin-top:22px;font-size:'+fs+'px">Signature: ______________</div><div style="margin-top:20px;font-size:'+fs+'px">Official Stamp: ___________</div>'+
+'<div style="text-align:center;font-size:'+(fs*.75)+'px;margin-top:6px">Printed: '+new Date().toLocaleString()+'</div></div>'}
+function dlvSize(){return app.settings.printSize==="58"?"58":"80"}
+function printDelivery(b,fmt){
+if(fmt==="thermal"){const z=dlvSize();printHTML(dlvThermalHTML(b,app.settings,z),z)}
+else printHTML(dlvHTML(b,app.settings),"A4")}
+function viewDelivery(b,fmt){
+const th=fmt==="thermal";const z=dlvSize();
+const body=th?'<div style="background:#fff;color:#000;max-width:'+(z==="58"?"260px":"340px")+';margin:0 auto;padding:10px;border:1px solid #cbd5e1;border-radius:6px">'+dlvThermalHTML(b,app.settings,z)+'</div>'
+:'<div style="background:#fff;color:#000;max-width:794px;margin:0 auto;border:1px solid #cbd5e1;border-radius:6px;overflow:auto">'+dlvHTML(b,app.settings)+'</div>';
+const ov=openModal("Bill "+(b.billNo||"(new)")+" — "+(th?"Thermal "+z+"mm":"A4"),body,
+'<button class="btn btn-dark" id="dv-a4">🖨 PRINT A4</button><button class="btn btn-primary" id="dv-th">🧾 PRINT THERMAL</button><button class="btn btn-neutral" id="dv-x">CLOSE</button>',true);
+$("#dv-a4",ov).onclick=()=>printDelivery(b,"a4");$("#dv-th",ov).onclick=()=>printDelivery(b,"thermal");$("#dv-x",ov).onclick=()=>ov.remove()}
 function pageDelivery(){
 const s=app.settings,C=s.currency||"Rs.";
 let from=monthNow()+"-01",to=today(),editing=null;
 const all=()=>app.deliverybills||[];
+const docs=()=>(app.doctors||[]).filter(d=>d.active!==false);
+const fmtPref=()=>{try{return localStorage.getItem("zm_dlv_fmt")==="thermal"?"thermal":"a4"}catch(e){return"a4"}};
 const typeLabel=()=>{const t=$("#dl-type").value;return t==="other"?($("#dl-other").value.trim()||"Delivery"):DLV_TYPES[t]};
 const calc=()=>{const t=num($("#dl-proc").value)+num($("#dl-doc-ch").value)+num($("#dl-nurse").value)+num($("#dl-room").value)+num($("#dl-med").value);$("#dl-total").textContent=C+" "+fmtMoney(t);return t};
+/* Authorized Doctor: Doctors section mein jo doctors add hain wahi dikhte hain */
+const fillDocs=(sel)=>{const list=docs();let h=list.map(d=>'<option value="'+esc(d.id)+'">'+esc(dlvDocName(d))+'</option>').join("");
+if(sel&&!list.some(d=>d.id===sel.id))h='<option value="'+esc(sel.id||"__old")+'">'+esc(sel.name)+'</option>'+h;
+$("#dl-doc").innerHTML=h||'<option value="">— Pehle Doctors section mein doctor add karein —</option>';
+if(sel)$("#dl-doc").value=sel.id||"__old"};
+const docInfo=()=>{const id_=$("#dl-doc").value;const d=(app.doctors||[]).find(x=>x.id===id_);if(d)return{id:d.id,name:dlvDocName(d)};
+const o=$("#dl-doc").selectedOptions[0];return{id:id_,name:id_&&o?o.textContent:""}};
 const filt=()=>{const q=$("#dl-q").value.trim().toLowerCase();
 return all().filter(b=>inRange(b.date,from,to)&&(!q||(b.patientName||"").toLowerCase().includes(q)||(b.husbandName||"").toLowerCase().includes(q)||(b.billNo||"").toLowerCase().includes(q)||(b.cnic||"").includes(q)||(b.contact||"").includes(q)))};
 const clear=()=>{editing=null;
 ["dl-name","dl-husband","dl-cnic","dl-contact","dl-other","dl-proc","dl-doc-ch","dl-nurse","dl-room","dl-med"].forEach(i=>$("#"+i).value="");
 $("#dl-date").value=today();$("#dl-ddate").value=today();$("#dl-type").value="nvd";$("#dl-other-wrap").style.display="none";
-$("#dl-pay").value="Paid";$("#dl-doc").value=DLV_DOCTOR_DEFAULT;$("#dl-title").textContent="New Delivery Bill";$("#dl-save").textContent="SAVE";$("#dl-saveprint").textContent="SAVE & PRINT";calc()};
+$("#dl-pay").value="Paid";fillDocs();$("#dl-title").textContent="New Delivery Bill";$("#dl-save").textContent="SAVE";$("#dl-saveprint").textContent="SAVE & PRINT";calc()};
+/* form se bill ka object (billNo/ID tab tak nahi jab tak save na ho) */
+const collect=()=>{const old=editing?all().find(x=>x.id===editing):null;const dc=docInfo();
+return{id:editing||id("dlv"),billNo:old?old.billNo:"",date:$("#dl-date").value||today(),patientName:$("#dl-name").value.trim(),husbandName:$("#dl-husband").value.trim(),cnic:$("#dl-cnic").value.trim(),contact:$("#dl-contact").value.trim(),
+deliveryType:$("#dl-type").value,deliveryLabel:typeLabel(),deliveryDate:$("#dl-ddate").value,procedure:num($("#dl-proc").value),doctorCharges:num($("#dl-doc-ch").value),nursingCharges:num($("#dl-nurse").value),roomCharges:num($("#dl-room").value),otherCharges:num($("#dl-med").value),
+total:calc(),paymentStatus:$("#dl-pay").value,authDoctorId:dc.id,authDoctor:dc.name,createdBy:old?old.createdBy:(app.user.fullName||"Admin"),createdAt:old?old.createdAt:new Date().toISOString()}};
 const draw=()=>{
 const list=filt(),tot=list.reduce((a,b)=>a+dlvTotal(b),0);
 $("#dl-sum").textContent=list.length+" bill(s) • "+C+" "+fmtMoney(tot);
 $("#dl-rows").innerHTML=list.length?list.map(b=>'<tr><td style="font-weight:700;white-space:nowrap">'+esc(b.billNo)+'</td><td style="font-size:12px;white-space:nowrap">'+fmtDate(b.date)+'</td><td style="font-weight:600">'+esc(b.patientName)+'</td><td style="font-size:12px">'+esc(b.husbandName||"-")+'</td><td style="font-weight:700;white-space:nowrap">'+C+" "+fmtMoney(dlvTotal(b))+'</td><td style="font-size:12px">'+esc(b.paymentStatus||"-")+'</td>'+
-'<td><div class="flex g8"><button class="btn btn-dark sm" data-prt="'+b.id+'">🖨</button><button class="btn btn-neutral sm" data-edit="'+b.id+'">✏️</button>'+(can("delete")?'<button class="btn btn-danger sm" data-del="'+b.id+'">🗑</button>':"")+'</div></td></tr>').join(""):'<tr class="empty-row"><td colspan="7">Is period mein koi delivery bill nahi</td></tr>';
-$$("[data-prt]").forEach(x=>x.onclick=()=>printDelivery(all().find(b=>b.id===x.dataset.prt)));
-$$("[data-edit]").forEach(x=>x.onclick=()=>{const b=all().find(r=>r.id===x.dataset.edit);editing=b.id;
+'<td><div class="flex g8"><button class="btn btn-outline sm" data-view="'+b.id+'" title="View">👁</button><button class="btn btn-dark sm" data-prt="'+b.id+'" title="Print A4">🖨</button><button class="btn btn-primary sm" data-th="'+b.id+'" title="Thermal print">🧾</button><button class="btn btn-neutral sm" data-edit="'+b.id+'">✏️</button>'+(can("delete")?'<button class="btn btn-danger sm" data-del="'+b.id+'">🗑</button>':"")+'</div></td></tr>').join(""):'<tr class="empty-row"><td colspan="7">Is period mein koi delivery bill nahi</td></tr>';
+const get=x=>all().find(b=>b.id===x);
+$$("[data-view]").forEach(x=>x.onclick=()=>viewDelivery(get(x.dataset.view),fmtPref()));
+$$("[data-prt]").forEach(x=>x.onclick=()=>printDelivery(get(x.dataset.prt),"a4"));
+$$("[data-th]").forEach(x=>x.onclick=()=>printDelivery(get(x.dataset.th),"thermal"));
+$$("[data-edit]").forEach(x=>x.onclick=()=>{const b=get(x.dataset.edit);editing=b.id;
 $("#dl-name").value=b.patientName||"";$("#dl-husband").value=b.husbandName||"";$("#dl-cnic").value=b.cnic||"";$("#dl-contact").value=b.contact||"";
 $("#dl-date").value=b.date||today();$("#dl-ddate").value=b.deliveryDate||"";$("#dl-type").value=b.deliveryType||"nvd";
 $("#dl-other").value=b.deliveryType==="other"?(b.deliveryLabel||""):"";$("#dl-other-wrap").style.display=b.deliveryType==="other"?"block":"none";
 $("#dl-proc").value=b.procedure||"";$("#dl-doc-ch").value=b.doctorCharges||"";$("#dl-nurse").value=b.nursingCharges||"";$("#dl-room").value=b.roomCharges||"";$("#dl-med").value=b.otherCharges||"";
-$("#dl-pay").value=b.paymentStatus||"Paid";$("#dl-doc").value=b.authDoctor||DLV_DOCTOR_DEFAULT;
+$("#dl-pay").value=b.paymentStatus||"Paid";fillDocs(b.authDoctor?{id:b.authDoctorId,name:b.authDoctor}:null);
 $("#dl-title").textContent="Edit Bill "+b.billNo;$("#dl-save").textContent="UPDATE";$("#dl-saveprint").textContent="UPDATE & PRINT";calc();window.scrollTo(0,0)});
-$$("[data-del]").forEach(x=>x.onclick=async()=>{const b=all().find(r=>r.id===x.dataset.del);
+$$("[data-del]").forEach(x=>x.onclick=async()=>{const b=get(x.dataset.del);
 if(!await confirmBox({title:"Delete Bill",message:'Bill '+b.billNo+' ('+b.patientName+') delete karna hai? Ye wapis nahi aayega.',danger:true,confirmText:"DELETE",requireText:"DELETE"}))return;
 await qDel("deliverybills",b.id);await audit(app.user.username,"DELETE","deliverybills",b.id,b.billNo+" "+b.patientName);await loadData();toast("Bill deleted","info");draw()});
 };
@@ -3486,36 +3537,37 @@ $("#page").innerHTML='<div class="grid" style="grid-template-columns:1fr 1fr;ali
 '<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--slate-600);margin:6px 0">Treatment Charges</p>'+
 '<div class="grid g2">'+num$("dl-proc","Delivery Charges")+num$("dl-doc-ch","Doctor\'s Charges")+num$("dl-nurse","Nursing Charges")+num$("dl-room","Hospital / Room Charges")+'</div>'+num$("dl-med","Medicines & Other Expenses")+
 '<div class="inp mb" style="background:var(--green-bg,#ecfdf5)"><span style="font-size:12px;font-weight:700;text-transform:uppercase">Total Amount: </span><span id="dl-total" style="font-size:18px;font-weight:800"></span></div>'+
-'<div class="grid g2"><div class="field"><label>Payment Status</label><select class="inp" id="dl-pay"><option>Paid</option><option>Unpaid</option></select></div><div class="field"><label>Authorized Doctor</label><input class="inp" id="dl-doc"></div></div>'+
-'<div class="grid g3"><button class="btn btn-success lg" id="dl-save">SAVE</button><button class="btn btn-primary lg" id="dl-saveprint">SAVE & PRINT</button><button class="btn btn-neutral lg" id="dl-clear">CLEAR</button></div></div></div>'+
+'<div class="grid g2"><div class="field"><label>Payment Status</label><select class="inp" id="dl-pay"><option>Paid</option><option>Unpaid</option></select></div><div class="field"><label>Authorized Doctor <span class="req">*</span></label><select class="inp" id="dl-doc"></select></div></div>'+
+'<div class="field"><label>Print / View Format</label><select class="inp" id="dl-fmt"><option value="a4">A4 (poora bill)</option><option value="thermal">Thermal / Terminal slip ('+dlvSize()+'mm)</option></select></div>'+
+'<div class="grid g2"><button class="btn btn-success lg" id="dl-save">SAVE</button><button class="btn btn-primary lg" id="dl-saveprint">SAVE & PRINT</button><button class="btn btn-outline lg" id="dl-viewbtn">👁 VIEW</button><button class="btn btn-neutral lg" id="dl-clear">CLEAR</button></div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>Delivery Bills</h2><div class="sub" id="dl-sum"></div></div><button class="btn btn-outline sm" id="dl-csv">⬇ CSV</button></div>'+
 '<div class="card-b"><div class="grid g3 mb"><input class="inp" id="dl-q" placeholder="🔍 Name / Bill No / CNIC"><input class="inp" type="date" id="dl-from" value="'+from+'"><input class="inp" type="date" id="dl-to" value="'+to+'"></div>'+
-'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Bill No</th><th>Date</th><th>Patient</th><th>Husband</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody id="dl-rows"></tbody></table></div></div></div></div>';
+'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Bill No</th><th>Date</th><th>Patient</th><th>Husband</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody id="dl-rows"></tbody></table></div>'+
+'<p style="font-size:11px;color:var(--slate-600);margin-top:8px">👁 View • 🖨 A4 print • 🧾 Thermal (terminal) print • ✏️ Edit</p></div></div></div>';
+$("#dl-fmt").value=fmtPref();
+$("#dl-fmt").addEventListener("change",()=>{try{localStorage.setItem("zm_dlv_fmt",$("#dl-fmt").value)}catch(e){}});
 $$(".dl-amt").forEach(i=>i.addEventListener("input",calc));
 $("#dl-type").addEventListener("change",()=>{$("#dl-other-wrap").style.display=$("#dl-type").value==="other"?"block":"none"});
 $("#dl-q").addEventListener("input",draw);
 $("#dl-from").addEventListener("change",e=>{from=e.target.value;draw()});
 $("#dl-to").addEventListener("change",e=>{to=e.target.value;draw()});
 $("#dl-clear").onclick=clear;
+$("#dl-viewbtn").onclick=()=>{const b=collect();if(!b.patientName){toast("Patient ka naam likhein","error");return}viewDelivery(b,$("#dl-fmt").value)};
 const save=async(doPrint)=>{
-const name=$("#dl-name").value.trim();
-if(!name){toast("Patient ka naam likhein","error");return}
-const total=calc();if(total<=0){toast("Kam az kam ek charge likhein","error");return}
-const old=editing?all().find(x=>x.id===editing):null;
+const b=collect();
+if(!b.patientName){toast("Patient ka naam likhein","error");return}
+if(b.total<=0){toast("Kam az kam ek charge likhein","error");return}
+if(!b.authDoctorId){toast("Authorized Doctor chunein (Doctors section mein pehle doctor add karein)","error");return}
 try{
-let billNo=old&&old.billNo;
-if(!billNo){try{billNo="DB-"+String(await nextSeq("deliveryBillSeq",1)).padStart(4,"0")}catch(e){const mx=Math.max(0,...all().map(x=>parseInt(String(x.billNo||"").replace(/\D/g,""),10)||0));billNo="DB-"+String(mx+1).padStart(4,"0")}}
-const t=$("#dl-type").value;
-const obj={id:editing||id("dlv"),billNo:billNo,date:$("#dl-date").value||today(),patientName:name,husbandName:$("#dl-husband").value.trim(),cnic:$("#dl-cnic").value.trim(),contact:$("#dl-contact").value.trim(),
-deliveryType:t,deliveryLabel:typeLabel(),deliveryDate:$("#dl-ddate").value,procedure:num($("#dl-proc").value),doctorCharges:num($("#dl-doc-ch").value),nursingCharges:num($("#dl-nurse").value),roomCharges:num($("#dl-room").value),otherCharges:num($("#dl-med").value),
-total:total,paymentStatus:$("#dl-pay").value,authDoctor:$("#dl-doc").value.trim()||DLV_DOCTOR_DEFAULT,createdBy:old?old.createdBy:(app.user.fullName||"Admin"),createdAt:old?old.createdAt:new Date().toISOString()};
-await qPut("deliverybills",obj);await audit(app.user.username,editing?"UPDATE":"CREATE","deliverybills",obj.id,obj.billNo+" "+name+" "+total);
-await loadData();toast(editing?"Bill updated":"Bill saved: "+obj.billNo);clear();draw();if(doPrint)printDelivery(obj);
+if(!b.billNo){try{b.billNo="DB-"+String(await nextSeq("deliveryBillSeq",1)).padStart(4,"0")}catch(e){const mx=Math.max(0,...all().map(x=>parseInt(String(x.billNo||"").replace(/\D/g,""),10)||0));b.billNo="DB-"+String(mx+1).padStart(4,"0")}}
+const wasEdit=!!editing;
+await qPut("deliverybills",b);await audit(app.user.username,wasEdit?"UPDATE":"CREATE","deliverybills",b.id,b.billNo+" "+b.patientName+" "+b.total);
+await loadData();toast(wasEdit?"Bill updated":"Bill saved: "+b.billNo);const fm=$("#dl-fmt").value;clear();draw();if(doPrint)printDelivery(b,fm);
 }catch(e){toast(/unknown store/i.test(String(e&&e.message))?"Server (server.js) update karna zaroori hai — deliverybills store nahi mila":"Save nahi hua: "+(e&&e.message||e),"error")}
 };
 $("#dl-save").onclick=()=>save(false);
 $("#dl-saveprint").onclick=()=>save(true);
-$("#dl-csv").onclick=()=>downloadCSV("delivery_bills_"+from+"_to_"+to+".csv",["Bill No","Date","Patient","Husband","CNIC","Contact","Delivery Type","Delivery Date","Delivery","Doctor","Nursing","Room","Medicines/Other","Total","Status"],filt().map(b=>[b.billNo,b.date,b.patientName,b.husbandName,b.cnic,b.contact,b.deliveryLabel,b.deliveryDate,b.procedure,b.doctorCharges,b.nursingCharges,b.roomCharges,b.otherCharges,dlvTotal(b),b.paymentStatus]));
+$("#dl-csv").onclick=()=>downloadCSV("delivery_bills_"+from+"_to_"+to+".csv",["Bill No","Date","Patient","Husband","CNIC","Contact","Delivery Type","Delivery Date","Delivery","Doctor","Nursing","Room","Medicines/Other","Total","Status","Authorized Doctor"],filt().map(b=>[b.billNo,b.date,b.patientName,b.husbandName,b.cnic,b.contact,b.deliveryLabel,b.deliveryDate,b.procedure,b.doctorCharges,b.nursingCharges,b.roomCharges,b.otherCharges,dlvTotal(b),b.paymentStatus,b.authDoctor]));
 clear();draw();
 }
 
