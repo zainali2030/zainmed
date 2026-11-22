@@ -43,7 +43,7 @@ const TZ          = pick("CLINIC_TZ", "timezone", "Asia/Karachi");
 const DEV_CONTACT = "Zain Ali — 03702906075";
 
 const STORES = ["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters",
-                "appointments","leads","inventory","staff","usreports","labreports","attendance"];
+                "appointments","leads","inventory","staff","usreports","labreports","attendance","deliverybills"];
 const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports",
                    "appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const DEFAULT_CLINIC = "abraj";
@@ -749,7 +749,7 @@ app.use("/api", async (req, res, next) => {
       req.auth = session;
       const storeMatch = req.path.match(/^\/([^/]+)/);
       const store = storeMatch && storeMatch[1];
-      const permissionByStore = { patients: "patients", visits: "newvisit", doctors: "doctors", tests: "lab", labreports: "lab", usreports: "ultrasound", inventory: "inventory", expenses: "expenses", payments: "billing", appointments: "appointments", leads: "leads", staff: "staff", attendance: "staff", users: "users", settings: "settings", audit: "reports", counters: "newvisit" };
+      const permissionByStore = { patients: "patients", visits: "newvisit", doctors: "doctors", tests: "lab", labreports: "lab", usreports: "ultrasound", inventory: "inventory", expenses: "expenses", payments: "billing", deliverybills: "billing", appointments: "appointments", leads: "leads", staff: "staff", attendance: "staff", users: "users", settings: "settings", audit: "reports", counters: "newvisit" };
       const required = permissionByStore[store] || (store === "agent" ? "agent" : store === "scan-medicine" || store === "scan-bill" ? "inventory" : store === "seq" ? "newvisit" : null);
       const perms = Array.isArray(account.permissions) ? account.permissions : [];
       const denied = Array.isArray(account.denied) ? account.denied : [];
