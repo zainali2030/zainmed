@@ -564,8 +564,10 @@ String(msg||"Unknown error")+(line?("\n— Line: "+line):"")+'</pre>'+
 '</div></div>';
 if(r){r.innerHTML=html}else{document.body.innerHTML=html}
 }
-window.addEventListener("error",function(e){showFatal(e.message,e.lineno)});
-window.addEventListener("unhandledrejection",function(e){var r=e.reason;showFatal(r&&r.message?r.message:String(r),0)});
+window.addEventListener("error",function(e){if(!e||!e.message||/ResizeObserver|Script error/i.test(e.message))return;
+var r=document.getElementById("root");if(r&&r.querySelector(".sidebar,.main-wrap,.login-wrap")){console.error(e.message);if(typeof toast==="function")try{toast(e.message,"error")}catch(x){}return}showFatal(e.message,e.lineno)});
+window.addEventListener("unhandledrejection",function(e){var r=e.reason;var m=r&&r.message?r.message:String(r);try{e.preventDefault()}catch(x){}
+console.error(r);if(typeof toast==="function"){try{toast(m,"error")}catch(x){}}else{alert(m)}});
 setTimeout(function(){
 var r=document.getElementById("root");
 if(r&&r.innerHTML.replace(/\s+/g,"")===""){showFatal("Script ne kaam shuru nahi kiya (screen khali hai). F12 → Console ki red line bhejain.",0)}
@@ -600,6 +602,7 @@ const NAV=[
 {key:"ultrasound",label:"Ultrasound",icon:"📡",perm:"ultrasound"},
 {key:"injection",label:"Injections / Drips",icon:"💉",perm:"injection"},
 {key:"billing",label:"Billing / Charges",icon:"🧾",perm:"billing"},
+{key:"delivery",label:"Delivery / Maternity",icon:"🤰",perm:"billing"},
 {key:"ms_dashboard",label:"Dashboard",icon:"🏪",perm:"inventory",grp:"ms"},
 {key:"ms_stock",label:"Stock",icon:"📦",perm:"inventory",grp:"ms"},
 {key:"ms_purchase",label:"Purchase",icon:"🛒",perm:"inventory",grp:"ms"},
@@ -992,15 +995,16 @@ if(OB.length&&netOK()){await flushOutbox();return}
 if(!OB.length&&NET.state==="off"&&navigator.onLine!==false&&Date.now()>=NET.offlineUntil-1){try{await api("GET","/api/ping",undefined,{force:true,timeout:5000});setNetState()}catch(e){}}
 else setNetState()},15000);
 /* ================= APP STATE ================= */
-const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],usreports:[],labreports:[],staff:[],attendance:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
-async function audit(user,action,entity,entityId,details){
-await qPut("audit",{id:id("log"),ts:new Date().toISOString(),user:user,action:action,entity:entity,entityId:entityId,details:details||""});
+const app={user:null,patients:[],visits:[],doctors:[],tests:[],payments:[],expenses:[],users:[],audit:[],usreports:[],labreports:[],staff:[],attendance:[],leads:[],settings:DEFAULT_SETTINGS,route:"dashboard"};
+function audit(user,action,entity,entityId,details){
+try{qPut("audit",{id:id("log"),ts:new Date().toISOString(),user:user,action:action,entity:entity,entityId:entityId,details:details||""}).catch(()=>{})}catch(e){}
+return Promise.resolve();
 }
 async function loadData(){
-const [p,v,d,t,pay,ex,u,au,s,usr,lbr,stf,att]=await Promise.all([
+const [p,v,d,t,pay,ex,u,au,s,usr,lbr,stf,att,ld]=await Promise.all([
 qGetAll("patients"),qGetAll("visits"),qGetAll("doctors"),qGetAll("tests"),qGetAll("payments"),
 qGetAll("expenses"),qGetAll("users"),qGetAll("audit"),qGet("settings","app"),usGetAll().catch(e=>{console.error("usreports",e);return app.usreports||[]}),lbGetAll().catch(e=>{console.error("labreports",e);return app.labreports||[]}),
-qGetAll("staff").catch(e=>{console.error("staff",e);return app.staff||[]}),qGetAll("attendance").catch(e=>{console.error("attendance",e);return app.attendance||[]})]);
+qGetAll("staff").catch(e=>{console.error("staff",e);return app.staff||[]}),qGetAll("attendance").catch(e=>{console.error("attendance",e);return app.attendance||[]}),qGetAll("leads").catch(e=>app.leads||[])]);
 app.patients=p.sort((a,b)=>a.patientId<b.patientId?1:-1);
 app.visits=v.sort((a,b)=>a.createdAt<b.createdAt?1:-1);
 app.doctors=d.sort((a,b)=>a.name.localeCompare(b.name));
@@ -1010,7 +1014,7 @@ app.labreports=(lbr||[]).sort((a,b)=>(a.createdAt||"")<(b.createdAt||"")?1:-1);
 app.payments=pay;app.expenses=ex.sort((a,b)=>a.date<b.date?1:-1);
 app.users=u;app.audit=au.sort((a,b)=>a.ts<b.ts?1:-1).slice(0,600);
 app.staff=(stf||[]).sort((a,b)=>(a.staffId||"").localeCompare(b.staffId||""));
-app.attendance=att||[];
+app.attendance=att||[];app.leads=ld||[];
 app.settings=Object.assign({},DEFAULT_SETTINGS,s||{});
 try{document.title=(app.settings.clinicName||"Clinic")+" • ZainMed"}catch(e){}
 }
@@ -1030,8 +1034,9 @@ if(!(await qGetAll("tests")).some(t=>t.type==="injection"))
 await qBulk("tests",SEED_INJ.map(t=>({id:id("tst"),name:t[0],category:t[1],type:"injection",price:0,active:true,createdAt:new Date().toISOString()})));
 localStorage.setItem(fk,"1")}}catch(e){console.error(e)}
 }
-async function saveRecord(store,obj){await qPut(store,obj);await loadData()}
-async function removeRecord(store,key){await qDel(store,key);await loadData()}
+function upsertLocal(store,obj,del){const a=app[store];if(!Array.isArray(a))return;const k=String(recKey(obj));const i=a.findIndex(x=>String(recKey(x))===k);if(del){if(i>=0)a.splice(i,1)}else if(i>=0)a[i]=obj;else a.unshift(obj)}
+async function saveRecord(store,obj){await qPut(store,obj);upsertLocal(store,obj);loadData().catch(()=>{})}
+async function removeRecord(store,key){await qDel(store,key);upsertLocal(store,{id:key},true);loadData().catch(()=>{})}
 async function saveSettingsObj(obj){await qPut("settings",Object.assign({},obj,{key:"app"}));app.settings=Object.assign({},DEFAULT_SETTINGS,obj,{key:"app"})}
 /* ---- Per-module action permissions: Add / Edit / Delete (user.denied = ["edit:lab","delete:ultrasound"]) ---- */
 function curModule(){const r=app.route||"dashboard";const n=NAV.find(x=>x.key===r);return n?n.perm:r}
@@ -1325,12 +1330,13 @@ mount('<aside class="sidebar hidden-m" id="sidebar">'+
 '<div style="min-width:0;flex:1"><h1 id="page-title">Dashboard</h1><p class="sub">'+esc(s.clinicName)+" • "+esc(s.address)+"</p></div>"+
 '<button class="net-pill on" id="net-pill" title="Sync status">● Online</button><div class="clock" id="clock"></div>'+(can("agent")?'<button class="btn btn-primary sm" id="ai-top" style="white-space:nowrap">🤖 AI Agent</button>':"")+
 '<div class="user-chip">'+esc(app.user.fullName)+"<small>"+esc(app.user.role)+"</small></div>"+
-'<button class="icon-btn" id="logout-btn" title="Logout">⏻</button></header>'+
+'<button class="icon-btn" id="refresh-btn" title="Refresh data" style="font-size:18px">🔄</button><button class="icon-btn" id="logout-btn" title="Logout">⏻</button></header>'+
 '<div id="banner-slot"></div><main class="content" id="page"></main>'+
 '<footer class="app-foot">'+esc(s.clinicName)+" — Management System • All records are stored centrally in the clinic server database (MySQL). Every connected computer sees the same data.</footer></div>");
 $("#hbtn").onclick=()=>{$("#sidebar").classList.toggle("hidden-m");$("#backdrop").classList.toggle("show")};
 $("#backdrop").onclick=()=>{$("#sidebar").classList.add("hidden-m");$("#backdrop").classList.remove("show")};
 if($("#ai-top"))$("#ai-top").onclick=()=>go("agent");
+{const rb=$("#refresh-btn");if(rb)rb.onclick=async()=>{rb.style.opacity=".4";rb.disabled=true;try{await zmRefresh(true)}finally{const b2=$("#refresh-btn");if(b2){b2.style.opacity="";b2.disabled=false}}}}
 $("#logout-btn").onclick=()=>{if(isOwner()){sessionStorage.removeItem("abraj_owner");location.href="/master.html";return}app.user=null;sessionStorage.removeItem("abraj_session_user");renderLogin()};
 $$("[data-nav]").forEach(b=>b.onclick=()=>{ $("#sidebar").classList.add("hidden-m");$("#backdrop").classList.remove("show");go(b.dataset.nav)});
 $$("[data-navgrp]").forEach(b=>b.onclick=()=>{const sub=$("#nav-sub-"+b.dataset.navgrp);const o=!sub.classList.contains("open");sub.classList.toggle("open",o);b.classList.toggle("open",o);app.msOpen=o});
@@ -1359,7 +1365,7 @@ renderShell();
 const t=NAV.find(n=>n.key===route);
 $("#page-title").textContent=t?(t.grp==="ms"?"Medical Store • "+t.label:t.label):"Dashboard";
 const PAGES={dashboard:pageDashboard,newvisit:pageNewVisit,patients:pagePatients,emr:pageEMR,doctors:pageDoctors,
-lab:()=>pageTestModule("lab"),ultrasound:()=>pageTestModule("ultrasound"),injection:()=>pageTestModule("injection"),billing:pageBilling,ms_dashboard:()=>{app.msTab="dashboard";pageMedicalStore()},ms_stock:()=>{app.msTab="stock";pageMedicalStore()},ms_purchase:()=>{app.msTab="purchase";pageMedicalStore()},ms_sale:()=>{app.msTab="sale";pageMedicalStore()},ms_customers:()=>{app.msTab="customers";pageMedicalStore()},ms_reports:()=>{app.msTab="reports";pageMedicalStore()},expenses:pageExpenses,
+lab:()=>pageTestModule("lab"),ultrasound:()=>pageTestModule("ultrasound"),injection:()=>pageTestModule("injection"),billing:pageBilling,delivery:pageDelivery,ms_dashboard:()=>{app.msTab="dashboard";pageMedicalStore()},ms_stock:()=>{app.msTab="stock";pageMedicalStore()},ms_purchase:()=>{app.msTab="purchase";pageMedicalStore()},ms_sale:()=>{app.msTab="sale";pageMedicalStore()},ms_customers:()=>{app.msTab="customers";pageMedicalStore()},ms_reports:()=>{app.msTab="reports";pageMedicalStore()},expenses:pageExpenses,
 reports:pageReports,agent:pageAgent,staff:pageStaff,users:pageUsers,settings:pageSettings,backup:pageBackup};
 (PAGES[route]||pageDashboard)();
 showBanner();
@@ -1594,7 +1600,7 @@ const v=buildVisitObj(patientId,token,doc?doc.name:"");
 await qPut("visits",v);
 await audit(app.user.username,"CREATE","visits",v.id,"Visit "+patientId+" token "+token+" total "+v.total);
 toast("Saved ✔ Patient "+patientId+" • Token "+token);
-await loadData();if(print==="lab")printLabSlip(v);else if(print)printSlip(v);go("billing");
+upsertLocal("visits",v);loadData().catch(()=>{});if(print==="lab")printLabSlip(v);else if(print)printSlip(v);go("billing");
 }catch(e){console.error(e);toast(e.message||"Could not save the record. Please try again.","error")}
 };
 $("#nv-save").onclick=()=>doSave(false);
@@ -1774,6 +1780,173 @@ draw();
 /* ============================================================
 DOCTORS
 ============================================================ */
+/* ============================================================
+DELIVERY / MATERNITY — case record + category-wise billing + bill print
+Data "leads" store mein (_dl:1) save hota hai — server mein koi tabdeeli nahi chahiye
+============================================================ */
+const DLV_CATS=["Room / Ward","Doctor / Surgeon","OT / Anesthesia","Medicines / Pharmacy","Nursing / Misc"];
+const DLV_ITEMS=["Room charges (per day)","Delivery charges","C-Section surgeon fee","Doctor visit fee","Anesthesia fee","OT charges","Baby care / nursery","Nursing charges","Medicines","Injections / IV drip","Lab tests","Ultrasound","Baby vaccine","Misc charges"];
+function dlvAll(){return (app.leads||[]).filter(x=>x&&x._dl).sort((a,b)=>(b.createdAt||"")<(a.createdAt||"")?-1:1)}
+function dlvCalc(c){const by={};DLV_CATS.forEach(k=>by[k]=0);let sub=0;
+(c.charges||[]).forEach(i=>{const a=(Number(i.qty)||0)*(Number(i.rate)||0);by[i.cat]=(by[i.cat]||0)+a;sub+=a});
+const disc=Math.min(Number(c.discount)||0,sub);const total=sub-disc;
+const paid=(c.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0);
+return{by:by,sub:sub,disc:disc,total:total,paid:paid,bal:total-paid}}
+function dlvDays(c){if(!c.admitDate)return 0;const e=c.dischargeDate||today();const d=Math.round((new Date(e)-new Date(c.admitDate))/864e5);return Math.max(1,d||1)}
+function pageDelivery(){
+const C=app.settings.currency;let q="",st="all";
+$("#page").innerHTML='<div id="dl-stats" class="grid g4" style="margin-bottom:12px"></div>'+
+'<div class="card" style="padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
+'<input class="inp" id="dl-q" placeholder="🔍 Mother name / mobile / case no" style="flex:1;min-width:180px">'+
+'<select class="inp" id="dl-st" style="width:auto"><option value="all">All</option><option>Admitted</option><option>Discharged</option></select>'+
+'<button class="btn btn-primary" id="dl-new">＋ New Delivery Case</button></div>'+
+'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Case</th><th>Mother</th><th>Type</th><th>Admit</th><th>Status</th><th>Total</th><th>Paid</th><th>Balance</th><th></th></tr></thead><tbody id="dl-rows"></tbody></table></div></div>';
+const draw=()=>{
+const all=dlvAll();const L=all.filter(c=>(st==="all"||c.status===st)&&(!q||[c.motherName,c.mobile,c.caseNo,c.husbandName].join(" ").toLowerCase().indexOf(q)>=0));
+let tb=0,tp=0,tbal=0;all.forEach(c=>{const k=dlvCalc(c);tb+=k.total;tp+=k.paid;tbal+=k.bal});
+$("#dl-stats").innerHTML=[["🤰 Total Cases",all.length],["🛏 Admitted",all.filter(c=>c.status==="Admitted").length],["💰 Total Billed",C+" "+fmtMoney(tb)],["⏳ Balance Due",C+" "+fmtMoney(tbal)]].map(x=>'<div class="stat"><div class="lbl">'+x[0]+'</div><div style="font-size:20px;font-weight:800">'+x[1]+'</div></div>').join("");
+$("#dl-rows").innerHTML=L.map(c=>{const k=dlvCalc(c);return '<tr><td style="font-weight:700;white-space:nowrap">'+esc(c.caseNo)+'</td><td><b>'+esc(c.motherName)+'</b><div style="font-size:11px;color:var(--slate-500)">'+esc(c.mobile||"")+'</div></td>'+
+'<td style="font-size:12px">'+esc(c.deliveryType||"-")+'</td><td style="font-size:12px;white-space:nowrap">'+fmtDate(c.admitDate)+'</td>'+
+'<td><span class="badge '+(c.status==="Admitted"?"amber":"green")+'">'+esc(c.status)+'</span></td>'+
+'<td style="white-space:nowrap">'+fmtMoney(k.total)+'</td><td style="white-space:nowrap">'+fmtMoney(k.paid)+'</td><td style="white-space:nowrap;font-weight:700;color:'+(k.bal>0?"#e11d48":"#16a34a")+'">'+fmtMoney(k.bal)+'</td>'+
+'<td><div class="flex g8" style="white-space:nowrap"><button class="btn btn-neutral sm" data-dedit="'+c.id+'">✏️</button><button class="btn btn-primary sm" data-dprint="'+c.id+'">🖨 Bill</button><button class="btn btn-danger sm" data-ddel="'+c.id+'">🗑</button></div></td></tr>'}).join("")||'<tr class="empty-row"><td colspan="9">Koi delivery case nahi — "＋ New Delivery Case" dabayein</td></tr>';
+$$("[data-dedit]").forEach(b=>b.onclick=()=>dlvModal(dlvAll().find(x=>x.id===b.dataset.dedit),draw));
+$$("[data-dprint]").forEach(b=>b.onclick=()=>dlvPrintChoose(dlvAll().find(x=>x.id===b.dataset.dprint)));
+$$("[data-ddel]").forEach(b=>b.onclick=async()=>{const c=dlvAll().find(x=>x.id===b.dataset.ddel);
+if(await confirmBox({title:"Delete Delivery Case",message:c.caseNo+" — "+c.motherName+" ka record delete karein?",confirmText:"DELETE"})){await removeRecord("leads",c.id);toast("Delete ho gaya","info");draw()}})};
+$("#dl-q").oninput=e=>{q=e.target.value.trim().toLowerCase();draw()};
+$("#dl-st").onchange=e=>{st=e.target.value;draw()};
+$("#dl-new").onclick=()=>dlvModal(null,draw);
+draw()}
+function dlvModal(c0,done){
+const s=app.settings,C=s.currency;
+const nowD=today(),nowT=new Date().toTimeString().slice(0,5);
+const m=c0?JSON.parse(JSON.stringify(c0)):{id:id("del"),_dl:1,key:undefined,caseNo:"",motherName:"",age:"",mobile:"",husbandName:"",address:"",mrNo:"",admitDate:nowD,admitTime:nowT,dischargeDate:"",dischargeTime:"",deliveryType:"Normal Delivery",doctorName:"",status:"Admitted",notes:"",babies:[{gender:"Male",weight:"",time:"",status:"Healthy"}],charges:[],discount:0,payments:[],createdAt:new Date().toISOString(),createdBy:app.user.username};
+if(!m.babies||!m.babies.length)m.babies=[{gender:"Male",weight:"",time:"",status:"Healthy"}];
+m.charges=m.charges||[];m.payments=m.payments||[];
+const opt=(arr,v)=>arr.map(x=>'<option'+(x===v?" selected":"")+'>'+esc(x)+'</option>').join("");
+const F=(l,idv,v,extra)=>'<div class="field"><label>'+l+'</label><input class="inp" id="'+idv+'" value="'+esc(v)+'" '+(extra||"")+'></div>';
+const body=
+'<datalist id="dl-pn">'+app.patients.slice(0,300).map(p=>'<option value="'+esc(p.name)+'">'+esc(p.patientId||"")+'</option>').join("")+'</datalist>'+
+'<datalist id="dl-di">'+DLV_ITEMS.map(x=>'<option value="'+esc(x)+'">').join("")+'</datalist>'+
+'<datalist id="dl-dr">'+app.doctors.map(d=>'<option value="'+esc(d.name)+'">').join("")+'</datalist>'+
+'<h4 style="margin:0 0 8px">👩 Mother / Patient</h4><div class="grid g2">'+
+F("Mother Name *","dl-name",m.motherName,'list="dl-pn" placeholder="Name"')+F("Age","dl-age",m.age,'inputmode="numeric"')+
+F("Mobile","dl-mob",m.mobile,'inputmode="tel"')+F("Husband / Guardian","dl-hus",m.husbandName)+
+F("MR No (agar patient registered hai)","dl-mr",m.mrNo)+F("Address","dl-adr",m.address)+
+F("Admission Date","dl-ad",m.admitDate,'type="date"')+F("Admission Time","dl-at",m.admitTime,'type="time"')+
+F("Discharge Date","dl-dd",m.dischargeDate,'type="date"')+F("Discharge Time","dl-dt",m.dischargeTime,'type="time"')+
+'<div class="field"><label>Delivery Type</label><select class="inp" id="dl-type">'+opt(["Normal Delivery","C-Section / Caesarean"],m.deliveryType)+'</select></div>'+
+F("Doctor / Surgeon","dl-doc",m.doctorName,'list="dl-dr"')+
+'</div><h4 style="margin:14px 0 8px">👶 Baby Details <button class="btn btn-outline sm" id="dl-addbaby" type="button">＋ Baby</button></h4><div id="dl-babies"></div>'+
+'<h4 style="margin:14px 0 8px">🧾 Charges (Category-wise)</h4><div id="dl-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+DLV_CATS.map((k,i)=>'<button class="btn btn-neutral sm" type="button" data-addc="'+i+'">＋ '+esc(k)+'</button>').join("")+'</div><div id="dl-charges"></div>'+
+'<h4 style="margin:14px 0 8px">💵 Advance / Payments <button class="btn btn-outline sm" id="dl-addpay" type="button">＋ Payment</button></h4><div id="dl-pays"></div>'+
+'<div class="grid g2" style="margin-top:10px"><div class="field"><label>Discount ('+C+')</label><input class="inp" id="dl-disc" inputmode="numeric" value="'+(m.discount||0)+'"></div>'+
+'<div class="field"><label>Notes</label><input class="inp" id="dl-notes" value="'+esc(m.notes)+'"></div></div>'+
+'<div id="dl-tot" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px;margin-top:8px;font-size:14px;line-height:1.9"></div>';
+const ov=openModal(c0?"Edit Delivery — "+m.caseNo:"New Delivery Case",body,'<button class="btn btn-outline" data-close>Cancel</button><button class="btn btn-primary" id="dl-save">💾 SAVE</button>',true);
+ov.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>ov.remove());
+const q$=x=>ov.querySelector(x);
+const totals=()=>{m.discount=Number(q$("#dl-disc").value)||0;const k=dlvCalc(m);
+q$("#dl-tot").innerHTML=DLV_CATS.filter(x=>k.by[x]>0).map(x=>'<div style="display:flex;justify-content:space-between;font-size:12px"><span>'+esc(x)+'</span><span>'+fmtMoney(k.by[x])+'</span></div>').join("")+
+'<div style="display:flex;justify-content:space-between"><span>Sub Total</span><b>'+C+' '+fmtMoney(k.sub)+'</b></div>'+(k.disc?'<div style="display:flex;justify-content:space-between"><span>Discount</span><b>- '+C+' '+fmtMoney(k.disc)+'</b></div>':'')+
+'<div style="display:flex;justify-content:space-between;font-size:16px"><span>TOTAL BILL</span><b>'+C+' '+fmtMoney(k.total)+'</b></div>'+
+'<div style="display:flex;justify-content:space-between"><span>Advance / Paid</span><b style="color:#16a34a">'+C+' '+fmtMoney(k.paid)+'</b></div>'+
+'<div style="display:flex;justify-content:space-between;font-size:16px"><span>BALANCE</span><b style="color:'+(k.bal>0?"#e11d48":"#16a34a")+'">'+C+' '+fmtMoney(k.bal)+'</b></div>'};
+const drawBabies=()=>{q$("#dl-babies").innerHTML=m.babies.map((b,i)=>'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center" data-bi="'+i+'"><b style="font-size:12px">#'+(i+1)+'</b>'+
+'<select class="inp" data-bf="gender" style="width:auto">'+opt(["Male","Female"],b.gender)+'</select>'+
+'<input class="inp" data-bf="weight" inputmode="decimal" placeholder="Weight kg" value="'+esc(b.weight)+'" style="width:95px">'+
+'<input class="inp" data-bf="time" type="datetime-local" value="'+esc(b.time)+'" style="width:auto" title="Delivery date/time">'+
+'<select class="inp" data-bf="status" style="width:auto">'+opt(["Healthy","Under Observation","NICU","Referred","Stillbirth"],b.status)+'</select>'+
+(m.babies.length>1?'<button class="btn btn-danger sm" type="button" data-rmb="'+i+'">✕</button>':'')+'</div>').join("")};
+const drawCh=()=>{q$("#dl-charges").innerHTML=m.charges.map((r,i)=>'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center" data-ci="'+i+'">'+
+'<select class="inp" data-cf="cat" style="width:auto;max-width:150px">'+opt(DLV_CATS,r.cat)+'</select>'+
+'<input class="inp" data-cf="desc" list="dl-di" placeholder="Item / description" value="'+esc(r.desc)+'" style="flex:1;min-width:130px">'+
+'<input class="inp" data-cf="qty" inputmode="decimal" placeholder="Qty" value="'+esc(r.qty)+'" style="width:60px">'+
+'<input class="inp" data-cf="rate" inputmode="decimal" placeholder="Rate" value="'+esc(r.rate)+'" style="width:90px">'+
+'<b class="dl-amt" style="min-width:70px;text-align:right">'+fmtMoney((Number(r.qty)||0)*(Number(r.rate)||0))+'</b><button class="btn btn-danger sm" type="button" data-rmc="'+i+'">✕</button></div>').join("")||'<div style="font-size:12px;color:var(--slate-500)">Upar se category button dabayein</div>'};
+const drawPay=()=>{q$("#dl-pays").innerHTML=m.payments.map((p,i)=>'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center" data-pi="'+i+'">'+
+'<input class="inp" data-pf="date" type="date" value="'+esc(p.date)+'" style="width:auto">'+
+'<input class="inp" data-pf="amount" inputmode="numeric" placeholder="Amount" value="'+esc(p.amount)+'" style="width:100px">'+
+'<select class="inp" data-pf="method" style="width:auto">'+opt(["Cash","Card","Easypaisa","JazzCash","Bank Transfer"],p.method)+'</select>'+
+'<input class="inp" data-pf="note" placeholder="Note (Advance / Final)" value="'+esc(p.note)+'" style="flex:1;min-width:100px">'+
+'<button class="btn btn-danger sm" type="button" data-rmp="'+i+'">✕</button></div>').join("")||'<div style="font-size:12px;color:var(--slate-500)">Abhi koi advance nahi</div>'};
+drawBabies();drawCh();drawPay();totals();
+ov.addEventListener("input",e=>{const t=e.target;const rw=t.closest("[data-ci]"),bw=t.closest("[data-bi]"),pw=t.closest("[data-pi]");
+if(rw&&t.dataset.cf){const r=m.charges[+rw.dataset.ci];r[t.dataset.cf]=t.value;const a=rw.querySelector(".dl-amt");if(a)a.textContent=fmtMoney((Number(r.qty)||0)*(Number(r.rate)||0))}
+else if(bw&&t.dataset.bf)m.babies[+bw.dataset.bi][t.dataset.bf]=t.value;
+else if(pw&&t.dataset.pf)m.payments[+pw.dataset.pi][t.dataset.pf]=t.value;
+if(t.id==="dl-name"){const p=app.patients.find(x=>x.name===t.value);if(p){if(!q$("#dl-mob").value)q$("#dl-mob").value=p.mobile||"";if(!q$("#dl-age").value)q$("#dl-age").value=p.age||"";if(!q$("#dl-mr").value)q$("#dl-mr").value=p.patientId||"";if(!q$("#dl-adr").value)q$("#dl-adr").value=p.address||""}}
+totals()});
+ov.addEventListener("change",e=>{if(e.target.matches("select")||e.target.type==="date"||e.target.type==="datetime-local")totals()});
+ov.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+if(b.dataset.addc!==undefined){m.charges.push({cat:DLV_CATS[+b.dataset.addc],desc:"",qty:1,rate:""});drawCh();const L=q$("#dl-charges").querySelectorAll("[data-cf=desc]");if(L.length)L[L.length-1].focus()}
+else if(b.dataset.rmc!==undefined){m.charges.splice(+b.dataset.rmc,1);drawCh();totals()}
+else if(b.dataset.rmb!==undefined){m.babies.splice(+b.dataset.rmb,1);drawBabies()}
+else if(b.dataset.rmp!==undefined){m.payments.splice(+b.dataset.rmp,1);drawPay();totals()}
+else if(b.id==="dl-addbaby"){m.babies.push({gender:"Male",weight:"",time:"",status:"Healthy"});drawBabies()}
+else if(b.id==="dl-addpay"){m.payments.push({date:today(),amount:"",method:"Cash",note:m.payments.length?"":"Advance"});drawPay()}});
+q$("#dl-save").onclick=async()=>{
+const name=q$("#dl-name").value.trim();if(!name){toast("Mother ka naam likhein","error");return}
+const btn=q$("#dl-save");btn.disabled=true;btn.textContent="Saving…";
+try{
+m.motherName=name;m.age=q$("#dl-age").value;m.mobile=q$("#dl-mob").value;m.husbandName=q$("#dl-hus").value;m.mrNo=q$("#dl-mr").value;m.address=q$("#dl-adr").value;
+m.admitDate=q$("#dl-ad").value;m.admitTime=q$("#dl-at").value;m.dischargeDate=q$("#dl-dd").value;m.dischargeTime=q$("#dl-dt").value;
+m.deliveryType=q$("#dl-type").value;m.doctorName=q$("#dl-doc").value;m.notes=q$("#dl-notes").value;m.discount=Number(q$("#dl-disc").value)||0;
+m.status=m.dischargeDate?"Discharged":"Admitted";
+m.charges=m.charges.filter(r=>(r.desc||"").trim()||Number(r.rate));m.payments=m.payments.filter(p=>Number(p.amount)>0);
+if(!m.caseNo){const n=await nextSeq("deliverySeq",1);m.caseNo="DLV-"+String(n).padStart(4,"0")}
+m.updatedAt=new Date().toISOString();delete m.key;
+await saveRecord("leads",m);
+toast("Delivery case save ho gaya","success");ov.remove();if(done)done();
+if(await confirmBox({title:"Bill Print",message:"Abhi bill / slip print karein?",confirmText:"PRINT"}))dlvPrintChoose(m)
+}catch(e){btn.disabled=false;btn.textContent="💾 SAVE";toast(e.message,"error")}}}
+function dlvPrintChoose(c){if(!c)return;
+const ov=openModal("Print Delivery Bill","<p style=\"font-size:13px\">"+esc(c.caseNo)+" — "+esc(c.motherName)+"</p>",'<button class="btn btn-outline" data-close>Close</button><button class="btn btn-neutral" id="dp-80">🧾 Slip (80mm)</button><button class="btn btn-primary" id="dp-a4">📄 Full Bill (A4)</button>');
+ov.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>ov.remove());
+ov.querySelector("#dp-80").onclick=()=>{ov.remove();printHTML(dlvBillHTML(c,"80"),"80")};
+ov.querySelector("#dp-a4").onclick=()=>{ov.remove();printHTML(dlvBillHTML(c,"A4"),"A4")}}
+function dlvBillHTML(c,size){
+const s=app.settings,C=s.currency,A4=size==="A4",k=dlvCalc(c);
+const fs=A4?"12px":"10.5px",sm=A4?"11px":"9.5px";
+const logo=s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="height:'+Math.max(20,Number(s.logoSize)||56)+'px;max-width:100%;object-fit:contain;margin-bottom:2px"/></div>':"";
+const td="padding:"+(A4?"4px 6px":"2px 0")+";font-size:"+fs+";";
+const kv=(l,v)=>'<td style="'+td+'font-weight:800;width:'+(A4?"17%":"34%")+'">'+l+'</td><td style="'+td+'">'+esc(v||"-")+'</td>';
+const rows2=(arr)=>{let o="";for(let i=0;i<arr.length;i+=(A4?2:1)){o+='<tr>'+arr.slice(i,i+(A4?2:1)).map(x=>kv(x[0],x[1])).join("")+'</tr>'}return o};
+const info=[["Case No",c.caseNo],["Admission",fmtDate(c.admitDate)+" "+fmtTime(c.admitTime)],["Mother",c.motherName],["Discharge",c.dischargeDate?fmtDate(c.dischargeDate)+" "+fmtTime(c.dischargeTime):"Admitted"],
+["Age",c.age?c.age+" yrs":"-"],["Stay",dlvDays(c)+" day(s)"],["Husband/Guardian",c.husbandName],["Delivery Type",c.deliveryType],["Mobile",c.mobile],["Doctor",c.doctorName?"Dr. "+String(c.doctorName).replace(/^dr\.?\s+/i,""):"-"],["MR No",c.mrNo],["Address",c.address]];
+const babies=(c.babies||[]).map((b,i)=>'<tr><td style="'+td+'">Baby '+(i+1)+'</td><td style="'+td+'">'+esc(b.gender||"-")+'</td><td style="'+td+'">'+(b.weight?esc(b.weight)+" kg":"-")+'</td><td style="'+td+'">'+esc(b.time?String(b.time).replace("T"," "):"-")+'</td><td style="'+td+'">'+esc(b.status||"-")+'</td></tr>').join("");
+let items="";DLV_CATS.forEach(cat=>{const L=(c.charges||[]).filter(x=>x.cat===cat);if(!L.length)return;
+items+='<tr style="background:#e5e7eb;-webkit-print-color-adjust:exact;print-color-adjust:exact"><td colspan="3" style="'+td+'font-weight:900">'+esc(cat)+'</td><td style="'+td+'font-weight:900;text-align:right">'+fmtMoney(k.by[cat])+'</td></tr>'+
+L.map(x=>'<tr><td style="'+td+'padding-left:'+(A4?"14px":"4px")+'">'+esc(x.desc)+'</td><td style="'+td+'text-align:center">'+esc(x.qty)+'</td><td style="'+td+'text-align:right">'+fmtMoney(Number(x.rate)||0)+'</td><td style="'+td+'text-align:right">'+fmtMoney((Number(x.qty)||0)*(Number(x.rate)||0))+'</td></tr>').join("")});
+const ln=(l,v,b,big)=>'<tr><td style="'+td+'text-align:right;font-weight:'+(b?900:700)+';font-size:'+(big?(A4?"15px":"13px"):fs)+'">'+l+'</td><td style="'+td+'text-align:right;font-weight:'+(b?900:700)+';width:'+(A4?"22%":"34%")+';font-size:'+(big?(A4?"15px":"13px"):fs)+'">'+v+'</td></tr>';
+const pays=(c.payments||[]).map(p=>ln("Paid "+fmtDate(p.date)+" ("+esc(p.method||"")+(p.note?" - "+esc(p.note):"")+")",C+" "+fmtMoney(Number(p.amount)||0))).join("");
+const hr='<div style="border-top:1px dashed #000;margin:5px 0"></div>';
+const th='style="'+td+'font-weight:900;border-bottom:1px solid #000;text-align:left"';
+return '<div style="width:'+(A4?"100%":size==="58"?"56mm":"76mm")+';margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#000;font-weight:600">'+(A4?'<div style="border:2px solid #000;padding:14px">':"")+
+logo+'<div style="text-align:center;font-weight:900;font-size:'+(A4?"22px":"16px")+'">'+esc(s.clinicName)+'</div>'+(s.tagline?'<div style="text-align:center;font-size:'+sm+'">'+esc(s.tagline)+'</div>':"")+
+'<div style="text-align:center;font-size:'+sm+'">'+esc(s.address)+'</div><div style="text-align:center;font-size:'+sm+';font-weight:800">Cell: '+esc(s.phone)+(s.phone2?" / "+esc(s.phone2):"")+'</div>'+
+'<div style="background:#000;color:#fff;text-align:center;font-weight:900;letter-spacing:2px;margin:6px 0;padding:4px 0;font-size:'+(A4?"14px":"11px")+';-webkit-print-color-adjust:exact;print-color-adjust:exact">'+(c.deliveryType&&/C-Sec/i.test(c.deliveryType)?"C-SECTION / ":"DELIVERY ")+(A4?"DELIVERY ":"")+'BILL</div>'+
+'<table style="width:100%;border-collapse:collapse">'+rows2(info)+'</table>'+hr+
+(babies?'<div style="font-weight:900;font-size:'+fs+'">Baby Details</div><table style="width:100%;border-collapse:collapse"><tr><th '+th+'>Baby</th><th '+th+'>Gender</th><th '+th+'>Weight</th><th '+th+'>Birth Time</th><th '+th+'>Status</th></tr>'+babies+'</table>'+hr:"")+
+'<table style="width:100%;border-collapse:collapse"><tr><th '+th+'>Description</th><th '+th+' >Qty</th><th '+th+'>Rate</th><th '+th+'>Amount</th></tr>'+(items||'<tr><td colspan="4" style="'+td+'text-align:center">No charges</td></tr>')+'</table>'+hr+
+'<table style="width:100%;border-collapse:collapse">'+ln("Sub Total",C+" "+fmtMoney(k.sub))+(k.disc?ln("Discount","- "+C+" "+fmtMoney(k.disc)):"")+ln("NET TOTAL",C+" "+fmtMoney(k.total),1,1)+pays+ln("Total Paid",C+" "+fmtMoney(k.paid),1)+ln(k.bal>0?"BALANCE DUE":(k.bal<0?"REFUND":"PAID IN FULL"),C+" "+fmtMoney(Math.abs(k.bal)),1,1)+'</table>'+hr+
+(A4?'<div style="display:flex;justify-content:space-between;margin-top:34px;font-size:'+fs+'"><div style="border-top:1px solid #000;padding-top:3px;width:30%;text-align:center">Patient / Attendant</div><div style="border-top:1px solid #000;padding-top:3px;width:30%;text-align:center">Cashier</div><div style="border-top:1px solid #000;padding-top:3px;width:30%;text-align:center">Doctor</div></div>':"")+
+(s.footerText?'<div style="text-align:center;font-size:'+sm+';font-weight:800;margin-top:6px">'+esc(s.footerText)+'</div>':"")+
+'<div style="text-align:center;font-size:'+sm+';margin-top:2px">Printed: '+new Date().toLocaleString()+(app.user?" • User: "+esc(app.user.username):"")+'</div>'+
+'<div style="border-top:1px solid #000;margin-top:4px;padding-top:3px;text-align:center;font-size:'+sm+';font-weight:900">'+devFooterHTML(s)+'</div>'+(A4?"</div>":"")+'</div>'}
+/* ============ REFRESH + AUTO-SYNC (mobile se add kiya patient laptop par khud aa jaye) ============ */
+async function zmRefresh(manual){
+if(!CLINIC||!app.user)return;
+const sig=()=>[app.patients.length,app.visits.length,(app.leads||[]).length,app.payments.length,app.expenses.length].join("-");
+const before=sig();
+try{if(OB.length)await flushOutbox();await loadData()}catch(e){if(manual)toast(e.message||"Refresh nahi hua","error");return}
+const busy=document.querySelector(".modal-overlay")||/INPUT|SELECT|TEXTAREA/.test((document.activeElement||{}).tagName||"")||["newvisit","settings","users","backup","agent"].indexOf(app.route)>=0;
+if(manual||(!busy&&sig()!==before)){const y=window.scrollY;go(app.route);window.scrollTo(0,y)}
+if(manual)toast("Data refresh ho gaya","success")}
+setInterval(()=>{if(!document.hidden&&netOK())zmRefresh(false)},25000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&netOK())zmRefresh(false)});
+
 function pageDoctors(){
 const s=app.settings;
 let from=monthNow()+"-01",to=today();
