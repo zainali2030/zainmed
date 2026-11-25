@@ -1867,30 +1867,38 @@ Data "leads" store mein (_mlc:1) save hota hai — server mein tabdeeli nahi cha
 const MLC_SECTIONS=["337-A(i) Shajjah-i-Khafifah","337-A(ii) Shajjah-i-Mudihah","337-A(iii) Shajjah-i-Hashimah","337-A(iv) Shajjah-i-Munaqqilah","337-A(v) Shajjah-i-Ammah","337-A(vi) Shajjah-i-Damighah","337-D Jaifah","337-F(i) Ghayr-Jaifah Damiyah","337-F(ii) Ghayr-Jaifah Badiah","337-F(iii) Ghayr-Jaifah Mutalahimah","337-F(iv) Ghayr-Jaifah Mudihah","337-F(v) Ghayr-Jaifah Hashimah","337-F(vi) Ghayr-Jaifah Munaqqilah","337-L(ii) Other Hurt","Other (remarks mein likhein)"];
 const MLC_TYPES=["Abrasion","Bruise / Contusion","Lacerated wound","Incised wound","Stab / Penetrating wound","Firearm — entry","Firearm — exit","Swelling","Tenderness only","Fracture (suspected)","Dislocation","Burn / Scald","Bite mark","Scratch","Other"];
 const MLC_WEAPONS=["Blunt weapon","Sharp weapon","Firearm","Hard & blunt (fall / RTA)","Burn / Scald","Bite","Chemical / Acid","Unknown / Not clear","Other"];
+const MLC_INVS=["X-ray","Ultrasound","Lab / Blood tests","CT Scan","MRI","ECG","Other"];
+const invsOf=c=>c.invs||(c.xray?["X-ray"]:[]);
 const MLC_AGES=["Fresh","Within 24 hours","1–3 days","3–7 days","More than 7 days","Cannot say"];
 function mlcAll(){return (app.leads||[]).filter(x=>x&&x._mlc).sort((a,b)=>(b.createdAt||"")<(a.createdAt||"")?-1:1)}
 function pageMLC(){
-let q="",st="all";
+let q="",st="all",fi="",ft="",df="",dt="";
 $("#page").innerHTML='<div id="ml-stats" class="grid g4" style="margin-bottom:12px"></div>'+
 '<div class="card" style="padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
 '<input class="inp" id="ml-q" placeholder="🔍 Patient / MLC no / Police station / FIR no" style="flex:1;min-width:180px">'+
-'<select class="inp" id="ml-st" style="width:auto"><option value="all">All</option><option>Provisional</option><option>Final</option></select>'+
+'<select class="inp" id="ml-st" style="width:auto"><option value="all">All Status</option><option>Provisional</option><option>Final</option></select>'+
+'<select class="inp" id="ml-inv" style="width:auto"><option value="">All Investigations</option>'+MLC_INVS.map(x=>'<option>'+x+'</option>').join("")+'<option value="__none">No investigation</option></select>'+
+'<select class="inp" id="ml-it" style="width:auto"><option value="">All Injury Types</option>'+MLC_TYPES.map(x=>'<option>'+esc(x)+'</option>').join("")+'</select>'+
+'<input class="inp" type="date" id="ml-df" style="width:auto" title="From date"><input class="inp" type="date" id="ml-dt" style="width:auto" title="To date">'+
+'<button class="btn btn-neutral sm" id="ml-reset">RESET</button>'+
 '<button class="btn btn-primary" id="ml-new">＋ New MLC</button></div>'+
-'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>MLC No</th><th>Patient</th><th>Police Station / FIR</th><th>Date</th><th>Injuries</th><th>Status</th><th></th></tr></thead><tbody id="ml-rows"></tbody></table></div></div>';
+'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>MLC No</th><th>Patient</th><th>Police Station / FIR</th><th>Date</th><th>Injuries</th><th>Investigations</th><th>Status</th><th></th></tr></thead><tbody id="ml-rows"></tbody></table></div></div>';
 const draw=()=>{
 const all=mlcAll();
-const L=all.filter(c=>(st==="all"||c.status===st)&&(!q||[c.name,c.mlcNo,c.ps,c.crimeNo,c.cnic,c.mobile].join(" ").toLowerCase().indexOf(q)>=0));
+const L=all.filter(c=>(st==="all"||c.status===st)&&(!fi||(fi==="__none"?!invsOf(c).length:invsOf(c).indexOf(fi)>=0))&&(!ft||(c.injuries||[]).some(j=>j.type===ft))&&(!df||c.examDate>=df)&&(!dt||c.examDate<=dt)&&(!q||[c.name,c.mlcNo,c.ps,c.crimeNo,c.cnic,c.mobile].join(" ").toLowerCase().indexOf(q)>=0));
 $("#ml-stats").innerHTML=[["⚖️ Total MLC",all.length],["🟡 Provisional",all.filter(c=>c.status!=="Final").length],["🟢 Final",all.filter(c=>c.status==="Final").length],["📅 Today",all.filter(c=>c.examDate===today()).length]].map(x=>'<div class="stat"><div class="lbl">'+x[0]+'</div><div style="font-size:20px;font-weight:800">'+x[1]+'</div></div>').join("");
 $("#ml-rows").innerHTML=L.map(c=>'<tr><td style="font-weight:700;white-space:nowrap">'+esc(c.mlcNo)+'</td><td><b>'+esc(c.name)+'</b><div style="font-size:11px;color:var(--slate-500)">'+esc((c.age||"")+" "+(c.gender||""))+'</div></td>'+
-'<td style="font-size:12px">'+esc(c.ps||"-")+'<div style="color:var(--slate-500)">FIR/Crime: '+esc(c.crimeNo||"-")+'</div></td><td style="font-size:12px;white-space:nowrap">'+fmtDate(c.examDate)+'</td><td>'+(c.injuries||[]).length+'</td>'+
+'<td style="font-size:12px">'+esc(c.ps||"-")+'<div style="color:var(--slate-500)">FIR/Crime: '+esc(c.crimeNo||"-")+'</div></td><td style="font-size:12px;white-space:nowrap">'+fmtDate(c.examDate)+'</td><td>'+(c.injuries||[]).length+'</td><td style="font-size:11px">'+(invsOf(c).map(x=>'<span style="display:inline-block;background:#e0e7ff;color:#3730a3;border-radius:99px;padding:2px 8px;margin:1px;font-weight:700">'+esc(x)+'</span>').join('')||'—')+'</td>'+
 '<td><span style="font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;background:'+(c.status==="Final"?"#dcfce7":"#fef3c7")+';color:'+(c.status==="Final"?"#166534":"#92400e")+'">'+esc(c.status||"Provisional")+'</span></td>'+
-'<td><div class="flex g8" style="white-space:nowrap"><button class="btn btn-neutral sm" data-mledit="'+c.id+'">✏️</button><button class="btn btn-primary sm" data-mlprint="'+c.id+'">🖨 Print</button><button class="btn btn-danger sm" data-mldel="'+c.id+'">🗑</button></div></td></tr>').join("")||'<tr class="empty-row"><td colspan="7">Koi MLC nahi — "＋ New MLC" dabayein</td></tr>';
+'<td><div class="flex g8" style="white-space:nowrap"><button class="btn btn-neutral sm" data-mledit="'+c.id+'">✏️</button><button class="btn btn-primary sm" data-mlprint="'+c.id+'">🖨 Print</button><button class="btn btn-danger sm" data-mldel="'+c.id+'">🗑</button></div></td></tr>').join("")||'<tr class="empty-row"><td colspan="8">Koi MLC nahi — "＋ New MLC" dabayein</td></tr>';
 $$("[data-mledit]").forEach(b=>b.onclick=()=>mlcModal(mlcAll().find(x=>x.id===b.dataset.mledit),draw));
 $$("[data-mlprint]").forEach(b=>b.onclick=()=>{const c=mlcAll().find(x=>x.id===b.dataset.mlprint);if(c)printHTML(mlcHTML(c),"A4")});
 $$("[data-mldel]").forEach(b=>b.onclick=async()=>{const c=mlcAll().find(x=>x.id===b.dataset.mldel);
 if(await confirmBox({title:"Delete MLC",message:c.mlcNo+" — "+c.name+" ka medico-legal record permanently delete karein? Ye wapas nahi aayega.",danger:true,confirmText:"DELETE",requireText:"DELETE"})){await removeRecord("leads",c.id);audit(app.user.username,"DELETE","mlc",c.id,c.mlcNo);toast("Delete ho gaya","info");draw()}})};
 $("#ml-q").oninput=e=>{q=e.target.value.trim().toLowerCase();draw()};
 $("#ml-st").onchange=e=>{st=e.target.value;draw()};
+$("#ml-inv").onchange=e=>{fi=e.target.value;draw()};$("#ml-it").onchange=e=>{ft=e.target.value;draw()};$("#ml-df").onchange=e=>{df=e.target.value;draw()};$("#ml-dt").onchange=e=>{dt=e.target.value;draw()};
+$("#ml-reset").onclick=()=>{q="";st="all";fi="";ft="";df="";dt="";["#ml-q","#ml-df","#ml-dt"].forEach(i=>$(i).value="");$("#ml-st").value="all";$("#ml-inv").value="";$("#ml-it").value="";draw()};
 $("#ml-new").onclick=()=>mlcModal(null,draw);
 draw()}
 function mlcModal(c0,done){
@@ -1913,7 +1921,7 @@ H("🕐 Incident & History")+'<div class="grid g2">'+F("Incident Date","incident
 '<div class="field" style="grid-column:span 2"><label style="display:flex;gap:8px;align-items:center;text-transform:none"><input type="checkbox" id="ml-consent" '+(m.consent?"checked":"")+'> Patient ki razamandi se examination ki gayi (consent taken)</label></div></div>'+
 H("🩺 General Examination")+'<div class="grid g2">'+S("Consciousness","consciousness",["Conscious","Semi-conscious","Unconscious"],m.consciousness)+F("General Condition","condition",m.condition,'placeholder="e.g. Stable"')+F("BP","bp",m.bp,'placeholder="120/80"')+F("Pulse","pulse",m.pulse)+F("Temp","temp",m.temp)+F("Resp. rate","resp",m.resp)+'</div>'+
 H("🩹 Injuries (har zakhm alag likhein)")+'<div id="ml-inj"></div><button type="button" class="btn btn-outline sm" id="ml-addinj" style="margin-top:6px">＋ ADD INJURY</button>'+
-H("🔬 X-ray / Investigations")+'<div class="grid g2">'+F("X-ray / Radiology advised","xray",m.xray,'placeholder="e.g. X-ray left forearm AP/Lat"')+F("Date","xrayDate",m.xrayDate,'type="date"')+T("Radiologist opinion / findings","radiologist",m.radiologist,2)+T("Other investigations","otherInv",m.otherInv,1)+'</div>'+
+H("🔬 Investigations")+'<div class="field"><label>Kaun si investigation hui / advise ki (tick karein)</label><div style="display:flex;flex-wrap:wrap;gap:8px">'+MLC_INVS.map(x=>'<label style="display:flex;gap:6px;align-items:center;background:#eef2ff;border:1px solid #c7d2fe;border-radius:99px;padding:6px 12px;font-size:12px;text-transform:none"><input type="checkbox" data-inv value="'+x+'" '+(invsOf(m).indexOf(x)>=0?"checked":"")+'> '+x+'</label>').join("")+'</div></div><div class="grid g2">'+F("Investigation details","xray",m.xray,'placeholder="e.g. X-ray left forearm AP/Lat, USG abdomen, CBC"')+F("Date","xrayDate",m.xrayDate,'type="date"')+T("Radiologist opinion / findings","radiologist",m.radiologist,2)+T("Other investigations","otherInv",m.otherInv,1)+'</div>'+
 H("⚖️ Opinion")+'<div class="grid g2">'+S("Nature of weapon (opinion)","weaponNature",[""].concat(MLC_WEAPONS),m.weaponNature)+S("Duration of injuries","ageInj",MLC_AGES,m.ageInj)+S("Dangerous to life?","dangerLife",["No","Yes","Reserved (pending investigations)"],m.dangerLife)+F("Doctor / MLO name","doctorName",m.doctorName,'list="ml-dr"')+F("Designation","doctorDesig",m.doctorDesig)+T("Opinion / Remarks (doctor ki raye)","opinionText",m.opinionText,3)+T("Other remarks","remarks",m.remarks,1)+'</div>'+
 '<p class="hint" style="margin-top:8px">⚠ Har zakhm ki PPC section (337-A / 337-F waghera) sirf MLO ki apni raye hai — software khud decide nahi karta. Provisional certificate X-ray ke baad Final banayein.</p>';
 const ov=openModal(c0?"Edit MLC — "+m.mlcNo:"New Medico-Legal Certificate",body,'<button class="btn btn-outline" data-close>Cancel</button><button class="btn btn-neutral" id="ml-saveprint">💾 SAVE & PRINT</button><button class="btn btn-primary" id="ml-save">💾 SAVE</button>',true);
@@ -1933,7 +1941,7 @@ drawInj();
 q$("#ml-addinj").onclick=()=>{m.injuries.push({site:"",type:MLC_TYPES[0],size:"",shape:"",weapon:"",section:"",note:""});drawInj()};
 q$("#ml-name").addEventListener("change",()=>{const p=app.patients.find(x=>x.name===q$("#ml-name").value);if(!p)return;
 if(!q$("#ml-age").value)q$("#ml-age").value=p.age||"";if(!q$("#ml-mobile").value)q$("#ml-mobile").value=p.mobile||"";if(!q$("#ml-address").value)q$("#ml-address").value=p.address||"";if(p.gender)q$("#ml-gender").value=p.gender});
-const collect=()=>{["status","mlcNo","examDate","examTime","ps","crimeNo","roznamcha","letterNo","letterDate","escort","escortBelt","refSections","name","gender","rel","relName","age","cnic","mobile","broughtBy","address","mark1","mark2","incidentDate","incidentTime","broughtTime","allegedWeapon","history","consciousness","condition","bp","pulse","temp","resp","xray","xrayDate","radiologist","otherInv","weaponNature","ageInj","dangerLife","doctorName","doctorDesig","opinionText","remarks"].forEach(k=>{m[k]=q$("#ml-"+k).value.trim()});m.consent=q$("#ml-consent").checked};
+const collect=()=>{["status","mlcNo","examDate","examTime","ps","crimeNo","roznamcha","letterNo","letterDate","escort","escortBelt","refSections","name","gender","rel","relName","age","cnic","mobile","broughtBy","address","mark1","mark2","incidentDate","incidentTime","broughtTime","allegedWeapon","history","consciousness","condition","bp","pulse","temp","resp","xray","xrayDate","radiologist","otherInv","weaponNature","ageInj","dangerLife","doctorName","doctorDesig","opinionText","remarks"].forEach(k=>{m[k]=q$("#ml-"+k).value.trim()});m.consent=q$("#ml-consent").checked;m.invs=Array.from(ov.querySelectorAll("[data-inv]:checked")).map(x=>x.value)};
 const save=async(btn,print)=>{collect();if(!m.name)return toast("Patient ka naam likhein","error");
 btn.disabled=true;try{
 if(!m.mlcNo){const n=await nextSeq("mlcSeq",1);m.mlcNo="MLC-"+today().slice(0,4)+"/"+String(n).padStart(4,"0")}
@@ -1963,7 +1971,7 @@ sec("INCIDENT & HISTORY")+tbl(rows([["Incident",(c.incidentDate?fmtDate(c.incide
 '<div style="'+td+b+'border-top:0;font-size:12px;min-height:30px"><b>History:</b> '+E(c.history||"-")+'</div>'+
 sec("GENERAL EXAMINATION")+tbl(rows([["Consciousness",c.consciousness],["General condition",c.condition],["BP / Pulse",(c.bp||"-")+" / "+(c.pulse||"-")],["Temp / Resp",(c.temp||"-")+" / "+(c.resp||"-")]]))+
 sec("INJURIES")+tbl('<tr>'+th("#")+th("Site")+th("Type")+th("Size")+th("Description")+th("Weapon")+th("Section / Kind")+'</tr>'+inj)+
-(c.xray||c.radiologist||c.otherInv?sec("INVESTIGATIONS")+tbl(rows([["X-ray advised",(c.xray||"-")+(c.xrayDate?" ("+fmtDate(c.xrayDate)+")":"")],["Other",c.otherInv]]))+'<div style="'+td+b+'border-top:0;font-size:12px"><b>Radiologist opinion:</b> '+E(c.radiologist||"-")+'</div>':"")+
+(c.xray||c.radiologist||c.otherInv||invsOf(c).length?sec("INVESTIGATIONS")+tbl(rows([["Investigations",invsOf(c).join(", ")],["Details",(c.xray||"-")+(c.xrayDate?" ("+fmtDate(c.xrayDate)+")":"")],["Other",c.otherInv]]))+'<div style="'+td+b+'border-top:0;font-size:12px"><b>Radiologist opinion:</b> '+E(c.radiologist||"-")+'</div>':"")+
 sec("OPINION OF MEDICO-LEGAL OFFICER")+tbl(rows([["Nature of weapon",c.weaponNature],["Duration of injuries",c.ageInj],["Dangerous to life",c.dangerLife],["Status",final?"Final":"Provisional (pending investigations)"]]))+
 '<div style="'+td+b+'border-top:0;font-size:12px;min-height:34px"><b>Opinion:</b> '+E(c.opinionText||"-")+(c.remarks?'<br><b>Remarks:</b> '+E(c.remarks):"")+'</div>'+
 '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:12px;gap:10px">'+
