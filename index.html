@@ -598,7 +598,7 @@ const NAV=[
 const DEFAULT_SETTINGS={key:"app",clinicName:"ZainMed Clinic",tagline:"General Practice • Laboratory • Ultrasound",
 address:"",phone:"",phone2:"",email:"",
 timing:"Open 24/7",logoDataUrl:"",slipTitle:"",footerText:"Thank you for visiting us.",
-printSize:"80",usThermalSize:"80",currency:"Rs.",defaultOpdFee:500,roomChargeName:"Room Charges",roomChargeDefault:0,patientIdPrefix:"",slipFontSize:13,showMrOnSlip:true,
+printSize:"80",usThermalSize:"80",currency:"Rs.",defaultOpdFee:500,patientIdPrefix:"",slipFontSize:13,showMrOnSlip:true,
 dutyStaffName:"",shifts:["Morning","Evening","Night"],
 paymentMethods:["Cash","Card","Easypaisa","JazzCash","Bank Transfer","Credit / Due"],
 expenseCategories:["Salary","Utilities","Medicines","Lab Supplies","Maintenance","Rent","Doctor Payout","Miscellaneous"],
@@ -607,7 +607,7 @@ msName:"",msAddress:"",msPhone:"",msFooter:"",
 devFooter:"Software developed by ZainMed\n03702906075 / 03192061690\nzainaliofficial343@gmail.com"};
 function devFooterHTML(s){const t=(s&&s.devFooter!==undefined&&s.devFooter!==null)?s.devFooter:DEFAULT_SETTINGS.devFooter;return String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(esc).join("<br>")}
 /* ================= v4: per-slip logo, PDF, WhatsApp, dock, mobile bar ================= */
-const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["delivery","🚪 Delivery Bill Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports (A4 tables)"],["sal","💰 Salary Slip"],["idc","🪪 Staff ID Card"],["store","🏪 Medical Store Bill"]];
+const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports (A4 tables)"],["sal","💰 Salary Slip"],["idc","🪪 Staff ID Card"],["store","🏪 Medical Store Bill"]];
 function slipS(s,kind){const o=((s&&s.slipLogos)||{})[kind];if(!o)return s;const r=Object.assign({},s);if(o.none)r.logoDataUrl="";else if(o.url)r.logoDataUrl=o.url;if(o.size)r.logoSize=o.size;SL_TXT.forEach(f=>{if(o[f[0]]!==undefined&&String(o[f[0]]).trim()!=="")r[f[2]]=o[f[0]]});return r}
 function storeLogoHTML(){const s=slipS(app.settings,"store");return s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="height:'+Math.max(20,Number(s.logoSize)||56)+'px;width:auto;max-width:100%;object-fit:contain;margin-bottom:3px"></div>':""}
 let LAST_PRINT=null,_pdfLibs=null,_docbarT=null;
@@ -1044,8 +1044,8 @@ setTimeout(()=>{try{window.print()}catch(e){toast("Is browser mein print nahi ho
 function shieldSVG(sz,color){color=color||"#000";
 return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M32 3 L58 12 v20 c0 15-11 26-26 29C17 58 6 47 6 32V12z" fill="none" stroke="'+color+'" stroke-width="3"/><path d="M27 17h10v10h10v10H37v10H27V37H17V27h10z" fill="'+color+'"/></svg>'}
 /* ---- receipt slip HTML ---- */
-function slipHTML(v,s,size,slipKind){
-s=slipS(s,slipKind||"opd");size=size||s.printSize;const A4=size==="A4";
+function slipHTML(v,s,size){
+s=slipS(s,"opd");size=size||s.printSize;const A4=size==="A4";
 const fs=s.slipFontSize||(A4?14:size==="58"?11.5:13);
 const p=fs+"px",sm=(fs*.8)+"px",lg=(fs*1.25)+"px";
 const width=A4?"100%":size==="58"?"54mm":"74mm";
@@ -1066,7 +1066,7 @@ logo+
 '<div style="text-align:center;font-size:'+sm+';font-weight:700;line-height:1.25;margin-top:1px">'+esc(s.address)+'</div>'+
 '<div style="text-align:center;font-size:'+sm+';font-weight:800;line-height:1.25">Cell: '+esc(s.phone)+(s.phone2?" / "+esc(s.phone2):"")+(s.timing?" • "+esc(s.timing):"")+'</div>'+
 (s.slipTitle?'<div style="text-align:center;font-weight:900;font-size:'+p+';margin-top:2px">'+esc(s.slipTitle)+'</div>':'')+
-(slipKind==="delivery"?'<div style="border:2px solid #111;background:#f1f5f9;color:#111;text-align:center;border-radius:3px;margin:5px 0 4px;padding:7px 4px"><div style="font-size:'+lg+';font-weight:900;letter-spacing:1px">HOSPITAL DELIVERY BILL</div><div style="font-size:'+sm+';font-weight:700">Patient Billing / Admission Charges</div></div>':'<div style="background:#000;color:#fff;text-align:center;border-radius:4px;margin:5px 0 4px;padding:3px 0 4px;-webkit-print-color-adjust:exact;print-color-adjust:exact"><div style="font-size:'+sm+';font-weight:800;letter-spacing:3px;line-height:1.1">TOKEN NO</div><div style="font-size:'+(fs*2.7)+'px;font-weight:900;line-height:1.05">'+esc(String(tokenNo))+'</div></div>')+
+'<div style="background:#000;color:#fff;text-align:center;border-radius:4px;margin:5px 0 4px;padding:3px 0 4px;-webkit-print-color-adjust:exact;print-color-adjust:exact"><div style="font-size:'+sm+';font-weight:800;letter-spacing:3px;line-height:1.1">TOKEN NO</div><div style="font-size:'+(fs*2.7)+'px;font-weight:900;line-height:1.05">'+esc(String(tokenNo))+'</div></div>'+
 '<table style="width:100%;border-collapse:collapse;table-layout:fixed">'+
 tr((s.showMrOnSlip!==false?field("MR No",padMr(v.patientId)):field("",""))+field("Date / Time",fmtDate(v.date)+" "+fmtTime(v.time)))+
 tr(field("Patient",v.patientName,true))+
@@ -1085,22 +1085,7 @@ line("Due",cur+" "+fmtMoney(v.due),p,true)+
 '<div style="border-top:1px solid #000;margin-top:4px;padding-top:3px;text-align:center;font-size:'+(A4?"11px":"9.5px")+';font-weight:900;line-height:1.2">'+devFooterHTML(s)+'</div>'+
 (A4?'</div>':'')+'</div>';
 }
-function printSlip(v,size){printHTML(slipHTML(v,app.settings,size,"opd"),size||app.settings.printSize)}
-function printDeliveryBill(v,size){
-const s=app.settings||DEFAULT_SETTINGS;size=size||s.printSize;const A4=size==="A4",fs=s.slipFontSize||(A4?14:size==="58"?11.5:13),p=fs+"px",sm=(fs*.82)+"px",lg=(fs*1.35)+"px",width=A4?"100%":size==="58"?"54mm":"74mm",cur=s.currency||"Rs.";
-const items=(v.items||[]).filter(x=>Number(x.amount||0)!==0),rows=items.map((x,i)=>'<tr><td style="padding:5px 3px;border-bottom:1px solid #bbb;word-break:break-word">'+(i+1)+'. '+esc(x.description||"Charge")+(Number(x.qty)>1?' × '+x.qty:'')+'</td><td style="text-align:right;padding:5px 3px;border-bottom:1px solid #bbb;white-space:nowrap">'+cur+' '+fmtMoney(Number(x.rate||0))+'</td><td style="text-align:right;padding:5px 3px;border-bottom:1px solid #bbb;white-space:nowrap;font-weight:800">'+cur+' '+fmtMoney(Number(x.amount||0))+'</td></tr>').join('');
-const total=Number(v.total||0),received=Number(v.received||0),due=Number(v.due!=null?v.due:Math.max(0,total-received));
-const logo=s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="max-height:'+Math.max(22,Number(s.logoSize)||56)+'px;max-width:100%;object-fit:contain;margin:0 auto 5px;display:block">':shieldSVG(Math.max(22,Number(s.logoSize)||56));
-const title=esc(s.deliveryBillTitle||"DELIVERY BILL / ADMISSION INVOICE"),subtitle=esc(s.deliveryBillSubtitle||"Hospital Patient Billing Statement");
-const info=(label,val)=>'<div style="border:1px solid #bbb;border-radius:3px;padding:5px 6px"><div style="font-size:'+sm+';font-weight:700;color:#444">'+label+'</div><div style="font-size:'+p+';font-weight:800;word-break:break-word">'+esc(val||"—")+'</div></div>';
-const line=(label,val,bold)=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:'+p+';font-weight:'+(bold?900:700)+'"><span>'+label+'</span><span>'+cur+' '+fmtMoney(val)+'</span></div>';
-let html='<div style="width:'+width+';margin:0 auto;padding:'+(A4?'10px':'0')+';font-family:Arial,Helvetica,sans-serif;color:#111;font-weight:600">'+(A4?'<div style="border:2px solid #111;padding:12px">':'')+logo;
-html+='<div style="text-align:center;font-size:'+(A4?'22px':lg)+';font-weight:900;line-height:1.2">'+esc(s.clinicName||"Hospital")+'</div>'+(s.tagline?'<div style="text-align:center;font-size:'+sm+';font-weight:700">'+esc(s.tagline)+'</div>':'')+'<div style="text-align:center;font-size:'+sm+';margin-top:2px">'+esc(s.address||'')+'</div><div style="text-align:center;font-size:'+sm+';font-weight:700">'+esc(s.phone||'')+(s.phone2?' / '+esc(s.phone2):'')+'</div>';
-html+='<div style="border:2px solid #111;margin:8px 0;padding:6px;text-align:center"><div style="font-size:'+lg+';font-weight:900;letter-spacing:.3px">'+title+'</div><div style="font-size:'+sm+';font-weight:700">'+subtitle+'</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">'+info('Patient Name',v.patientName)+info('MR Number',padMr(v.patientId))+info('Bill / Admission Date',fmtDate(v.date))+info('Time',v.time||'')+info('Doctor',v.doctorName||'')+info('Age / Gender',(v.age||'')+' '+(v.ageUnit||'')+' / '+(v.gender||''))+info('Phone',v.mobile||'')+info('Payment Method',v.paymentMethod||'')+info('Prepared By',s.dutyStaffName||v.createdBy||'')+'</div>';
-html+='<div style="margin-top:8px;font-weight:900;font-size:'+p+';border-bottom:2px solid #111;padding-bottom:3px">CHARGE DETAILS</div><table style="width:100%;border-collapse:collapse;font-size:'+p+';margin-top:2px"><thead><tr><th style="text-align:left;padding:4px 2px;border-bottom:1px solid #111">Description</th><th style="text-align:right;padding:4px 2px;border-bottom:1px solid #111">Rate</th><th style="text-align:right;padding:4px 2px;border-bottom:1px solid #111">Amount</th></tr></thead><tbody>'+(rows||'<tr><td colspan="3" style="text-align:center;padding:8px">No charges</td></tr>')+'</tbody></table><div style="border-top:2px solid #111;margin-top:6px;padding-top:4px">'+line('Subtotal',Number(v.subTotal||total))+(Number(v.discount||0)>0?line('Discount',Number(v.discount)):'')+line('TOTAL BILL',total,true)+line('ADVANCE / RECEIVED',received)+line('BALANCE DUE',due,true)+'</div>';
-html+='<div style="margin-top:12px;display:flex;justify-content:space-between;gap:20px;font-size:'+sm+'"><div style="text-align:center;border-top:1px solid #111;padding-top:4px;flex:1">Patient / Attendant Signature</div><div style="text-align:center;border-top:1px solid #111;padding-top:4px;flex:1">Authorized Signature</div></div>'+(s.deliveryBillFooter&&String(s.deliveryBillFooter).trim()?'<div style="text-align:center;font-size:'+sm+';font-weight:700;margin-top:8px">'+esc(s.deliveryBillFooter)+'</div>':s.footerText?'<div style="text-align:center;font-size:'+sm+';margin-top:8px">'+esc(s.footerText)+'</div>':'')+'<div style="text-align:center;font-size:'+(A4?'10px':'8.5px')+';margin-top:5px">Printed: '+new Date().toLocaleString()+'</div><div style="border-top:1px solid #111;margin-top:5px;padding-top:4px;text-align:center;font-size:'+(A4?'11px':'9.5px')+';font-weight:900">'+devFooterHTML(s)+'</div>'+(A4?'</div>':'')+'</div>';
-printHTML(html,size);
-}
+function printSlip(v,size){printHTML(slipHTML(v,app.settings,size),size||app.settings.printSize)}
 /* ---- Doctor ka mobile number (doctor record se) ---- */
 function slipDocMobile(v){
 try{const d=(app.doctors||[]).find(x=>x.id===v.doctorId)||(app.doctors||[]).find(x=>v.doctorName&&x.name===v.doctorName);
@@ -1393,7 +1378,7 @@ const activeDocs=app.doctors.filter(d=>d.active);
 $("#page").innerHTML=
 '<div class="grid" style="grid-template-columns:2fr 1fr;align-items:start">'+
 '<div>'+
-'<div class="card"><div class="card-h"><div><h2>'+(editVisit?"Edit Visit":"Patient Registration / OPD Entry")+'</h2><div class="sub">'+(editVisit?"Update this visit record":"MR Number auto-generated, Token Number entered manually")+'</div></div><div class="flex g8"><button class="btn btn-outline sm" id="nv-search">🔍 SEARCH PATIENT</button><button class="btn btn-warn sm" id="nv-token-reset" title="Token sequence reset to 1">↻ TOKEN RESET</button></div></div><div class="card-b">'+
+'<div class="card"><div class="card-h"><div><h2>'+(editVisit?"Edit Visit":"Patient Registration / OPD Entry")+'</h2><div class="sub">'+(editVisit?"Update this visit record":"MR Number auto-generated, Token Number entered manually")+'</div></div><button class="btn btn-outline sm" id="nv-search">🔍 SEARCH PATIENT</button></div><div class="card-b">'+
 '<div class="grid g4 mb">'+
 '<div class="mr-big"><div class="lbl">MR No</div><div class="val">'+esc(padMr(mrNo))+'</div></div>'+
 '<div class="tok-big"><div class="lbl">Token No (Auto)</div><input id="nv-token" inputmode="numeric" readonly style="cursor:not-allowed" placeholder="Auto" value="'+(editVisit?editVisit.token:"")+'"></div>'+
@@ -1413,7 +1398,7 @@ activeDocs.map(d=>'<option value="'+d.id+'" '+(editVisit&&editVisit.doctorId===d
 '<div class="card"><div class="card-h"><h2>Add Lab Tests / Ultrasound</h2><div class="sub">Click a test to add it to the bill — price is added automatically</div></div><div class="card-b">'+
 '<input class="inp mb" id="nv-testq" placeholder="🔍 Search test by name or category (CBC, Malaria, Ultrasound…)">'+
 '<div class="test-list" id="nv-tests"></div>'+
-'<div class="grid mt" style="grid-template-columns:1fr 140px auto auto"><input class="inp" id="nv-chg-desc" placeholder="Additional charge description (Injection, Dressing, ECG…)"><input class="inp" id="nv-chg-amt" placeholder="Amount" inputmode="numeric"><button class="btn btn-success" id="nv-chg-add">➕ ADD CHARGE</button><button class="btn btn-outline" id="nv-room-add">🏨 ROOM CHARGE</button></div></div></div>'+
+'<div class="grid mt" style="grid-template-columns:1fr 140px auto"><input class="inp" id="nv-chg-desc" placeholder="Additional charge description (Injection, Dressing, ECG…)"><input class="inp" id="nv-chg-amt" placeholder="Amount" inputmode="numeric"><button class="btn btn-success" id="nv-chg-add">➕ ADD CHARGE</button></div></div></div>'+
 '<div class="card"><div class="card-h"><h2>Clinical Notes (optional)</h2><div class="sub">Saved permanently to the patient\'s EMR history</div></div><div class="card-b"><div class="grid g3">'+
 '<div class="field"><label>Diagnosis</label><textarea class="inp" id="nv-dx" placeholder="e.g. Acute gastritis">'+esc(editVisit?editVisit.diagnosis:"")+'</textarea></div>'+
 '<div class="field"><label>Prescription</label><textarea class="inp" id="nv-rx" placeholder="Tab. Panadol 500mg BD x 3 days">'+esc(editVisit?editVisit.prescription:"")+'</textarea></div>'+
@@ -1427,7 +1412,7 @@ activeDocs.map(d=>'<option value="'+d.id+'" '+(editVisit&&editVisit.doctorId===d
 '<div class="grid g2 mt"><div class="field"><label>Amount Received</label><input class="inp" id="nv-recv" style="font-weight:700;font-size:15px" inputmode="numeric" value="'+(editVisit?editVisit.received:0)+'"></div>'+
 '<div class="field"><label>Remaining / Due</label><div class="inp" id="nv-duebox" style="font-weight:800;font-size:15px"></div></div></div>'+
 '<div class="flex g8 fw mb"><button class="btn btn-success sm" id="nv-full">FULL PAYMENT</button><button class="btn btn-neutral sm" id="nv-none">NO PAYMENT</button></div>'+
-'<div style="display:grid;gap:8px"><button class="btn btn-success lg block" id="nv-save">💾 SAVE VISIT</button><button class="btn btn-primary lg block" id="nv-saveprint">🖨 SAVE & PRINT SLIP</button><button class="btn btn-warn lg block" id="nv-savelab">🧪 SAVE & PRINT LAB SLIP</button><button class="btn btn-outline lg block" id="nv-savedelivery">🚪 SAVE & PRINT DELIVERY BILL</button>'+
+'<div style="display:grid;gap:8px"><button class="btn btn-success lg block" id="nv-save">💾 SAVE VISIT</button><button class="btn btn-primary lg block" id="nv-saveprint">🖨 SAVE & PRINT SLIP</button><button class="btn btn-warn lg block" id="nv-savelab">🧪 SAVE & PRINT LAB SLIP</button>'+
 '<div class="grid g2"><button class="btn btn-neutral" id="nv-clear">CLEAR</button><button class="btn btn-outline" id="nv-reprint" '+(editVisit?"":"disabled")+">PRINT SLIP</button></div>"+(editVisit?'<button class="btn btn-warn block mt" id="nv-reprintlab">🧪 PRINT LAB SLIP</button>':"")+"</div>"+
 '<p style="text-align:center;font-size:11px;color:var(--slate-500);margin-top:10px">Every save is written instantly to the server database (MySQL).</p></div></div>'+
 '<div class="card sticky-top"><div class="card-h"><h2>📋 LIVE SLIP PREVIEW</h2><div class="sub">Automatically updates as you fill the form</div></div><div class="card-b"><div class="preview-box" id="nv-preview"></div>'+
@@ -1499,10 +1484,9 @@ if(!d||a<=0){toast("Enter description and amount for additional charge","error")
 nv.items.push({id:id("chg"),description:d,category:"other",rate:a,qty:1,amount:a});
 $("#nv-chg-desc").value="";$("#nv-chg-amt").value="";updBill();
 };
-$("#nv-room-add").onclick=()=>{const name=(app.settings.roomChargeName||"Room Charges").trim(),rate=num(app.settings.roomChargeDefault);const existing=nv.items.find(i=>i.category==="other"&&i.description===name);if(existing){toast("Room charge already added — amount edit kar sakte hain","info");return}nv.items.push({id:id("chg"),description:name,category:"other",rate,qty:1,amount:rate});updBill();};
-const tokKey=()=>"tokenSeq_"+($("#nv-doc").value||"all");
+const tokKey=()=>"tokenSeq_"+today()+"_"+($("#nv-doc").value||"all");
 const refreshTok=async()=>{if(editVisit)return;try{$("#nv-token").value=await peekSeq(tokKey(),1);updBill()}catch(e){}};
-$("#nv-doc").addEventListener("change",refreshTok);refreshTok();$("#nv-token-reset").onclick=async()=>{if(!await confirmBox({title:"Reset Token Counter",message:"Selected doctor/counter ka token number dobara 1 se start hoga. Confirm?",danger:true,confirmText:"RESET TO 1"}))return;try{await api("POST","/api/seq/"+encodeURIComponent(tokKey()),{reset:true});await refreshTok();toast("Token counter reset to 1")}catch(e){toast("Reset failed: "+e.message,"error")}};
+$("#nv-doc").addEventListener("change",refreshTok);refreshTok();
 $("#nv-full").onclick=()=>{$("#nv-recv").value=totals().total;updBill()};
 $("#nv-none").onclick=()=>{$("#nv-recv").value=0;updBill()};
 $("#nv-search").onclick=()=>patientPicker(p=>{
@@ -1525,7 +1509,7 @@ if(patientDbId){const p=app.patients.find(x=>x.id===patientDbId);
 if(p)await qPut("patients",Object.assign({},p,{name:v.patientName,age:v.age,ageUnit:v.ageUnit,gender:v.gender,mobile:v.mobile,address:v.address,updatedAt:new Date().toISOString()}))}
 await audit(app.user.username,"UPDATE","visits",v.id,"Visit updated for "+patientId);
 toast("Visit updated and saved on server ("+patientId+")");
-await loadData();if(print==="lab")printLabSlip(v);else if(print==="delivery")printDeliveryBill(v);else if(print)printSlip(v);go("billing");return;
+await loadData();if(print==="lab")printLabSlip(v);else if(print)printSlip(v);go("billing");return;
 }
 if(patientDbId){const p=app.patients.find(x=>x.id===patientDbId);
 if(p){patientId=p.patientId;
@@ -1537,13 +1521,12 @@ const v=buildVisitObj(patientId,token,doc?doc.name:"");
 await qPut("visits",v);
 await audit(app.user.username,"CREATE","visits",v.id,"Visit "+patientId+" token "+token+" total "+v.total);
 toast("Saved ✔ Patient "+patientId+" • Token "+token);
-await loadData();if(print==="lab")printLabSlip(v);else if(print==="delivery")printDeliveryBill(v);else if(print)printSlip(v);go("billing");
+await loadData();if(print==="lab")printLabSlip(v);else if(print)printSlip(v);go("billing");
 }catch(e){console.error(e);toast(e.message||"Could not save the record. Please try again.","error")}
 };
 $("#nv-save").onclick=()=>doSave(false);
 $("#nv-saveprint").onclick=()=>doSave(true);
 $("#nv-savelab").onclick=()=>doSave("lab");
-$("#nv-savedelivery").onclick=()=>doSave("delivery");
 $("#nv-clear").onclick=async()=>{
 if(($("#nv-name").value||nv.items.length)&&!await confirmBox({title:"Clear Form",message:"All values entered in this form will be cleared. This does not delete any saved record. Continue?",confirmText:"Yes, clear"}))return;
 pageNewVisit();
@@ -1575,16 +1558,14 @@ function pagePatients(){
 const s=app.settings;
 $("#page").innerHTML='<div class="card"><div class="card-h"><div><h2>Patient Directory</h2><div class="sub">Permanent patient records in the server database</div></div>'+
 '<div class="flex g8"><button class="btn btn-outline sm" id="pt-csv">⬇ EXPORT CSV</button><button class="btn btn-dark sm" id="pt-print">🖨 PRINT LIST</button></div></div>'+
-'<div class="card-b"><div class="grid mb" style="grid-template-columns:2fr 1fr 1fr"><input class="inp" id="pt-q" style="font-size:15px;padding:12px" placeholder="🔍 Search by MR No, name, mobile or CNIC…"><select class="inp" id="pt-g"><option value="">All Genders</option><option>Male</option><option>Female</option><option>Other</option></select><select class="inp" id="pt-service"><option value="all">All Services</option><option value="opd">OPD</option><option value="lab">Laboratory</option><option value="ultrasound">Ultrasound</option><option value="injection">Injection</option></select></div><div id="pt-summary" class="grid g4 mb"></div>'+
+'<div class="card-b"><div class="grid mb" style="grid-template-columns:2fr 1fr"><input class="inp" id="pt-q" style="font-size:15px;padding:12px" placeholder="🔍 Search by MR No, name, mobile or CNIC…"><select class="inp" id="pt-g"><option value="">All Genders</option><option>Male</option><option>Female</option><option>Other</option></select></div>'+
 '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>MR No</th><th>Name</th><th>Age / Gender</th><th>Mobile</th><th>Visits</th><th>Total Billed</th><th>Due</th><th>Last Visit</th><th>Actions</th></tr></thead><tbody id="pt-rows"></tbody></table></div>'+
 '<p id="pt-more" style="font-size:12px;color:var(--slate-500);margin-top:8px"></p></div></div>';
 const stats=pid=>{const vs=app.visits.filter(v=>v.patientId===pid);
 return{count:vs.length,last:vs[0]?vs[0].date:"",billed:vs.reduce((a,b)=>a+b.total,0),due:vs.reduce((a,b)=>a+b.due,0)}};
 const draw=()=>{
-const q=$("#pt-q").value.trim().toLowerCase(),g=$("#pt-g").value,svc=$("#pt-service").value;
-const list=app.patients.filter(p=>(!g||p.gender===g)&&(!q||p.patientId.toLowerCase().includes(q)||mrDigits(p.patientId).includes(q.replace(/\D/g,""))||p.name.toLowerCase().includes(q)||(p.mobile||"").includes(q)||(p.cnic||"").includes(q))&&(!svc||svc==="all"||app.visits.some(v=>v.patientId===p.patientId&&(svc==="opd"?num(v.opdFee)>0:svc==="lab"?v.items.some(i=>i.category==="lab"):svc==="ultrasound"?v.items.some(i=>i.category==="ultrasound"):v.items.some(i=>i.category==="injection")))));
-const sums=list.reduce((a,p)=>{const vs=app.visits.filter(v=>v.patientId===p.patientId);a.total+=vs.reduce((x,v)=>x+v.total,0);a.received+=vs.reduce((x,v)=>x+v.received,0);a.opd+=vs.reduce((x,v)=>x+num(v.opdFee),0);a.lab+=vs.reduce((x,v)=>x+v.labTotal,0);a.ultra+=vs.reduce((x,v)=>x+v.ultraTotal,0);return a;},{total:0,received:0,opd:0,lab:0,ultra:0});
-$("#pt-summary").innerHTML=[["OPD",sums.opd],["Lab",sums.lab],["Ultrasound",sums.ultra],["Total Received",sums.received]].map(x=>`<div class="mini-stat"><div class="lbl">${x[0]}</div><div class="val">${s.currency} ${fmtMoney(x[1])}</div></div>`).join("");
+const q=$("#pt-q").value.trim().toLowerCase(),g=$("#pt-g").value;
+const list=app.patients.filter(p=>(!g||p.gender===g)&&(!q||p.patientId.toLowerCase().includes(q)||mrDigits(p.patientId).includes(q.replace(/\D/g,""))||p.name.toLowerCase().includes(q)||(p.mobile||"").includes(q)||(p.cnic||"").includes(q)));
 $("#pt-more").textContent=list.length>300?"Showing first 300 of "+list.length+". Refine your search.":"";
 $("#pt-rows").innerHTML=list.length?list.slice(0,300).map(p=>{
 const st=stats(p.patientId);
@@ -1605,7 +1586,7 @@ await audit(app.user.username,"DELETE","patients",p.patientId,"Deleted patient "
 toast("Patient record deleted","info");draw();
 });
 };
-$("#pt-q").addEventListener("input",draw);$("#pt-g").addEventListener("change",draw);$("#pt-service").addEventListener("change",draw);
+$("#pt-q").addEventListener("input",draw);$("#pt-g").addEventListener("change",draw);
 $("#pt-csv").onclick=()=>downloadCSV("patients.csv",
 ["MR No","Name","Age","Unit","Gender","Mobile","Address","CNIC","Blood Group","Visits","Total Billed","Due","Registered"],
 app.patients.map(p=>{const st=stats(p.patientId);return[padMr(p.patientId),p.name,p.age,p.ageUnit,p.gender,p.mobile,p.address,p.cnic,p.bloodGroup,st.count,st.billed,st.due,(p.createdAt||"").slice(0,10)]}));
@@ -1856,7 +1837,7 @@ return '<tr><td style="font-size:12px;white-space:nowrap">'+fmtDate(r.date)+'<di
 '<tr class="empty-row"><td colspan="9">No patients in this period</td></tr>';
 lbBind($("#tm-wrows"),()=>drawWork())};
 const drawWork=()=>{
-const wq=(document.getElementById("tm-psearch")?.value||"").trim().toLowerCase();const rows=workList().filter(r=>!wq||r.name.toLowerCase().includes(wq)||r.patientId.toLowerCase().includes(wq)||mrDigits(r.patientId).includes(wq.replace(/\D/g,""))||String(r.token).toLowerCase()===wq);const total=rows.reduce((a,b)=>a+b.amount,0);
+const rows=workList(),total=rows.reduce((a,b)=>a+b.amount,0);
 $("#tm-count").textContent=rows.length;$("#tm-amt").textContent=s.currency+" "+fmtMoney(total);
 $("#tm-wrows").innerHTML=rows.length?rows.map(r=>
 '<tr><td style="font-size:12px;white-space:nowrap">'+fmtDate(r.date)+'<div style="color:var(--slate-500)">'+fmtTime(r.time)+"</div></td>"+
@@ -1877,9 +1858,9 @@ $("#page").innerHTML=
 '<div class="card-b"><input class="inp mb" id="tm-q" placeholder="🔍 Search test / category…"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tm-rows"></tbody></table></div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory")+' Work List</h2><div class="sub">Patients who have been charged for these services</div></div>'+
 '<div class="flex g8 fw"><input class="inp" type="date" id="tm-from" style="width:150px" value="'+from+'"><input class="inp" type="date" id="tm-to" style="width:150px" value="'+to+'">'+
-''+((isUS||isLAB)?'<select class="inp" id="tm-st" style="width:130px"><option value="all">All</option><option value="pending">Pending</option>'+(isLAB?'<option value="partial">Partial</option>':"")+'<option value="done">Reported</option></select>':"")+'<input class="inp" id="tm-psearch" placeholder="🔍 Search Existing Patient / MR / Token" style="min-width:220px"><button class="btn btn-outline sm" id="tm-refresh">↻ REFRESH</button><button class="btn btn-outline sm" id="tm-wcsv">⬇ CSV</button><button class="btn btn-dark sm" id="tm-print">🖨 PRINT</button></div></div>'+
+''+((isUS||isLAB)?'<select class="inp" id="tm-st" style="width:130px"><option value="all">All</option><option value="pending">Pending</option>'+(isLAB?'<option value="partial">Partial</option>':"")+'<option value="done">Reported</option></select>':"")+'<button class="btn btn-outline sm" id="tm-wcsv">⬇ CSV</button><button class="btn btn-dark sm" id="tm-print">🖨 PRINT</button></div></div>'+
 '<div class="card-b"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date / Time</th><th>Token</th><th>MR No</th><th>Patient</th><th>Doctor</th><th>'+(isUS?"Study":isINJ?"Injection / Drip":"Tests")+'</th><th>Amount</th>'+((isUS||isLAB)?'<th>Status</th><th style="min-width:270px">Report</th>':"")+'</tr></thead><tbody id="tm-wrows"></tbody></table></div></div></div>';
-$("#tm-q").addEventListener("input",drawList);if($("#tm-psearch"))$("#tm-psearch").addEventListener("input",drawWork);if($("#tm-refresh"))$("#tm-refresh").onclick=async()=>{await loadData();drawList();drawWork();toast("Data refreshed");};
+$("#tm-q").addEventListener("input",drawList);
 $("#tm-from").addEventListener("change",e=>{from=e.target.value;drawWork()});
 $("#tm-to").addEventListener("change",e=>{to=e.target.value;drawWork()});
 if(isUS||isLAB)$("#tm-st").addEventListener("change",drawWork);
@@ -4445,7 +4426,7 @@ $("#page").innerHTML='<div class="grid" style="grid-template-columns:2fr 1fr;ali
 '<div id="st-logobox" style="width:64px;height:64px;border-radius:8px;background:#fff;border:1px solid var(--slate-200);display:grid;place-items:center;overflow:hidden">'+(s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="max-width:100%;max-height:100%">':shieldSVG(48,"#1d4ed8"))+"</div>"+
 '<div style="flex:1"><input type="file" id="st-logofile" accept="image/*" style="font-size:12px;width:100%">'+(s.logoDataUrl?'<button class="btn btn-neutral sm mt" id="st-logorm">REMOVE LOGO</button>':"")+"</div></div>"+
 '<div class="field"><label>Printer / Paper Size</label><select class="inp" id="st-size"><option value="58" '+(s.printSize==="58"?"selected":"")+">58 mm Thermal Printer</option><option value=\"80\" "+(s.printSize==="80"?"selected":"")+">80 mm Thermal Printer</option><option value=\"A4\" "+(s.printSize==="A4"?"selected":"")+">A4 Paper</option></select></div>"+
-'<div class="field"><label>Default OPD Fee</label><input class="inp" id="st-opd" inputmode="numeric" value="'+s.defaultOpdFee+'" /></div><div class="field"><label>Room Charge Name</label><input class="inp" id="st-roomname" value="'+esc(s.roomChargeName||"Room Charges")+'" placeholder="Room Charges"></div><div class="field"><label>Default Room Charge</label><input class="inp" id="st-roomamt" inputmode="numeric" value="'+num(s.roomChargeDefault)+'" placeholder="0 = manually enter"></div></div>'+
+'<div class="field"><label>Default OPD Fee</label><input class="inp" id="st-opd" inputmode="numeric" value="'+s.defaultOpdFee+'"></div>'+
 '<div class="field"><label>MR Number Prefix</label><input class="inp" id="st-prefix" value="'+esc(s.patientIdPrefix||"")+'"></div>'+
 '<div class="field"><label>Slip Font Size (Standard: 13)</label><div class="flex g12 aic"><input type="range" id="st-font" min="9" max="26" step="0.5" value="'+s.slipFontSize+'" style="flex:1;accent-color:var(--blue-700)"><span id="st-fontv" style="font-weight:700;color:var(--blue-800);width:48px;text-align:center">'+s.slipFontSize+"px</span></div></div>"+
 '<div class="field"><label>Report Font Size</label><div class="flex g12 aic"><input type="range" id="st-rfont" min="9" max="22" step="0.5" value="'+(s.reportFontSize||12)+'" style="flex:1"><span id="st-rfontv">'+(s.reportFontSize||12)+'px</span></div></div>'+
@@ -4456,7 +4437,7 @@ $("#page").innerHTML='<div class="grid" style="grid-template-columns:2fr 1fr;ali
 '<div class="field"><label>Backup Reminder (days)</label><input class="inp" id="st-bk" inputmode="numeric" value="'+s.backupReminderDays+'"></div>'+
 '<div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:8px;padding:12px"><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--blue-800);margin-bottom:8px">Test Print Sample Slip</p><div class="flex g8 fw">'+
 ["58","80","A4"].map(x=>'<button class="btn btn-outline sm" data-demo="'+x+'">🖨 '+(x==="A4"?"A4":x+"mm")+"</button>").join("")+"</div></div></div></div></div>"+
-slipLogoCardHTML(s)+bgCardHTML(s)+'<div class="card" style="grid-column:span 2"><div class="card-h"><h2>🚪 Delivery Bill / Admission Invoice Settings</h2><div class="sub">Delivery bill title aur footer alag edit karein; OPD slip/token par koi asar nahi hoga</div></div><div class="card-b"><div class="grid g2"><div class="field"><label>Delivery Bill Title</label><input class="inp" id="st-dbill-title" value="'+esc(s.deliveryBillTitle||"DELIVERY BILL / ADMISSION INVOICE")+'" placeholder="DELIVERY BILL / ADMISSION INVOICE"></div><div class="field"><label>Subtitle</label><input class="inp" id="st-dbill-subtitle" value="'+esc(s.deliveryBillSubtitle||"Hospital Patient Billing Statement")+'" placeholder="Hospital Patient Billing Statement"></div><div class="field" style="grid-column:span 2"><label>Delivery Bill Footer / Instructions</label><textarea class="inp" id="st-dbill-footer" rows="2" placeholder="Optional footer text for delivery bill only">'+esc(s.deliveryBillFooter||"")+'</textarea><p class="hint">Token number Delivery Bill par print nahi hoga. Charge details, total, received aur balance saved bill se aayenge.</p></div></div></div></div>'+'<div class="card" style="grid-column:span 2"><div class="card-h"><h2>🏪 Medical Store Slip</h2><div class="sub">Medical Store ki bill slip yahan se edit karein — khali chhora to Clinic wali value use hogi</div></div><div class="card-b"><div class="grid g2">'+
+slipLogoCardHTML(s)+bgCardHTML(s)+'<div class="card" style="grid-column:span 2"><div class="card-h"><h2>🏪 Medical Store Slip</h2><div class="sub">Medical Store ki bill slip yahan se edit karein — khali chhora to Clinic wali value use hogi</div></div><div class="card-b"><div class="grid g2">'+
 '<div class="field" style="grid-column:span 2"><label>Store Name (slip ke upar)</label><input class="inp" id="st-msname" style="font-weight:700" value="'+esc(s.msName||"")+'" placeholder="Khali = automatic (e.g. Jawad Medical Store)"></div>'+
 '<div class="field" style="grid-column:span 2"><label>Store Address</label><input class="inp" id="st-msaddr" value="'+esc(s.msAddress||"")+'" placeholder="Khali = Clinic ka address"></div>'+
 '<div class="field"><label>Store Phone</label><input class="inp" id="st-msphone" value="'+esc(s.msPhone||"")+'" placeholder="Khali = Clinic ka phone"></div>'+
@@ -4514,8 +4495,8 @@ $("#st-save").onclick=async()=>{
 const lines=v=>v.split("\n").map(x=>x.trim()).filter(Boolean);
 const obj=Object.assign({},s,{clinicName:$("#st-name").value.trim()||s.clinicName,tagline:$("#st-tag").value,address:$("#st-addr").value,
 phone:$("#st-phone").value,phone2:$("#st-phone2").value,email:$("#st-email").value,timing:$("#st-timing").value,
-slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,deliveryBillTitle:$("#st-dbill-title").value.trim(),deliveryBillSubtitle:$("#st-dbill-subtitle").value.trim(),deliveryBillFooter:$("#st-dbill-footer").value,msName:$("#st-msname").value.trim(),msAddress:$("#st-msaddr").value.trim(),msPhone:$("#st-msphone").value.trim(),msFooter:$("#st-msfoot").value.trim(),devFooter:$("#st-dev").value,slipLogos:slipLogos,
-bgImage:bgImg,bgDim:bgDim,sbImage:sbImg,sbDim:sbDim,logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),roomChargeName:$("#st-roomname").value.trim()||"Room Charges",roomChargeDefault:num($("#st-roomamt").value),patientIdPrefix:$("#st-prefix").value,
+slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,msName:$("#st-msname").value.trim(),msAddress:$("#st-msaddr").value.trim(),msPhone:$("#st-msphone").value.trim(),msFooter:$("#st-msfoot").value.trim(),devFooter:$("#st-dev").value,slipLogos:slipLogos,
+bgImage:bgImg,bgDim:bgDim,sbImage:sbImg,sbDim:sbDim,logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
 slipFontSize:parseFloat($("#st-font").value),reportFontSize:parseFloat($("#st-rfont").value),logoSize:parseInt($("#st-logosize").value,10),usThermalSize:$("#st-usth").value,dutyStaffName:$("#st-duty").value,showMrOnSlip:showMr,
 backupReminderDays:num($("#st-bk").value),shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
 await saveSettingsObj(obj);

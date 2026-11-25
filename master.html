@@ -104,7 +104,7 @@ function draw(){
   '<div class="card"><h2>Clinics & Medical Stores ('+CL.length+')</h2>'+
   (CL.map(function(c){return '<div class="clinic '+(c.active?"":"off")+'"><div class="ch"><div><h3>'+esc(c.name)+' '+status(c)+'</h3><div style="color:#64748b;font-size:12px">'+esc(c.address||"")+' '+esc(c.phone||"")+'</div></div>'+
    '<div class="acts"><button class="btn sm" title="Owner access ke saath clinic kholo" data-open="'+esc(c.code)+'">Open Clinic</button><button class="btn n sm" data-link="'+esc(c.code)+'">🔗 Link</button><button class="btn a sm" data-edit="'+esc(c.code)+'">Edit</button><button class="btn sm '+(c.active?"r":"g")+'" data-tog="'+esc(c.code)+'">'+(c.active?"Band karo":"Active karo")+'</button><button class="btn r sm" data-del="'+esc(c.code)+'">🗑 Delete</button></div></div>'+
-   '<div class="kv"><div><span>Clinic ID</span><b>'+esc(c.code)+'</b></div><div><span>Admin Username</span><b>'+esc(c.admin_user)+'</b></div><div><span>Admin Password</span><b>Stored securely (hashed)</b></div><div><span>Patients / Visits</span><b>'+c.patients+' / '+c.visits+'</b></div><div><span>Expiry</span><b>'+esc(c.expiry||"Unlimited")+'</b></div><div><span>Created</span><b>'+esc(c.created)+'</b></div></div>'+
+   '<div class="kv"><div><span>Clinic ID</span><b>'+esc(c.code)+'</b></div><div><span>Admin Username</span><b>'+esc(c.admin_user)+'</b></div><div><span>Admin Password</span><b>'+esc(c.admin_pass)+'</b></div><div><span>Patients / Visits</span><b>'+c.patients+' / '+c.visits+'</b></div><div><span>Expiry</span><b>'+esc(c.expiry||"Unlimited")+'</b></div><div><span>Created</span><b>'+esc(c.created)+'</b></div></div>'+
    (c.note?'<div style="font-size:12px;color:#64748b">Note: '+esc(c.note)+'</div>':'')+'</div>'}).join("")||'<p>Abhi koi clinic nahi.</p>')+
   '</div><p class="foot">Software developed by ZainMed<br>03702906075 / 03192061690<br>zainaliofficial343@gmail.com</p></div>';
   $("#app").innerHTML=h;
@@ -147,7 +147,7 @@ function edit(c){
   '<div><label>Address</label><input class="inp" id="e-addr" value="'+esc(c.address)+'"></div>'+
   '<div><label>Phone</label><input class="inp" id="e-phone" value="'+esc(c.phone)+'"></div>'+
   '<div><label>Admin Username</label><input class="inp" id="e-au" value="'+esc(c.admin_user)+'"></div>'+
-  '<div><label>Admin Password</label><input class="inp" id="e-ap" value="" placeholder="Leave blank to keep current password"></div>'+
+  '<div><label>Admin Password</label><input class="inp" id="e-ap" value="'+esc(c.admin_pass)+'"></div>'+
   '<div><label>License Expiry</label><input class="inp" type="date" id="e-exp" value="'+esc(c.expiry||"")+'"></div></div>'+
   '<label style="margin-top:10px">Note</label><input class="inp" id="e-note" value="'+esc(c.note||"")+'">'+
   '<div class="acts" style="margin-top:14px"><button class="btn g" id="e-save">Save</button><button class="btn n" id="e-cancel">Cancel</button></div></div>';
