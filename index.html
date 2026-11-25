@@ -526,6 +526,23 @@ body:has(.modal-overlay) #zm-dock{display:none!important}
 }
 @media(min-width:1024px){.content{padding-right:76px}}
 @media print{#zm-dock,#zm-bnav,#zm-docbar{display:none!important}body::before{display:none!important}}
+/* ===== Neon glow (hover par rainbow glow) - sidebar aur mobile bottom-nav par nahi ===== */
+:where(button,.btn,.icon-btn,.test-chip,.net-pill):where(:not(.nav-item,.sidebar *,#zm-bnav *)){position:relative;isolation:isolate;overflow:hidden}
+:where(button,.btn,.icon-btn,.test-chip,.net-pill):where(:not(.nav-item,.sidebar *,#zm-bnav *))::before{content:"";position:absolute;top:-2px;left:-2px;z-index:-1;width:calc(100% + 4px);height:calc(100% + 4px);background:linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000);background-size:400%;filter:blur(5px);border-radius:inherit;animation:glowing 20s linear infinite;opacity:0;transition:opacity .3s ease-in-out;pointer-events:none}
+:where(button,.btn,.icon-btn,.test-chip,.net-pill):where(:not(.nav-item,.sidebar *,#zm-bnav *)):hover:not(:disabled)::before{opacity:1}
+:where(.btn-neutral,.btn-outline,.icon-btn,.test-chip,.ag-chip,.net-pill):hover:not(:disabled){color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+.test-chip:hover .price{color:#fff}
+.tbl tbody tr:hover td{background-image:linear-gradient(90deg,rgba(255,0,0,.16),rgba(255,115,0,.16),rgba(255,251,0,.16),rgba(72,255,0,.16),rgba(0,255,213,.16),rgba(0,43,255,.16),rgba(122,0,255,.16),rgba(255,0,200,.16),rgba(255,0,0,.16));background-size:400vw 100%;background-attachment:fixed;animation:glowing 20s linear infinite}
+@keyframes glowing{0%{background-position:0 0}50%{background-position:400% 0}100%{background-position:0 0}}
+@media(prefers-reduced-motion:reduce){:where(button,.btn,.icon-btn,.test-chip,.net-pill)::before,.tbl tbody tr:hover td{animation:none}}
+@media print{:where(button,.btn,.icon-btn,.test-chip,.net-pill)::before{display:none!important}.tbl tbody tr:hover td{background-image:none!important}}
+/* ===== Rainbow border line (mouse hover/focus) - all boxes, inputs, sidebar ===== */
+.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button{position:relative}
+:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after{content:"";position:absolute;inset:0;padding:2px;border-radius:inherit;background:linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000);background-size:400%;animation:glowing 20s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s ease-in-out;pointer-events:none;z-index:3}
+:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button):hover::after{opacity:1}
+.inp:hover:not(.login-glass *):not(:disabled):not([readonly]),.inp:focus:not(.login-glass *){border:2px solid transparent;padding:9px 11px;background:linear-gradient(rgba(255,255,255,.96),rgba(255,255,255,.96)) padding-box,linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000) border-box;background-size:auto,400%;animation:glowing 20s linear infinite;box-shadow:0 0 12px rgba(56,189,248,.4)}
+@media(prefers-reduced-motion:reduce){:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after,.inp:hover,.inp:focus{animation:none}}
+@media print{:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after{display:none!important}}
 </style>
 </head>
 <body>
@@ -1018,15 +1035,15 @@ async function removeRecord(store,key){await qDel(store,key);await loadData()}
 async function saveSettingsObj(obj){await qPut("settings",Object.assign({},obj,{key:"app"}));app.settings=Object.assign({},DEFAULT_SETTINGS,obj,{key:"app"})}
 /* ---- Per-module action permissions: Add / Edit / Delete (user.denied = ["edit:lab","delete:ultrasound"]) ---- */
 function curModule(){const r=app.route||"dashboard";const n=NAV.find(x=>x.key===r);return n?n.perm:r}
-function canAct(act,mod){const u=app.user;if(!u||u.role==="owner"||u.role==="admin")return true;mod=mod||curModule();return (u.denied||[]).indexOf(act+":"+mod)<0}
+function canAct(act,mod){const u=app.user;if(!u||u.role==="owner"||(u.role==="admin"&&!u.custom))return true;mod=mod||curModule();return (u.denied||[]).indexOf(act+":"+mod)<0}
 function btnAct(b){const attrs=Array.prototype.map.call(b.attributes,a=>a.name),vals=Array.prototype.map.call(b.attributes,a=>String(a.value)),txt=(b.textContent||"").trim();
 if(attrs.some(n=>/^data-[a-z-]*(del|delete|remove)/.test(n))||vals.some(v=>/^(del|delete|remove)$/i.test(v))||/🗑/.test(txt)||/^delete$/i.test(txt))return"delete";
 if(attrs.some(n=>/^data-[a-z-]*edit/.test(n))||vals.some(v=>/^edit$/i.test(v))||/^✏/.test(txt)||/^edit$/i.test(txt))return"edit";
 if(/^[＋➕]/.test(txt)||/^\+\s/.test(txt)||/-(add|new)$/.test(b.id||""))return"add";
 const m=curModule();if(m==="settings"||m==="backup"||m==="agent"){if(/delete|remove|clear|reset|✕/i.test(txt))return"delete";if(/save|💾|upload|import|restore|apply|update|change|set\b|🖼|📷|logo|picture/i.test(txt)||/(save|upload|import|restore)/i.test(b.id||""))return"edit"}return""}
 document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("button");if(!b||!app.user||b.hasAttribute("data-close"))return;const a=btnAct(b);if(a&&!canAct(a)){e.stopImmediatePropagation();e.preventDefault();toast("Aap ko is kaam ("+({add:"Add",edit:"Edit",delete:"Delete"})[a]+") ki ijazat nahi hai","error")}},true);
-let _actT=null;new MutationObserver(()=>{clearTimeout(_actT);_actT=setTimeout(()=>{const u=app.user;if(!u||!(u.denied||[]).length||u.role==="admin"||u.role==="owner")return;document.querySelectorAll("button").forEach(b=>{if(b.dataset.zact===undefined){b.dataset.zact=btnAct(b)}const a=b.dataset.zact;if(a&&!canAct(a))b.style.display="none"})},120)}).observe(document.documentElement,{childList:true,subtree:true});
-function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users")return false;if(app.user.role==="medicalstore")return perm==="inventory";if(app.user.role==="lab")return perm==="lab";if(app.user.role==="admin")return true;return (app.user.permissions||[]).indexOf(perm)>=0}
+let _actT=null;new MutationObserver(()=>{clearTimeout(_actT);_actT=setTimeout(()=>{const u=app.user;if(!u||!(u.denied||[]).length||(u.role==="admin"&&!u.custom)||u.role==="owner")return;document.querySelectorAll("button").forEach(b=>{if(b.dataset.zact===undefined){b.dataset.zact=btnAct(b)}const a=b.dataset.zact;if(a&&!canAct(a))b.style.display="none"})},120)}).observe(document.documentElement,{childList:true,subtree:true});
+function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users")return false;if(app.user.role==="medicalstore")return perm==="inventory";if(app.user.role==="lab")return perm==="lab";if(app.user.role==="admin"&&!app.user.custom)return true;return (app.user.permissions||[]).indexOf(perm)>=0}
 function backupDue(){const s=app.settings;if(!s.backupReminderDays)return false;
 if(!s.lastBackupAt)return app.visits.length>0;
 return daysBetween(s.lastBackupAt.slice(0,10),today())>=s.backupReminderDays}
@@ -4835,9 +4852,9 @@ const draw=()=>{
 $("#us-rows").innerHTML=app.users.map(u=>
 '<tr><td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--blue-800)">'+esc(u.username)+'</td><td style="font-weight:600">'+esc(u.fullName)+"</td>"+
 '<td><span class="badge '+(u.role==="admin"?"violet":u.role==="doctor"?"blue":"slate")+'">'+u.role.toUpperCase()+"</span></td>"+
-'<td style="font-size:11px;color:var(--slate-600)">'+(u.role==="admin"?"Full access to all modules":u.permissions.map(p=>PERM_LABELS[p]||p).join(", "))+"</td>"+
+'<td style="font-size:11px;color:var(--slate-600)">'+(u.role==="admin"&&!u.custom?"Full access to all modules":u.permissions.map(p=>PERM_LABELS[p]||p).join(", "))+"</td>"+
 '<td><span class="badge '+(u.active?"green":"red")+'">'+(u.active?"Active":"Disabled")+"</span></td>"+
-"<td>"+(u.id===ADMIN_ID?'<span class="badge violet">FIXED — LOCKED</span>':
+"<td>"+(u.id===ADMIN_ID?'<div class="flex g8"><button class="btn btn-neutral sm" data-edit="'+u.id+'">✏️</button></div>':
 '<div class="flex g8"><button class="btn btn-neutral sm" data-edit="'+u.id+'">✏️</button><button class="btn '+(u.active?"btn-warn":"btn-success")+' sm" data-tog="'+u.id+'">'+(u.active?"OFF":"ON")+'</button><button class="btn btn-danger sm" data-del="'+u.id+'">🗑</button></div>')+"</td></tr>").join("");
 $$("[data-edit]").forEach(b=>b.onclick=()=>userModal(app.users.find(x=>x.id===b.dataset.edit)));
 $$("[data-tog]").forEach(b=>b.onclick=async()=>{const u=app.users.find(x=>x.id===b.dataset.tog);await qPut("users",Object.assign({},u,{active:!u.active}));await loadData();pageUsers()});
@@ -4860,18 +4877,18 @@ draw();
 function userModal(u){
 const ov=openModal(u.id?"Edit User — "+u.username:"Add New User",
 '<div class="grid g2">'+
-'<div class="field"><label>Username <span class="req">*</span></label><input class="inp" id="um-user" value="'+esc(u.username)+'" autocomplete="off"></div>'+
-'<div class="field"><label>Password <span class="req">*</span></label><input class="inp" id="um-pass" value="'+esc(u.password)+'" autocomplete="new-password"></div>'+
+'<div class="field"><label>Username <span class="req">*</span></label><input class="inp" id="um-user" value="'+esc(u.username)+'" autocomplete="off'+(u.id===ADMIN_ID?'" readonly title="Username/password clinic setup se control hote hain':'')+'"></div>'+
+'<div class="field"><label>Password <span class="req">*</span></label><input class="inp" id="um-pass" value="'+esc(u.password)+'" autocomplete="new-password'+(u.id===ADMIN_ID?'" readonly title="Username/password clinic setup se control hote hain':'')+'"></div>'+
 '<div class="field"><label>Full Name</label><input class="inp" id="um-name" value="'+esc(u.fullName)+'"></div>'+
-'<div class="field"><label>Role</label><select class="inp" id="um-role"><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option><option value=\"medicalstore\" "+(u.role==="medicalstore"?"selected":"")+">Medical Store — Medical Store only</option><option value=\"lab\" "+(u.role==="lab"?"selected":"")+">Lab — Lab module only</option></select></div></div>"+
+'<div class="field"><label>Role</label><select class="inp" id="um-role"'+(u.id===ADMIN_ID?' disabled':'')+'><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option><option value=\"medicalstore\" "+(u.role==="medicalstore"?"selected":"")+">Medical Store — Medical Store only</option><option value=\"lab\" "+(u.role==="lab"?"selected":"")+">Lab — Lab module only</option></select></div></div>"+
 '<div><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--slate-600);margin-bottom:8px">Module Permissions</p><div id="um-perms"></div></div>',
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="um-save">💾 SAVE USER</button>');
-let role=u.role,perms=u.permissions.slice(),denied=(u.denied||[]).slice();
+let role=u.role,perms=(u.id===ADMIN_ID&&!u.custom?ALL_PERMS.slice():u.permissions.slice()),denied=(u.denied||[]).slice();
 const drawPerms=()=>{
 const box=$("#um-perms",ov);
 if(role==="medicalstore"){perms=MEDICAL_STORE_PERMS.slice();box.innerHTML='<p style="background:rgba(219,234,254,.65);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:13px;color:#1e40af">This account can access Medical Store only. All clinic modules, users and settings remain hidden.</p>';return}
 if(role==="lab"){perms=LAB_PERMS.slice();box.innerHTML='<p style="background:rgba(219,234,254,.65);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:13px;color:#1e40af">Is account ko sirf Lab module ka access milega (Lab work list, lab reports, test list). Baaki modules, users aur settings hidden rahenge.</p>';return}
-if(role==="admin"){box.innerHTML='<p style="background:var(--violet-bg);border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:13px;color:#5b21b6">Administrators automatically have full access to every module including delete and backup.</p>';return}
+if(role==="admin"&&u.id!==ADMIN_ID){box.innerHTML='<p style="background:var(--violet-bg);border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:13px;color:#5b21b6">Administrators automatically have full access to every module including delete and backup.</p>';return}
 box.innerHTML='<div class="grid g2">'+ALL_PERMS.map(p=>
 '<label style="display:flex;align-items:center;gap:8px;border:1px solid var(--slate-200);border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer"><input type="checkbox" data-perm="'+p+'" '+(perms.indexOf(p)>=0?"checked":"")+' style="width:16px;height:16px"><span'+(p==="delete"?' style="font-weight:600;color:#be123c"':"")+">"+(PERM_LABELS[p]||p)+"</span>"+(["delete","users"].indexOf(p)<0?'<span class="uacts" style="margin-left:auto;display:flex;gap:8px;font-size:11px;'+(perms.indexOf(p)>=0?"":"opacity:.35;pointer-events:none")+'">'+[["add","➕ Add"],["edit","✏️ Edit"],["delete","🗑 Delete"]].map(a=>'<label style="display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" data-act="'+a[0]+":"+p+'" '+(denied.indexOf(a[0]+":"+p)<0?"checked":"")+' style="width:14px;height:14px">'+a[1]+"</label>").join("")+"</span>":"")+"</label>").join("")+"</div><p style=\"font-size:11px;color:var(--slate-600);margin-top:8px\">Module ke saath ➕ Add / ✏️ Edit / 🗑 Delete alag alag de ya band kar sakte hain. Tick hataya to wo button us user ko nazar nahi aayega.</p>";
 $$("[data-act]",ov).forEach(cb=>cb.addEventListener("change",()=>{const k=cb.dataset.act;denied=denied.filter(x=>x!==k);if(!cb.checked)denied.push(k)}));
@@ -4882,7 +4899,7 @@ $("#um-role",ov).addEventListener("change",e=>{role=e.target.value;
 perms=role==="admin"?ALL_PERMS.slice():role==="doctor"?DOCTOR_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():role==="lab"?LAB_PERMS.slice():RECEPTION_PERMS.slice();drawPerms()});
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
 ov.querySelector("#um-save").onclick=async()=>{
-if(u.id===ADMIN_ID){toast("The fixed administrator account cannot be edited","error");return}
+if(u.id===ADMIN_ID){const ao=Object.assign({},u,{permissions:perms.slice(),denied:denied.filter(k=>perms.indexOf(k.split(":")[1])>=0),custom:true,fullName:$("#um-name",ov).value.trim()||u.fullName});await qPut("users",ao);await audit(app.user.username,"UPDATE","users",ao.id,u.username+" (admin permissions)");await loadData();toast("Administrator access updated");ov.remove();pageUsers();return}
 const un=$("#um-user",ov).value.trim(),pw=$("#um-pass",ov).value.trim();
 if(un.toLowerCase()===ADMIN_USER.toLowerCase()){toast("That username is reserved for the fixed administrator account","error");return}
 if(!un){toast("Username is required","error");return}
