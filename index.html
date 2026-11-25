@@ -470,6 +470,7 @@ body:has(.modal-overlay) #zm-dock{display:none!important}
 #zm-dock svg{width:26px;height:26px;fill:#fff}
 #zm-docbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9990;display:none;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:94vw;background:rgba(8,30,52,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:9px 12px;color:#fff;font-size:12px;box-shadow:0 12px 36px rgba(0,0,0,.45)}
 #zm-docbar.show{display:flex}
+.zm-tbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
 #zm-docbar button{border:0;border-radius:11px;padding:9px 13px;font-weight:700;font-size:13px;color:#fff;cursor:pointer}
 #zm-docbar .pdf{background:linear-gradient(135deg,#ef4444,#b91c1c)}#zm-docbar .wa{background:linear-gradient(135deg,#25d366,#128c7e)}#zm-docbar .x{background:rgba(255,255,255,.18)}
 
@@ -648,6 +649,51 @@ b.innerHTML='<span>Slip tayyar</span><button class="pdf" id="db-pdf">📄 PDF</b
 b.classList.add("show");
 document.getElementById("db-pdf").onclick=()=>lastPDF(false);document.getElementById("db-wa").onclick=()=>lastPDF(true);document.getElementById("db-x").onclick=()=>b.classList.remove("show");
 clearTimeout(_docbarT);_docbarT=setTimeout(()=>b.classList.remove("show"),20000)}
+/* ---- Har table ke neeche 📄 PDF aur 💬 WhatsApp (auto) ---- */
+function tblTitle(w){let t="",p=w.previousElementSibling;while(p&&!t){if(/^H[1-4]$/.test(p.tagName))t=p.textContent.trim();p=p.previousElementSibling}
+if(!t){const c=w.closest(".card");const h=c&&c.querySelector("h2,h3");if(h)t=h.textContent.trim()}
+if(!t){const n=NAV.find(x=>x.key===app.route);t=n?n.label:"List"}return t.replace(/\s+/g," ")}
+function tblData(w){const tb=w.querySelector("table");if(!tb)return null;const ths=Array.prototype.slice.call(tb.querySelectorAll("thead th"));
+const skip=ths.map(th=>th.classList.contains("zm-x")||/^(actions?|print|edit|delete|del|select|view|pay|⋯)$/i.test(th.textContent.trim()));
+const head=ths.map(th=>th.textContent.trim().replace(/\s+/g," ")).filter((h,i)=>!skip[i]);
+const rows=[];Array.prototype.forEach.call(tb.querySelectorAll("tbody tr"),tr=>{if(tr.classList.contains("empty-row")||tr.offsetHeight===0)return;const cells=Array.prototype.slice.call(tr.children);if(cells.length<2&&ths.length>1)return;
+rows.push(cells.filter((c,i)=>!skip[i]).map(c=>c.innerText.replace(/\s+/g," ").trim()))});return{head,rows}}
+function tblPDFHTML(w){const d=tblData(w),s=app.settings||{};const fs=d.head.length>9?8:d.head.length>6?9:10.5;const E=esc;
+return '<div style="font-family:Arial,sans-serif;color:#111"><div style="text-align:center;margin-bottom:8px"><div style="font-size:18px;font-weight:800">'+E(s.clinicName||"")+'</div>'+(s.address?'<div style="font-size:10px;color:#555">'+E(s.address)+(s.phone?" · "+E(s.phone):"")+'</div>':"")+'</div><div style="display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:4px;margin-bottom:6px"><b style="font-size:14px">'+E(tblTitle(w))+'</b><span style="font-size:10px">'+E(fmtDate(today()))+" "+E(timeNow())+" · "+d.rows.length+' rows</span></div>'+
+'<table style="width:100%;border-collapse:collapse;font-size:'+fs+'px"><thead><tr>'+d.head.map(h=>'<th style="border:1px solid #888;background:#e5e7eb;padding:4px 5px;text-align:left">'+E(h)+'</th>').join("")+'</tr></thead><tbody>'+
+d.rows.map((r,i)=>'<tr style="'+(i%2?"background:#f6f7f9":"")+'">'+r.map(c=>'<td style="border:1px solid #bbb;padding:3px 5px;vertical-align:top">'+E(c)+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>'}
+async function tblExport(w,share){const d=tblData(w);if(!d||!d.rows.length){toast("Table mein koi row nahi","error");return}
+toast("PDF ban rahi hai…","info");const title=tblTitle(w);const name=(title.replace(/[^A-Za-z0-9]+/g,"_").slice(0,30)||"list")+"_"+today()+".pdf";
+try{const pdf=await makePDF(tblPDFHTML(w),"A4");
+if(share&&navigator.canShare){try{const f=new File([pdf.output("blob")],name,{type:"application/pdf"});if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title:title});return}}catch(e){if(e&&e.name==="AbortError")return}}
+pdf.save(name);toast("PDF download ho gayi","success");
+if(share){const txt=((app.settings&&app.settings.clinicName)||"")+" — "+title+" ("+fmtDate(today())+")\n"+d.rows.slice(0,15).map(r=>r.join(" | ")).join("\n")+(d.rows.length>15?"\n… aur "+(d.rows.length-15)+" rows (PDF attach kar dein)":"");openWA("",txt.slice(0,1800))}
+}catch(e){console.error(e);toast("PDF library load nahi hui (pehli dafa internet chahiye)","error")}}
+function rowData(tr){const tb=tr.closest("table");const ths=Array.prototype.slice.call(tb.querySelectorAll("thead th"));const cells=Array.prototype.slice.call(tr.children);const out=[];
+ths.forEach((th,i)=>{const c=cells[i];if(!c||th.classList.contains("zm-x")||c.classList.contains("zm-x"))return;if(/^(actions?|print|edit|delete|del|select|view|pay|⋯)$/i.test(th.textContent.trim()))return;const v=c.innerText.replace(/\s+/g," ").trim();const k=th.textContent.trim().replace(/\s+/g," ");if(k)out.push([k,v])});return out}
+async function rowExport(tr,share){const w=tr.closest(".tbl-wrap"),d=rowData(tr),s=app.settings||{},title=tblTitle(w),E=esc;if(!d.length)return;
+const phone=((d.map(x=>x[1]).join(" ").match(/(?:\+?92|0)3\d{2}[\s-]?\d{7}/)||[""])[0]).replace(/\D/g,"");
+const html='<div style="font-family:Arial,sans-serif;color:#111"><div style="text-align:center;margin-bottom:8px"><div style="font-size:20px;font-weight:800">'+E(s.clinicName||"")+'</div>'+(s.address?'<div style="font-size:11px;color:#555">'+E(s.address)+(s.phone?" · "+E(s.phone):"")+'</div>':"")+'</div><div style="display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:4px;margin-bottom:10px"><b style="font-size:15px">'+E(title)+'</b><span style="font-size:11px">'+E(fmtDate(today()))+" "+E(timeNow())+'</span></div><table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>'+d.map((x,i)=>'<tr style="'+(i%2?"background:#f6f7f9":"")+'"><td style="border:1px solid #bbb;padding:6px 8px;width:36%;font-weight:700">'+E(x[0])+'</td><td style="border:1px solid #bbb;padding:6px 8px">'+E(x[1])+'</td></tr>').join("")+'</tbody></table></div>';
+toast("PDF ban rahi hai…","info");const name=(title.replace(/[^A-Za-z0-9]+/g,"_").slice(0,24)||"record")+"_"+(d[0][1]||"").replace(/[^A-Za-z0-9]+/g,"_").slice(0,20)+".pdf";
+try{const pdf=await makePDF(html,"A4");
+if(share&&navigator.canShare){try{const f=new File([pdf.output("blob")],name,{type:"application/pdf"});if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title:title});return}}catch(e){if(e&&e.name==="AbortError")return}}
+pdf.save(name);toast("PDF download ho gayi","success");
+if(share)openWA(phone,(s.clinicName||"")+" — "+title+"\n"+d.map(x=>x[0]+": "+x[1]).join("\n")+"\n(PDF attach kar dein)")
+}catch(e){console.error(e);toast("PDF library load nahi hui (pehli dafa internet chahiye)","error")}}
+function addRowBtns(w){const tb=w.querySelector("table");if(!tb||!tb.querySelector("thead tr"))return;
+const rows=Array.prototype.filter.call(tb.querySelectorAll("tbody tr"),r=>!r.classList.contains("empty-row")&&!r.dataset.zr&&r.children.length>=2&&r.children.length>=tb.querySelectorAll("thead th").length-1);
+if(!rows.length)return;const hasAct=Array.prototype.some.call(tb.querySelectorAll("tbody tr"),r=>r.lastElementChild&&r.lastElementChild.querySelector&&r.lastElementChild.querySelector("button"));
+if(!hasAct&&tb.querySelectorAll("thead th").length<3)return;
+if(!hasAct&&!tb.querySelector("thead th.zm-x")){const th=document.createElement("th");th.className="zm-x";th.textContent="Share";tb.querySelector("thead tr").appendChild(th)}
+rows.forEach(tr=>{tr.dataset.zr="1";const html='<button type="button" class="btn btn-outline sm zm-rb" data-rx="pdf" title="PDF download">📄</button><button type="button" class="btn btn-outline sm zm-rb" data-rx="wa" title="WhatsApp bhejein" style="color:#16a34a">💬</button>';
+let host;if(hasAct){const lc=tr.lastElementChild;host=lc.querySelector(".flex")||lc}else{host=document.createElement("td");host.className="zm-x";tr.appendChild(host)}
+const box=document.createElement("span");box.style.cssText="display:inline-flex;gap:6px;margin-left:6px";box.innerHTML=html;host.appendChild(box);
+box.querySelector('[data-rx="pdf"]').onclick=e=>{e.stopPropagation();rowExport(tr,false)};box.querySelector('[data-rx="wa"]').onclick=e=>{e.stopPropagation();rowExport(tr,true)}})}
+let _tbT=null;function addTblBars(){document.querySelectorAll(".tbl-wrap").forEach(w=>{if(w.closest("#zm-print"))return;try{addRowBtns(w)}catch(e){console.warn(e)}if(w.dataset.zmx)return;const tb=w.querySelector("table");if(!tb||!tb.querySelector("thead"))return;
+const n=Array.prototype.filter.call(tb.querySelectorAll("tbody tr"),r=>!r.classList.contains("empty-row")).length;if(!n)return;
+w.dataset.zmx="1";const bar=document.createElement("div");bar.className="zm-tbar";bar.innerHTML='<button type="button" class="btn btn-outline sm" data-tx="pdf">📄 PDF DOWNLOAD</button><button type="button" class="btn btn-success sm" data-tx="wa">💬 WHATSAPP</button>';
+w.insertAdjacentElement("afterend",bar);bar.querySelector('[data-tx="pdf"]').onclick=()=>tblExport(w,false);bar.querySelector('[data-tx="wa"]').onclick=()=>tblExport(w,true)})}
+new MutationObserver(()=>{clearTimeout(_tbT);_tbT=setTimeout(addTblBars,300)}).observe(document.documentElement,{childList:true,subtree:true});
 function waNum(n){let d=String(n||"").replace(/\D/g,"");if(d.indexOf("00")===0)d=d.slice(2);if(d.charAt(0)==="0")d="92"+d.slice(1);return d}
 function openWA(n,text){window.open("https://wa.me/"+waNum(n)+(text?"?text="+encodeURIComponent(text):""),"_blank")}
 function waModal(){
@@ -970,7 +1016,17 @@ localStorage.setItem(fk,"1")}}catch(e){console.error(e)}
 async function saveRecord(store,obj){await qPut(store,obj);await loadData()}
 async function removeRecord(store,key){await qDel(store,key);await loadData()}
 async function saveSettingsObj(obj){await qPut("settings",Object.assign({},obj,{key:"app"}));app.settings=Object.assign({},DEFAULT_SETTINGS,obj,{key:"app"})}
-function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users"||perm==="settings")return false;if(app.user.role==="medicalstore")return perm==="inventory";if(app.user.role==="lab")return perm==="lab";if(app.user.role==="admin")return true;return (app.user.permissions||[]).indexOf(perm)>=0}
+/* ---- Per-module action permissions: Add / Edit / Delete (user.denied = ["edit:lab","delete:ultrasound"]) ---- */
+function curModule(){const r=app.route||"dashboard";const n=NAV.find(x=>x.key===r);return n?n.perm:r}
+function canAct(act,mod){const u=app.user;if(!u||u.role==="owner"||u.role==="admin")return true;mod=mod||curModule();return (u.denied||[]).indexOf(act+":"+mod)<0}
+function btnAct(b){const attrs=Array.prototype.map.call(b.attributes,a=>a.name),vals=Array.prototype.map.call(b.attributes,a=>String(a.value)),txt=(b.textContent||"").trim();
+if(attrs.some(n=>/^data-[a-z-]*(del|delete|remove)/.test(n))||vals.some(v=>/^(del|delete|remove)$/i.test(v))||/🗑/.test(txt)||/^delete$/i.test(txt))return"delete";
+if(attrs.some(n=>/^data-[a-z-]*edit/.test(n))||vals.some(v=>/^edit$/i.test(v))||/^✏/.test(txt)||/^edit$/i.test(txt))return"edit";
+if(/^[＋➕]/.test(txt)||/^\+\s/.test(txt)||/-(add|new)$/.test(b.id||""))return"add";
+const m=curModule();if(m==="settings"||m==="backup"||m==="agent"){if(/delete|remove|clear|reset|✕/i.test(txt))return"delete";if(/save|💾|upload|import|restore|apply|update|change|set\b|🖼|📷|logo|picture/i.test(txt)||/(save|upload|import|restore)/i.test(b.id||""))return"edit"}return""}
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("button");if(!b||!app.user||b.hasAttribute("data-close"))return;const a=btnAct(b);if(a&&!canAct(a)){e.stopImmediatePropagation();e.preventDefault();toast("Aap ko is kaam ("+({add:"Add",edit:"Edit",delete:"Delete"})[a]+") ki ijazat nahi hai","error")}},true);
+let _actT=null;new MutationObserver(()=>{clearTimeout(_actT);_actT=setTimeout(()=>{const u=app.user;if(!u||!(u.denied||[]).length||u.role==="admin"||u.role==="owner")return;document.querySelectorAll("button").forEach(b=>{if(b.dataset.zact===undefined){b.dataset.zact=btnAct(b)}const a=b.dataset.zact;if(a&&!canAct(a))b.style.display="none"})},120)}).observe(document.documentElement,{childList:true,subtree:true});
+function can(perm){if(!app.user)return false;if(app.user.role==="owner")return true;if(perm==="users")return false;if(app.user.role==="medicalstore")return perm==="inventory";if(app.user.role==="lab")return perm==="lab";if(app.user.role==="admin")return true;return (app.user.permissions||[]).indexOf(perm)>=0}
 function backupDue(){const s=app.settings;if(!s.backupReminderDays)return false;
 if(!s.lastBackupAt)return app.visits.length>0;
 return daysBetween(s.lastBackupAt.slice(0,10),today())>=s.backupReminderDays}
@@ -1854,7 +1910,7 @@ $("#page").innerHTML=
 '<div class="mini-stat" style="background:var(--green-bg);border-color:var(--green-bd);color:#065f46"><div class="lbl">'+(isUS?"Studies in Period":"Patients in Period")+'</div><div class="val" id="tm-count">0</div></div>'+
 '<div class="mini-stat" style="background:var(--violet-bg);border-color:#ddd6fe;color:#5b21b6"><div class="lbl">Collection in Period</div><div class="val" id="tm-amt">—</div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory Test")+' Price List</h2><div class="sub">Prices are added to the patient bill automatically when selected at the counter</div></div>'+
-'<div class="flex g8 fw"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+((isUS||isLAB)?'<button class="btn btn-outline sm" id="tm-common">📥 ADD COMMON TESTS</button>':"")+((isUS||isLAB)?'<button class="btn btn-primary sm" id="tm-report">➕ NEW REPORT (Manual)</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
+'<div class="flex g8 fw"><button class="btn btn-outline sm" id="tm-csv">⬇ CSV</button>'+((isUS||isLAB)?'<button class="btn btn-outline sm" id="tm-common">📥 ADD COMMON TESTS</button>':"")+'<button class="btn btn-outline sm" id="tm-dedup">🧹 DUPLICATE HATAYEIN</button>'+((isUS||isLAB)?'<button class="btn btn-primary sm" id="tm-report">➕ NEW REPORT (Manual)</button>':"")+'<button class="btn btn-success sm" id="tm-add">➕ '+(isUS?"ADD ULTRASOUND":isINJ?"ADD INJECTION / DRIP":"ADD TEST")+"</button></div></div>"+
 '<div class="card-b"><input class="inp mb" id="tm-q" placeholder="🔍 Search test / category…"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tm-rows"></tbody></table></div></div></div>'+
 '<div class="card"><div class="card-h"><div><h2>'+(isUS?"Ultrasound":isINJ?"Injection / Drip":"Laboratory")+' Work List</h2><div class="sub">Patients who have been charged for these services</div></div>'+
 '<div class="flex g8 fw"><input class="inp" type="date" id="tm-from" style="width:150px" value="'+from+'"><input class="inp" type="date" id="tm-to" style="width:150px" value="'+to+'">'+
@@ -1865,6 +1921,13 @@ $("#tm-from").addEventListener("change",e=>{from=e.target.value;drawWork()});
 $("#tm-to").addEventListener("change",e=>{to=e.target.value;drawWork()});
 if(isUS||isLAB)$("#tm-st").addEventListener("change",drawWork);
 $("#tm-add").onclick=()=>testModal({id:"",name:"",category:isUS?"Ultrasound":isINJ?"Injection":"Haematology",type:type,price:0,active:true},type);if(isUS)$("#tm-report").onclick=ultrasoundReportModal;if(isLAB)$("#tm-report").onclick=()=>lbEditor({},()=>drawWork());
+$("#tm-dedup").onclick=async()=>{
+const grp={};app.tests.filter(t=>t.type===type).slice().sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||"")).forEach(t=>{const k=String(t.name).trim().toLowerCase();(grp[k]=grp[k]||[]).push(t)});
+const del=[];Object.values(grp).forEach(g=>{if(g.length>1){const keep=g.find(x=>num(x.price)>0)||g[0];g.forEach(x=>{if(x!==keep)del.push(x)})}});
+if(!del.length){toast("Koi duplicate test nahi mila ✅","info");return}
+if(!await confirmBox({title:"Duplicate Hatayein",message:del.length+" duplicate test mile (ek hi naam ke). Har naam ka ek test rakha jayega, baqi hata diye jayenge. Purani reports par asar nahi hoga. Jari rakhein?",confirmText:"HAAN, HATAYEIN"}))return;
+for(const x of del)await qDel("tests",x.id);
+await audit(app.user.username,"DELETE","tests","bulk","Removed "+del.length+" duplicate "+type+" tests");await loadData();toast(del.length+" duplicate hata diye");pageTestModule(type)};
 if($("#tm-common"))$("#tm-common").onclick=async()=>{
 const src=isLAB?LAB_EXTRA:usExtra();const have=new Set(app.tests.filter(t=>t.type===type).map(t=>t.name.trim().toLowerCase()));
 const add=src.filter(x=>!have.has(x[0].toLowerCase()));
@@ -2536,6 +2599,407 @@ const LB_LIB=LB_LIB_NEW.concat([
 [/rheumatoid|\bra\b/i,[["RA Factor","IU/mL","< 14"]]],
 [/\baso\b/i,[["ASO Titre","IU/mL","< 200"]]]
 ]);
+(function(){
+/* ===== MORE LAB TESTS (compact catalogue): T(name, category, price, "Param;unit;normal;female;options ~ Param2…", "Note") ===== */
+const LAB_MORE=[];
+const _N="Negative|Positive",_R="Non-Reactive|Reactive",_D="Not Detected|Detected",_P="Present|Absent";
+function T(n,c,p,rows,note){LAB_MORE.push([n,c,p,String(rows||"").split("~").filter(Boolean).map(r=>{const f=r.split(";").map(x=>x.trim());if(f[0]&&f[0][0]==="#")return[f[0]];const o=[f[0],f[1]||"",f[2]||""];if(f[3]||f[4]){o.push(f[3]||"");if(f[4])o.push(f[4])}return o}),note||""])}
+const GEN="Reference ranges vary with age, sex, method and kit; correlate clinically.";
+/* ---------- HAEMATOLOGY ---------- */
+T("Haemoglobin (Hb) Only","Haematology",100,"Haemoglobin;g/dL;13.0 - 17.0;12.0 - 15.5","Low Hb indicates anaemia; high values may be seen in dehydration, smokers, high altitude and polycythaemia.");
+T("Total Leucocyte Count (TLC)","Haematology",120,"Total Leucocyte Count;x10^3/uL;4.0 - 11.0","Raised TLC suggests infection/inflammation; low TLC may be due to viral infection, drugs or marrow suppression.");
+T("RBC Count","Haematology",120,"RBC Count;x10^6/uL;4.5 - 5.9;4.1 - 5.1","");
+T("Red Cell Indices (MCV, MCH, MCHC, RDW)","Haematology",200,"MCV;fL;80 - 100~MCH;pg;27 - 33~MCHC;g/dL;32 - 36~RDW-CV;%;11.5 - 14.5","Low MCV with low MCH suggests iron deficiency or thalassaemia trait; high MCV suggests B12/folate deficiency, liver disease or hypothyroidism.");
+T("Differential Count (DLC)","Haematology",150,"Neutrophils;%;40 - 75~Lymphocytes;%;20 - 45~Monocytes;%;2 - 10~Eosinophils;%;1 - 6~Basophils;%;0 - 1","");
+T("Absolute Neutrophil Count (ANC)","Haematology",250,"Absolute Neutrophil Count;/uL;1500 - 7000","ANC < 500/uL indicates severe neutropenia with high risk of infection.");
+T("Absolute Lymphocyte Count (ALC)","Haematology",250,"Absolute Lymphocyte Count;/uL;1000 - 4800","");
+T("Neutrophil-Lymphocyte Ratio (NLR)","Haematology",250,"Neutrophil-Lymphocyte Ratio;;1 - 3","NLR is a non-specific marker of systemic inflammation/stress.");
+T("Platelet Indices (MPV, PDW, PCT)","Haematology",250,"MPV;fL;7.5 - 11.5~PDW;fL;9 - 17~PCT;%;0.15 - 0.40","");
+T("ESR (Westergren) 2nd Hour","Haematology",150,"ESR (1st hour);mm/hr;0 - 15;0 - 20","ESR is a non-specific marker of inflammation; raised in infection, anaemia, autoimmune disease and malignancy.");
+T("Malaria Parasite (Thick & Thin Film)","Haematology",250,"Malaria Parasite (MP);;Not Seen;;Not Seen|P. vivax Seen|P. falciparum Seen|Mixed Infection~Parasite Density;/uL;~Stage;;","Negative smear does not rule out malaria if clinical suspicion is high; repeat after 6-12 hours.");
+T("Microfilaria (MF) Detection","Haematology",300,"Microfilaria;;Not Seen;;Not Seen|Seen","Night-time (10 PM - 2 AM) blood sample is preferred for detection.");
+T("Bone Marrow Aspiration Report","Haematology",6000,"Cellularity;;;;Hypocellular|Normocellular|Hypercellular~Erythropoiesis;;~Myelopoiesis;;~Megakaryocytes;;~Blast Cells;%;< 5~Iron Stores;;~Impression;;","");
+T("Packed Cell Volume + Haematocrit Indices","Haematology",200,"PCV / Haematocrit;%;40 - 52;36 - 46","");
+T("Blood Group & Rh Factor","Haematology",100,"ABO Group;;;;A|B|AB|O~Rh Factor;;;;Positive|Negative","");
+T("Cross Match (Compatibility Test)","Blood Bank",300,"Donor Blood Group;;~Recipient Blood Group;;~Major Cross Match;;Compatible;;Compatible|Incompatible~Minor Cross Match;;Compatible;;Compatible|Incompatible","");
+T("Indirect Coombs Test (ICT)","Blood Bank",600,"Indirect Coombs Test;;Negative;;Negative|Positive~Titre;;","Used in antenatal screening (Rh negative mothers) and before transfusion to detect unexpected antibodies.");
+T("Rh Antibody Titre","Blood Bank",1000,"Anti-D Titre;;< 1:8","Rising titre in an Rh-negative pregnancy indicates sensitisation; consult the obstetrician.");
+T("Fibrinogen","Coagulation",800,"Fibrinogen;mg/dL;200 - 400","");
+T("Thrombin Time (TT)","Coagulation",500,"Thrombin Time;sec;14 - 19~Control;sec;","");
+T("FDP (Fibrin Degradation Products)","Coagulation",1200,"FDP;ug/mL;< 5","");
+T("Factor VIII Assay","Coagulation",4000,"Factor VIII Activity;%;50 - 150","Low levels indicate Haemophilia A.");
+T("Factor IX Assay","Coagulation",4000,"Factor IX Activity;%;50 - 150","Low levels indicate Haemophilia B.");
+T("von Willebrand Factor (vWF) Antigen","Coagulation",4500,"vWF Antigen;%;50 - 160","");
+T("Protein C Activity","Coagulation",4500,"Protein C Activity;%;70 - 140","");
+T("Protein S Activity","Coagulation",4500,"Protein S Activity;%;60 - 140","");
+T("Antithrombin III","Coagulation",4500,"Antithrombin III;%;80 - 120","");
+T("Lupus Anticoagulant","Coagulation",4000,"Lupus Anticoagulant;;Negative;;Negative|Positive","");
+T("Mixing Study (PT / APTT)","Coagulation",2000,"Result;;;;Corrects|Does Not Correct","");
+T("Platelet Aggregation Study","Coagulation",5000,"Platelet Aggregation;;Normal;;Normal|Reduced","");
+T("Osmotic Fragility Test","Haematology",1200,"Osmotic Fragility;;Normal;;Normal|Increased|Decreased","");
+T("Hb F (Fetal Haemoglobin)","Haematology",1500,"HbF;%;< 2","");
+T("HbA2 (Thalassemia Screening)","Haematology",1500,"HbA2;%;2.0 - 3.5","HbA2 > 3.5% suggests beta-thalassaemia trait; interpret with iron studies.");
+T("LE Cell Preparation","Haematology",800,"LE Cells;;Not Seen;;Not Seen|Seen","");
+T("Iron (Serum)","Biochemistry",450,"Serum Iron;ug/dL;60 - 170;50 - 150","");
+T("TIBC (Total Iron Binding Capacity)","Biochemistry",450,"TIBC;ug/dL;250 - 450","");
+T("UIBC","Biochemistry",450,"UIBC;ug/dL;110 - 370","");
+T("Transferrin Saturation","Biochemistry",500,"Transferrin Saturation;%;20 - 50","");
+T("Transferrin","Biochemistry",900,"Transferrin;mg/dL;200 - 360","");
+T("Soluble Transferrin Receptor (sTfR)","Biochemistry",3500,"sTfR;mg/L;1.9 - 4.4","");
+/* ---------- BIOCHEMISTRY ---------- */
+T("Serum Sodium (Na)","Biochemistry",200,"Sodium (Na);mmol/L;135 - 145","Low sodium (hyponatraemia) may be due to fluid overload, diuretics, SIADH, adrenal insufficiency; high sodium suggests dehydration.");
+T("Serum Potassium (K)","Biochemistry",200,"Potassium (K);mmol/L;3.5 - 5.1","Potassium < 3.0 or > 6.0 mmol/L is critical; repeat on a fresh non-haemolysed sample.");
+T("Serum Chloride (Cl)","Biochemistry",200,"Chloride (Cl);mmol/L;98 - 107","");
+T("Serum Bicarbonate (HCO3)","Biochemistry",250,"Bicarbonate (HCO3);mmol/L;22 - 29","");
+T("Anion Gap","Biochemistry",300,"Anion Gap;mmol/L;8 - 16","");
+T("Serum Osmolality","Biochemistry",800,"Serum Osmolality;mOsm/kg;275 - 295","");
+T("Ionized Calcium","Biochemistry",600,"Ionized Calcium;mmol/L;1.12 - 1.32","");
+T("Corrected Calcium","Biochemistry",350,"Corrected Calcium;mg/dL;8.5 - 10.5","");
+T("Serum Zinc","Biochemistry",1200,"Zinc;ug/dL;70 - 120","");
+T("Serum Copper","Biochemistry",1500,"Copper;ug/dL;70 - 140;80 - 155","");
+T("Ceruloplasmin","Biochemistry",2000,"Ceruloplasmin;mg/dL;20 - 60","Low ceruloplasmin supports the diagnosis of Wilson disease.");
+T("Serum Lithium","Biochemistry",1500,"Lithium;mmol/L;0.6 - 1.2","Toxic above 1.5 mmol/L.");
+T("Blood Lactate","Biochemistry",800,"Lactate;mmol/L;0.5 - 2.2","");
+T("Blood Ammonia","Biochemistry",1500,"Ammonia;ug/dL;15 - 45","Sample must be on ice and processed immediately.");
+T("Serum Ketones (Beta-Hydroxybutyrate)","Biochemistry",900,"Beta-Hydroxybutyrate;mmol/L;< 0.6","");
+T("Fructosamine","Biochemistry",1200,"Fructosamine;umol/L;200 - 285","Reflects average glucose over the last 2-3 weeks.");
+T("Estimated Average Glucose (eAG)","Biochemistry",150,"eAG;mg/dL;< 117","");
+T("C-Peptide (Fasting)","Biochemistry",2500,"C-Peptide;ng/mL;0.8 - 3.1","");
+T("HOMA-IR","Biochemistry",1500,"Fasting Glucose;mg/dL;70 - 100~Fasting Insulin;uIU/mL;2.6 - 24.9~HOMA-IR;;< 2.5","HOMA-IR above 2.5 suggests insulin resistance.");
+T("Random Blood Sugar (RBS)","Biochemistry",100,"Random Blood Sugar;mg/dL;< 200","");
+T("Fasting Blood Sugar (FBS)","Biochemistry",100,"Fasting Blood Sugar;mg/dL;70 - 100","Fasting 100-125 mg/dL = impaired fasting glucose; >= 126 mg/dL on two occasions suggests diabetes mellitus.");
+T("GCT (50 g Glucose Challenge Test)","Biochemistry",500,"Blood Sugar 1 hr after 50 g Glucose;mg/dL;< 140","Value >= 140 mg/dL needs confirmation with a 100 g OGTT.");
+T("OGTT in Pregnancy (75 g, 3 samples)","Biochemistry",900,"Fasting;mg/dL;< 92~1 Hour;mg/dL;< 180~2 Hour;mg/dL;< 153","Gestational diabetes is diagnosed if any value is equal to or above the cut-off (IADPSG).");
+T("Apolipoprotein A1","Biochemistry",2000,"Apo A1;mg/dL;110 - 205;120 - 215","");
+T("Apolipoprotein B","Biochemistry",2000,"Apo B;mg/dL;55 - 140","");
+T("Lipoprotein (a) [Lp(a)]","Biochemistry",3000,"Lipoprotein (a);mg/dL;< 30","");
+T("VLDL Cholesterol","Biochemistry",250,"VLDL Cholesterol;mg/dL;2 - 30","");
+T("Non-HDL Cholesterol","Biochemistry",250,"Non-HDL Cholesterol;mg/dL;< 130","");
+T("Cholesterol / HDL Ratio","Biochemistry",250,"Cholesterol / HDL Ratio;;< 5.0","");
+T("hs-CRP (High Sensitivity CRP)","Biochemistry",1200,"hs-CRP;mg/L;< 3.0","< 1 low, 1-3 average, > 3 high cardiovascular risk (if no acute infection).");
+T("Cystatin C","Biochemistry",3500,"Cystatin C;mg/L;0.53 - 0.95","");
+T("eGFR (Calculated)","Biochemistry",300,"Serum Creatinine;mg/dL;0.7 - 1.3;0.6 - 1.1~eGFR;mL/min/1.73m2;> 90","eGFR < 60 mL/min/1.73m2 for 3 months or more indicates chronic kidney disease.");
+T("Creatinine Clearance (24 hr)","Biochemistry",700,"24 hr Urine Volume;mL;~Urine Creatinine;mg/dL;~Serum Creatinine;mg/dL;0.7 - 1.3~Creatinine Clearance;mL/min;90 - 130","Accurate 24-hour urine collection is essential.");
+T("Beta-2 Microglobulin","Biochemistry",3000,"Beta-2 Microglobulin;mg/L;0.8 - 2.2","");
+T("Bile Acids (Total)","Biochemistry",2500,"Total Bile Acids;umol/L;< 10","");
+T("Direct Bilirubin","Biochemistry",200,"Direct Bilirubin;mg/dL;0.0 - 0.3","");
+T("Indirect Bilirubin","Biochemistry",200,"Indirect Bilirubin;mg/dL;0.2 - 0.8","");
+T("Total Bilirubin","Biochemistry",200,"Total Bilirubin;mg/dL;0.2 - 1.2","");
+T("Globulin & A/G Ratio","Biochemistry",250,"Globulin;g/dL;2.0 - 3.5~A/G Ratio;;1.1 - 2.2","");
+T("Serum Protein Electrophoresis","Biochemistry",2500,"Albumin;%;52 - 65~Alpha-1 Globulin;%;2.5 - 5.0~Alpha-2 Globulin;%;7.0 - 13.0~Beta Globulin;%;8.0 - 14.0~Gamma Globulin;%;12 - 22~M-Band;;Not Detected;;Not Detected|Detected","A discrete M-band should be followed by immunofixation.");
+T("Immunofixation Electrophoresis (IFE)","Biochemistry",6000,"IgG;;Not Detected;;Not Detected|Detected~IgA;;Not Detected;;Not Detected|Detected~IgM;;Not Detected;;Not Detected|Detected~Kappa;;;;Normal|Monoclonal~Lambda;;;;Normal|Monoclonal","");
+T("Adenosine Deaminase (ADA)","Biochemistry",1500,"ADA;U/L;< 30","In pleural/peritoneal/CSF fluid, high ADA supports tuberculous aetiology.");
+T("Acid Phosphatase (Total)","Biochemistry",800,"Acid Phosphatase;U/L;< 11","");
+T("5' Nucleotidase","Biochemistry",1500,"5' Nucleotidase;U/L;2 - 17","");
+T("Serum Cholinesterase","Biochemistry",1200,"Cholinesterase;U/L;5300 - 12900","Low levels seen in organophosphate poisoning and liver disease.");
+T("Alpha-1 Antitrypsin","Biochemistry",3000,"Alpha-1 Antitrypsin;mg/dL;90 - 200","");
+T("Haptoglobin","Biochemistry",2500,"Haptoglobin;mg/dL;30 - 200","");
+T("Vitamin A (Retinol)","Biochemistry",3500,"Vitamin A;ug/dL;30 - 80","");
+T("Vitamin E (Tocopherol)","Biochemistry",3500,"Vitamin E;mg/L;5.5 - 17","");
+T("Vitamin B1 (Thiamine)","Biochemistry",3500,"Vitamin B1;nmol/L;70 - 180","");
+T("Vitamin B6","Biochemistry",3500,"Vitamin B6;ug/L;5 - 50","");
+T("Vitamin C (Ascorbic Acid)","Biochemistry",3000,"Vitamin C;mg/dL;0.4 - 2.0","");
+T("Vitamin K","Biochemistry",4000,"Vitamin K;ng/mL;0.13 - 1.19","");
+T("Vitamin D3 (1,25-Dihydroxy)","Biochemistry",4500,"1,25 (OH)2 Vitamin D;pg/mL;19.6 - 54.3","");
+T("Folic Acid (RBC Folate)","Biochemistry",3000,"RBC Folate;ng/mL;> 280","");
+T("Methylmalonic Acid (MMA)","Biochemistry",5000,"Methylmalonic Acid;nmol/L;< 400","");
+T("Selenium","Biochemistry",4000,"Selenium;ug/L;70 - 150","");
+T("Lead (Blood)","Biochemistry",3000,"Blood Lead;ug/dL;< 5","");
+T("Mercury (Blood)","Biochemistry",3500,"Blood Mercury;ug/L;< 10","");
+T("Arsenic (Urine)","Biochemistry",3500,"Urine Arsenic;ug/L;< 50","");
+/* ---------- HORMONES / ENDOCRINE ---------- */
+T("Anti-TPO (Thyroid Peroxidase Antibody)","Hormones",2000,"Anti-TPO;IU/mL;< 35","Raised in Hashimoto thyroiditis and Graves disease.");
+T("Anti-Thyroglobulin Antibody (Anti-Tg)","Hormones",2500,"Anti-Thyroglobulin;IU/mL;< 40","");
+T("Thyroglobulin","Hormones",3500,"Thyroglobulin;ng/mL;3.5 - 77","");
+T("TSH Receptor Antibody (TRAb)","Hormones",5000,"TRAb;IU/L;< 1.75","");
+T("Calcitonin","Hormones",4000,"Calcitonin;pg/mL;< 10;< 5","");
+T("Reverse T3","Hormones",3500,"Reverse T3;ng/dL;10 - 24","");
+T("T3 Uptake","Hormones",900,"T3 Uptake;%;24 - 39","");
+T("Free Thyroxine Index (FTI)","Hormones",800,"FTI;;1.1 - 4.3","");
+T("ACTH (Plasma)","Hormones",3500,"ACTH;pg/mL;7 - 63","Sample on ice; collect in the morning.");
+T("Cortisol (Evening)","Hormones",1500,"Cortisol (PM);ug/dL;2.9 - 17.3","");
+T("Cortisol (Random)","Hormones",1500,"Cortisol;ug/dL;5 - 25","");
+T("Dexamethasone Suppression Test (Overnight)","Hormones",3000,"Cortisol (8 AM after 1 mg dexamethasone);ug/dL;< 1.8","Cortisol > 1.8 ug/dL suggests Cushing syndrome (needs confirmation).");
+T("Growth Hormone (GH)","Hormones",3500,"Growth Hormone;ng/mL;< 5.0;< 10.0","");
+T("IGF-1 (Somatomedin C)","Hormones",5000,"IGF-1;ng/mL;100 - 300","Age-dependent; interpret using age-matched reference range.");
+T("17-OH Progesterone","Hormones",4000,"17-OH Progesterone;ng/mL;0.2 - 1.3;0.2 - 1.0","");
+T("DHEA-S","Hormones",3000,"DHEA-S;ug/dL;80 - 560;35 - 430","");
+T("Androstenedione","Hormones",3500,"Androstenedione;ng/mL;0.4 - 2.7;0.3 - 3.3","");
+T("Free Testosterone","Hormones",3500,"Free Testosterone;pg/mL;9 - 30;0.3 - 1.9","");
+T("SHBG (Sex Hormone Binding Globulin)","Hormones",3500,"SHBG;nmol/L;10 - 57;18 - 144","");
+T("Estriol (Unconjugated, E3)","Hormones",2500,"Estriol (E3);ng/mL;","");
+T("Inhibin B","Hormones",5000,"Inhibin B;pg/mL;","");
+T("Aldosterone","Hormones",4500,"Aldosterone;ng/dL;3 - 16","");
+T("Plasma Renin Activity","Hormones",4500,"Plasma Renin Activity;ng/mL/hr;0.2 - 3.3","");
+T("Aldosterone / Renin Ratio","Hormones",6000,"Aldosterone / Renin Ratio;;< 30","");
+T("Parathyroid Hormone (Intact PTH)","Hormones",3500,"Intact PTH;pg/mL;15 - 65","");
+T("Gastrin","Hormones",3500,"Gastrin;pg/mL;< 100","");
+T("Serum Insulin (Random)","Hormones",2000,"Insulin;uIU/mL;2.6 - 24.9","");
+T("Urinary Metanephrines (24 hr)","Hormones",6000,"Metanephrine;ug/24hr;< 350~Normetanephrine;ug/24hr;< 600","");
+T("Urinary Catecholamines (24 hr)","Hormones",6000,"Adrenaline;ug/24hr;< 20~Noradrenaline;ug/24hr;< 90~Dopamine;ug/24hr;< 500","");
+T("VMA (24 hr Urine)","Hormones",4000,"VMA;mg/24hr;< 8","");
+T("5-HIAA (24 hr Urine)","Hormones",4000,"5-HIAA;mg/24hr;2 - 9","");
+T("Serum Cortisol Binding / Free Cortisol (24 hr Urine)","Hormones",4500,"Urinary Free Cortisol;ug/24hr;20 - 90","");
+T("Prolactin (Macroprolactin)","Hormones",3500,"Macroprolactin;%;< 40","");
+T("Beta HCG (Qualitative)","Hormones",300,"Beta HCG;;Negative;;Negative|Positive","");
+T("Ovulation Study (LH Surge)","Hormones",1500,"LH;mIU/mL;~Estradiol;pg/mL;~Impression;;","");
+T("Menopause Panel (FSH, LH, E2)","Hormones",3500,"FSH;mIU/mL;~LH;mIU/mL;~Estradiol (E2);pg/mL;","FSH > 25-30 mIU/mL with low estradiol supports menopause.");
+T("Infertility Panel (Female)","Hormones",5500,"FSH;mIU/mL;3.5 - 12.5~LH;mIU/mL;2.4 - 12.6~Prolactin;ng/mL;4.8 - 23.3~TSH;uIU/mL;0.4 - 4.0~Estradiol (E2);pg/mL;30 - 400~AMH;ng/mL;1.0 - 4.0","Hormone levels vary with the phase of the menstrual cycle (day 2-3 values are used for FSH/LH/E2).");
+T("PCOS Profile","Hormones",5000,"LH;mIU/mL;2.4 - 12.6~FSH;mIU/mL;3.5 - 12.5~LH / FSH Ratio;;< 2~Total Testosterone;ng/dL;15 - 70~Prolactin;ng/mL;4.8 - 23.3~TSH;uIU/mL;0.4 - 4.0~Fasting Insulin;uIU/mL;2.6 - 24.9","LH:FSH ratio > 2 with raised testosterone and insulin resistance supports PCOS in the right clinical setting.");
+T("Male Infertility Panel (FSH, LH, Testosterone, Prolactin)","Hormones",4500,"FSH;mIU/mL;1.5 - 12.4~LH;mIU/mL;1.7 - 8.6~Testosterone (Total);ng/dL;270 - 1070~Prolactin;ng/mL;4.0 - 15.2","");
+T("Thyroid Profile with TSH Only (Quick)","Hormones",800,"TSH;uIU/mL;0.4 - 4.0","");
+/* ---------- IMMUNOLOGY / SEROLOGY ---------- */
+T("Anti-dsDNA","Immunology",2500,"Anti-dsDNA;IU/mL;< 30","Positive anti-dsDNA is highly specific for SLE; titres correlate with disease activity.");
+T("ENA Profile (Extractable Nuclear Antigens)","Immunology",5500,"Anti-Sm;;Negative;;Negative|Positive~Anti-RNP;;Negative;;Negative|Positive~Anti-SS-A (Ro);;Negative;;Negative|Positive~Anti-SS-B (La);;Negative;;Negative|Positive~Anti-Scl-70;;Negative;;Negative|Positive~Anti-Jo-1;;Negative;;Negative|Positive","");
+T("c-ANCA (PR3)","Immunology",3500,"c-ANCA (PR3);;Negative;;Negative|Positive","");
+T("p-ANCA (MPO)","Immunology",3500,"p-ANCA (MPO);;Negative;;Negative|Positive","");
+T("Anti-GBM Antibody","Immunology",4000,"Anti-GBM;U/mL;< 7","");
+T("Anti-tTG IgA (Celiac Disease)","Immunology",3000,"Anti-tTG IgA;U/mL;< 20","Total IgA should be checked simultaneously to exclude IgA deficiency (false negative).");
+T("Anti-tTG IgG","Immunology",3000,"Anti-tTG IgG;U/mL;< 20","");
+T("Anti-Endomysial Antibody (EMA)","Immunology",3500,"Anti-Endomysial IgA;;Negative;;Negative|Positive","");
+T("Anti-Gliadin Antibodies (IgA / IgG)","Immunology",3000,"Anti-Gliadin IgA;U/mL;< 20~Anti-Gliadin IgG;U/mL;< 20","");
+T("Total IgE","Immunology",1800,"Total IgE;IU/mL;< 100","Raised in allergy, asthma, atopic dermatitis and parasitic infestation.");
+T("Serum IgG","Immunology",1500,"IgG;mg/dL;700 - 1600","");
+T("Serum IgA","Immunology",1500,"IgA;mg/dL;70 - 400","");
+T("Serum IgM","Immunology",1500,"IgM;mg/dL;40 - 230","");
+T("Immunoglobulin Profile (IgG, IgA, IgM)","Immunology",3500,"IgG;mg/dL;700 - 1600~IgA;mg/dL;70 - 400~IgM;mg/dL;40 - 230","");
+T("Complement C3","Immunology",1800,"C3;mg/dL;90 - 180","");
+T("Complement C4","Immunology",1800,"C4;mg/dL;10 - 40","");
+T("Total Haemolytic Complement (CH50)","Immunology",3500,"CH50;U/mL;30 - 75","");
+T("Anti-Cardiolipin Antibodies (IgG / IgM)","Immunology",4000,"Anti-Cardiolipin IgG;GPL;< 15~Anti-Cardiolipin IgM;MPL;< 12.5","");
+T("Anti-Beta 2 Glycoprotein I","Immunology",4000,"Anti-Beta2GPI IgG;U/mL;< 20~Anti-Beta2GPI IgM;U/mL;< 20","");
+T("Anti-Mitochondrial Antibody (AMA)","Immunology",3000,"AMA;;Negative;;Negative|Positive","Positive AMA supports primary biliary cholangitis.");
+T("Anti-Smooth Muscle Antibody (ASMA)","Immunology",3000,"ASMA;;Negative;;Negative|Positive","");
+T("Anti-LKM-1 Antibody","Immunology",3500,"Anti-LKM-1;;Negative;;Negative|Positive","");
+T("Anti-Parietal Cell Antibody","Immunology",3500,"Anti-Parietal Cell Antibody;;Negative;;Negative|Positive","");
+T("Anti-Intrinsic Factor Antibody","Immunology",3500,"Anti-Intrinsic Factor;;Negative;;Negative|Positive","");
+T("HLA-B27","Immunology",5000,"HLA-B27;;Negative;;Negative|Positive","");
+T("Rheumatoid Factor (Quantitative)","Immunology",1200,"Rheumatoid Factor;IU/mL;< 14","");
+T("CRP Quantitative","Immunology",700,"C-Reactive Protein;mg/L;< 6","");
+T("Cold Agglutinins","Immunology",1500,"Cold Agglutinin Titre;;< 1:64","");
+T("Anti-Sperm Antibodies","Immunology",3000,"Anti-Sperm Antibody;;Negative;;Negative|Positive","");
+T("Antiphospholipid Profile","Immunology",7000,"Lupus Anticoagulant;;Negative;;Negative|Positive~Anti-Cardiolipin IgG;GPL;< 15~Anti-Cardiolipin IgM;MPL;< 12.5~Anti-Beta2GPI IgG;U/mL;< 20","");
+T("Autoimmune Liver Profile","Immunology",6500,"ANA;;Negative;;Negative|Positive~AMA;;Negative;;Negative|Positive~ASMA;;Negative;;Negative|Positive~Anti-LKM-1;;Negative;;Negative|Positive","");
+T("Allergy Panel (Food, 10 Allergens)","Immunology",6000,"Milk;kU/L;< 0.35~Egg White;kU/L;< 0.35~Wheat;kU/L;< 0.35~Peanut;kU/L;< 0.35~Soy;kU/L;< 0.35~Fish;kU/L;< 0.35~Shrimp;kU/L;< 0.35~Tomato;kU/L;< 0.35~Chicken;kU/L;< 0.35~Beef;kU/L;< 0.35","Class 0 (< 0.35 kU/L) = negative; higher classes indicate increasing sensitisation.");
+T("Allergy Panel (Inhalant, 10 Allergens)","Immunology",6000,"House Dust Mite;kU/L;< 0.35~Cockroach;kU/L;< 0.35~Grass Pollen;kU/L;< 0.35~Tree Pollen;kU/L;< 0.35~Weed Pollen;kU/L;< 0.35~Cat Dander;kU/L;< 0.35~Dog Dander;kU/L;< 0.35~Mould (Aspergillus);kU/L;< 0.35~Feathers;kU/L;< 0.35~Cotton Dust;kU/L;< 0.35","");
+/* ---------- INFECTIOUS DISEASE / MICROBIOLOGY ---------- */
+T("Typhoid IgM / IgG (Rapid)","Serology",800,"Salmonella Typhi IgM;;Negative;;Negative|Positive~Salmonella Typhi IgG;;Negative;;Negative|Positive","IgM positivity suggests recent infection; blood culture remains the gold standard for diagnosis.");
+T("Salmonella Typhi Antigen (Rapid)","Serology",800,"S. Typhi Antigen;;Negative;;Negative|Positive","");
+T("Widal Test (Slide Method)","Serology",300,"S. Typhi O;;< 1:80;;Negative|1:40|1:80|1:160|1:320|1:640~S. Typhi H;;< 1:80;;Negative|1:40|1:80|1:160|1:320|1:640~S. Paratyphi AH;;< 1:80;;Negative|1:40|1:80|1:160|1:320~S. Paratyphi BH;;< 1:80;;Negative|1:40|1:80|1:160|1:320","A single titre has limited value; a four-fold rise in paired sera or titre >= 1:160 with clinical correlation is significant.");
+T("Dengue NS1 Antigen","Serology",1500,"Dengue NS1 Antigen;;Negative;;Negative|Positive","NS1 is most sensitive in the first 5 days of fever.");
+T("Dengue IgM","Serology",1200,"Dengue IgM;;Negative;;Negative|Positive","");
+T("Dengue IgG","Serology",1200,"Dengue IgG;;Negative;;Negative|Positive","");
+T("Dengue Profile (NS1, IgM, IgG)","Serology",2500,"Dengue NS1 Antigen;;Negative;;Negative|Positive~Dengue IgM;;Negative;;Negative|Positive~Dengue IgG;;Negative;;Negative|Positive","");
+T("Malaria Antigen (Pf/Pv Rapid)","Serology",500,"P. falciparum Antigen;;Negative;;Negative|Positive~P. vivax Antigen;;Negative;;Negative|Positive","");
+T("Leptospira IgM","Serology",2500,"Leptospira IgM;;Negative;;Negative|Positive","");
+T("Scrub Typhus IgM","Serology",3000,"Scrub Typhus IgM;;Negative;;Negative|Positive","");
+T("Weil-Felix Test","Serology",1000,"OX-19;;< 1:80;;Negative|1:80|1:160|1:320~OX-2;;< 1:80;;Negative|1:80|1:160|1:320~OX-K;;< 1:80;;Negative|1:80|1:160|1:320","");
+T("Leishmania rK39 (Kala-azar)","Serology",1500,"Leishmania rK39;;Negative;;Negative|Positive","");
+T("Hepatitis E IgM (Anti-HEV)","Serology",2500,"Anti-HEV IgM;;Non-Reactive;;Non-Reactive|Reactive","");
+T("Hepatitis B Core Antibody Total (Anti-HBc)","Serology",1800,"Anti-HBc Total;;Non-Reactive;;Non-Reactive|Reactive","");
+T("Hepatitis B Core IgM","Serology",2200,"Anti-HBc IgM;;Non-Reactive;;Non-Reactive|Reactive","IgM anti-HBc indicates acute or recent hepatitis B infection.");
+T("Hepatitis B Profile (HBsAg, Anti-HBs, HBeAg, Anti-HBe, Anti-HBc)","Serology",4500,"HBsAg;;Non-Reactive;;Non-Reactive|Reactive~Anti-HBs;mIU/mL;< 10~HBeAg;;Non-Reactive;;Non-Reactive|Reactive~Anti-HBe;;Non-Reactive;;Non-Reactive|Reactive~Anti-HBc Total;;Non-Reactive;;Non-Reactive|Reactive","Anti-HBs >= 10 mIU/mL indicates immunity (vaccination or recovery).");
+T("Hepatitis Screening (HBsAg, Anti-HCV, HIV)","Serology",1800,"HBsAg;;Non-Reactive;;Non-Reactive|Reactive~Anti-HCV;;Non-Reactive;;Non-Reactive|Reactive~Anti-HIV I & II;;Non-Reactive;;Non-Reactive|Reactive","All reactive screening results should be confirmed with a confirmatory test.");
+T("HCV Genotyping","Serology",12000,"HCV Genotype;;;;1a|1b|2|3|4|5|6~Sub-type;;","");
+T("HDV (Hepatitis D) Antibody","Serology",4000,"Anti-HDV Total;;Non-Reactive;;Non-Reactive|Reactive","");
+T("HIV 1/2 Antibody (Confirmatory)","Serology",2500,"HIV 1/2 Antibody;;Non-Reactive;;Non-Reactive|Reactive","");
+T("HIV Viral Load (RNA PCR)","Serology",9000,"HIV-1 RNA;copies/mL;Not Detected","");
+T("EBV VCA IgM","Serology",3000,"EBV VCA IgM;;Negative;;Negative|Positive","");
+T("EBV VCA IgG","Serology",3000,"EBV VCA IgG;;Negative;;Negative|Positive","");
+T("Varicella Zoster IgG","Serology",3000,"VZV IgG;;Negative;;Negative|Positive","");
+T("Measles IgG","Serology",3000,"Measles IgG;;Negative;;Negative|Positive","");
+T("Mumps IgG","Serology",3000,"Mumps IgG;;Negative;;Negative|Positive","");
+T("Parvovirus B19 IgM","Serology",3500,"Parvovirus B19 IgM;;Negative;;Negative|Positive","");
+T("Herpes Simplex Virus (HSV 1/2) IgM","Serology",3000,"HSV 1/2 IgM;;Negative;;Negative|Positive","");
+T("COVID-19 Antigen (Rapid)","Serology",1200,"SARS-CoV-2 Antigen;;Negative;;Negative|Positive","");
+T("COVID-19 PCR","Serology",6000,"SARS-CoV-2 RNA (RT-PCR);;Not Detected;;Not Detected|Detected","");
+T("COVID-19 IgG Antibody","Serology",2000,"SARS-CoV-2 IgG;;Negative;;Negative|Positive","");
+T("Influenza A/B Antigen","Serology",2500,"Influenza A;;Negative;;Negative|Positive~Influenza B;;Negative;;Negative|Positive","");
+T("Strep A Rapid Antigen (Throat)","Serology",1200,"Group A Streptococcus Antigen;;Negative;;Negative|Positive","");
+T("Chlamydia Antigen / IgG","Serology",2500,"Chlamydia trachomatis;;Negative;;Negative|Positive","");
+T("Gonorrhoea (Gram Stain / Culture)","Microbiology",1000,"Gram Stain;;No Gram-negative Intracellular Diplococci;;Seen|Not Seen~Culture;;No Growth;;No Growth|Neisseria gonorrhoeae Isolated","");
+T("Mycoplasma pneumoniae IgM","Serology",3000,"Mycoplasma IgM;;Negative;;Negative|Positive","");
+T("TB Gold (QuantiFERON-TB)","Serology",9000,"QuantiFERON-TB Gold;;Negative;;Negative|Positive|Indeterminate~TB Antigen minus Nil;IU/mL;< 0.35","");
+T("TB PCR (GeneXpert MTB/RIF)","Microbiology",5500,"MTB DNA;;Not Detected;;Not Detected|Detected~Rifampicin Resistance;;Not Detected;;Not Detected|Detected|Indeterminate","");
+T("TB Culture (AFB Culture)","Microbiology",3500,"AFB Culture;;No Growth;;No Growth|Growth of M. tuberculosis|Growth of NTM|Contaminated","Culture may take up to 6-8 weeks.");
+T("Fungal Culture","Microbiology",2000,"Fungal Culture;;No Growth;;No Growth|Candida Isolated|Aspergillus Isolated|Other Fungus Isolated~Organism;;","");
+T("Candida Antigen / KOH Mount","Microbiology",800,"KOH Mount;;No Fungal Elements Seen;;Seen|Not Seen","");
+T("Skin Scraping for Fungus","Microbiology",800,"KOH Mount;;No Fungal Elements Seen;;Seen|Not Seen","");
+T("Skin Scraping for Scabies","Microbiology",800,"Sarcoptes scabiei;;Not Seen;;Seen|Not Seen","");
+T("Slit Skin Smear (AFB for Leprosy)","Microbiology",1200,"Bacteriological Index;;0;;","");
+/* ---------- URINE ---------- */
+T("Urine Complete Examination (UCE)","Urine",150,"#Physical~Colour;;Pale Yellow~Appearance;;Clear;;Clear|Slightly Turbid|Turbid~Specific Gravity;;1.005 - 1.030~pH;;4.5 - 8.0~#Chemical~Protein;;Negative;;Negative|Trace|+|++|+++~Glucose;;Negative;;Negative|Trace|+|++|+++~Ketones;;Negative;;Negative|Trace|+|++|+++~Bilirubin;;Negative;;Negative|Positive~Urobilinogen;;Normal;;Normal|Increased~Blood;;Negative;;Negative|Trace|+|++|+++~Nitrite;;Negative;;Negative|Positive~Leucocyte Esterase;;Negative;;Negative|+|++|+++~#Microscopy~Pus Cells;/HPF;0 - 5~RBCs;/HPF;0 - 2~Epithelial Cells;/HPF;Occasional~Casts;;Nil~Crystals;;Nil~Bacteria;;Nil~Yeast Cells;;Nil","Pus cells > 5/HPF with bacteria/nitrite suggests urinary tract infection; send urine culture if symptomatic.");
+T("Urine for Sugar","Urine",50,"Urine Sugar;;Negative;;Negative|Trace|+|++|+++|++++","");
+T("Urine for Albumin (Protein)","Urine",50,"Urine Protein;;Negative;;Negative|Trace|+|++|+++","");
+T("Urine for Ketones","Urine",80,"Urine Ketones;;Negative;;Negative|Trace|+|++|+++","");
+T("Urine for Bile Salts & Pigments","Urine",100,"Bile Pigments;;Negative;;Negative|Positive~Bile Salts;;Negative;;Negative|Positive~Urobilinogen;;Normal;;Normal|Increased","");
+T("Urine Pregnancy Test (Rapid)","Urine",100,"Urine HCG;;Negative;;Negative|Positive","");
+T("Urine Culture & Sensitivity","Microbiology",1000,"Specimen;;Urine~Culture Result;;No Growth;;No Growth|Growth Seen|Mixed Growth~Colony Count;CFU/mL;< 10,000~Organism Isolated;;~Sensitive To;;~Intermediate To;;~Resistant To;;","Significant bacteriuria: >= 100,000 CFU/mL of a single organism (clean-catch midstream sample).");
+T("Urine Spot Protein / Creatinine Ratio","Urine",700,"Urine Protein;mg/dL;~Urine Creatinine;mg/dL;~Protein / Creatinine Ratio;mg/mg;< 0.2","Ratio > 0.2 mg/mg suggests significant proteinuria; > 3.5 mg/mg is nephrotic-range.");
+T("Urine Albumin / Creatinine Ratio (Spot)","Urine",900,"Urine Albumin;mg/L;~Urine Creatinine;mg/dL;~Albumin / Creatinine Ratio;mg/g;< 30","30-300 mg/g indicates microalbuminuria; > 300 mg/g indicates macroalbuminuria.");
+T("24 Hour Urine Creatinine","Urine",500,"24 hr Urine Volume;mL;800 - 2000~Urine Creatinine;mg/24hr;800 - 2000;600 - 1800","");
+T("24 Hour Urine Calcium","Urine",500,"24 hr Urine Volume;mL;~Urine Calcium;mg/24hr;100 - 300","");
+T("24 Hour Urine Oxalate","Urine",1500,"Urine Oxalate;mg/24hr;< 45","");
+T("24 Hour Urine Citrate","Urine",1500,"Urine Citrate;mg/24hr;> 320","");
+T("24 Hour Urine Uric Acid","Urine",600,"Urine Uric Acid;mg/24hr;250 - 750","");
+T("24 Hour Urine Sodium / Potassium","Urine",800,"Urine Sodium;mmol/24hr;40 - 220~Urine Potassium;mmol/24hr;25 - 125","");
+T("24 Hour Urine Phosphate","Urine",700,"Urine Phosphate;mg/24hr;400 - 1300","");
+T("24 Hour Urine Urea","Urine",600,"Urine Urea;g/24hr;12 - 20","");
+T("Urine Osmolality","Urine",800,"Urine Osmolality;mOsm/kg;300 - 900","");
+T("Urine Electrolytes (Spot Na, K, Cl)","Urine",700,"Urine Sodium;mmol/L;~Urine Potassium;mmol/L;~Urine Chloride;mmol/L;","");
+T("Bence Jones Protein (Urine)","Urine",800,"Bence Jones Protein;;Negative;;Negative|Positive","");
+T("Urine Myoglobin","Urine",1500,"Urine Myoglobin;;Negative;;Negative|Positive","");
+T("Urine Drug Screen (5 Panel)","Urine",2500,"Amphetamine;;Negative;;Negative|Positive~Cocaine;;Negative;;Negative|Positive~Opiates;;Negative;;Negative|Positive~Cannabinoids (THC);;Negative;;Negative|Positive~Benzodiazepines;;Negative;;Negative|Positive","Screening result only; positive results should be confirmed by GC-MS/LC-MS.");
+T("Urine Cytology","Urine",2000,"Cytology Findings;;;;Negative for Malignant Cells|Atypical Cells Seen|Suspicious for Malignancy|Malignant Cells Seen~Impression;;","");
+T("Urine for Eosinophils","Urine",500,"Urine Eosinophils;;Not Seen;;Seen|Not Seen","");
+T("Urine for Haemosiderin","Urine",600,"Urine Haemosiderin;;Negative;;Negative|Positive","");
+T("Urine Phenylketones (Ferric Chloride)","Urine",300,"Urine Ferric Chloride Test;;Negative;;Negative|Positive","");
+/* ---------- STOOL ---------- */
+T("Stool Complete Examination (Stool R/E)","Stool",150,"#Physical~Colour;;Brown~Consistency;;Formed;;Formed|Semi-formed|Loose|Watery|Hard~Mucus;;Absent;;Absent|Present~Blood;;Absent;;Absent|Present~Reaction (pH);;~#Microscopy~Pus Cells;/HPF;0 - 2~RBCs;/HPF;Nil~Ova;;Not Seen;;Not Seen|Seen~Cysts;;Not Seen;;Not Seen|Seen~Trophozoites;;Not Seen;;Not Seen|Seen~Undigested Food;;Occasional~Fat Globules;;Nil~Yeast Cells;;Nil~Bacteria;;Normal Flora","Three consecutive stool samples increase the chance of detecting intestinal parasites.");
+T("Stool for Ova & Cyst","Stool",150,"Ova;;Not Seen;;Not Seen|Seen~Cysts;;Not Seen;;Not Seen|Seen~Trophozoites;;Not Seen;;Not Seen|Seen~Parasite Identified;;","");
+T("Stool Reducing Substances","Stool",200,"Reducing Substances;;Negative;;Negative|Trace|+|++|+++","Positive in carbohydrate malabsorption / lactose intolerance in infants.");
+T("Stool pH","Stool",100,"Stool pH;;6.5 - 7.5","");
+T("Giardia Antigen (Stool)","Stool",1000,"Giardia lamblia Antigen;;Negative;;Negative|Positive","");
+T("Entamoeba histolytica Antigen (Stool)","Stool",1200,"E. histolytica Antigen;;Negative;;Negative|Positive","");
+T("Rotavirus Antigen (Stool)","Stool",1200,"Rotavirus Antigen;;Negative;;Negative|Positive","");
+T("Clostridium difficile Toxin (Stool)","Stool",2500,"C. difficile Toxin A/B;;Negative;;Negative|Positive","");
+T("Faecal Calprotectin","Stool",4000,"Faecal Calprotectin;ug/g;< 50","Raised levels suggest intestinal inflammation (IBD) rather than functional bowel disease.");
+T("Faecal Elastase","Stool",4500,"Faecal Elastase-1;ug/g;> 200","");
+T("Stool Fat (Sudan III)","Stool",300,"Fat Globules;;Nil;;Nil|Few|Moderate|Many","");
+T("Stool Occult Blood (FOBT)","Stool",300,"Occult Blood;;Negative;;Negative|Positive","");
+T("Stool Hanging Drop (Cholera)","Stool",300,"Vibrio Motility;;Not Seen;;Seen|Not Seen","");
+/* ---------- BODY FLUIDS ---------- */
+T("CSF Routine Examination","Body Fluids",1200,"Colour;;Colourless~Appearance;;Clear;;Clear|Turbid|Hazy|Blood-stained~Cells (Total);/uL;0 - 5~Polymorphs;%;0~Lymphocytes;%;100~RBCs;/uL;Nil~Glucose;mg/dL;45 - 80~Protein;mg/dL;15 - 45~Chloride;mmol/L;118 - 132~Gram Stain;;No Organisms Seen","CSF glucose should be compared with simultaneous blood glucose (CSF:blood ratio > 0.6 normal).");
+T("CSF Culture & Sensitivity","Microbiology",1500,"Specimen;;CSF~Culture Result;;No Growth;;No Growth|Growth Seen~Organism Isolated;;~Sensitive To;;~Resistant To;;","");
+T("CSF ADA","Body Fluids",1500,"CSF ADA;U/L;< 10","");
+T("Pleural Fluid Analysis","Body Fluids",1500,"Colour;;Straw~Appearance;;Clear~Total Cells;/uL;~Neutrophils;%;~Lymphocytes;%;~Protein;g/dL;~Glucose;mg/dL;~LDH;U/L;~ADA;U/L;< 40~Gram Stain;;~Impression;;","Light's criteria: pleural fluid protein/serum protein > 0.5, LDH ratio > 0.6, or pleural LDH > 2/3 of the upper limit of serum LDH suggest an exudate.");
+T("Ascitic Fluid Analysis","Body Fluids",1500,"Colour;;Straw~Appearance;;Clear~Total Cells;/uL;~Neutrophils;/uL;< 250~Protein;g/dL;~Albumin;g/dL;~Glucose;mg/dL;~LDH;U/L;~ADA;U/L;< 30~Gram Stain;;","Ascitic fluid neutrophils >= 250/uL is diagnostic of spontaneous bacterial peritonitis (SBP).");
+T("SAAG (Serum-Ascites Albumin Gradient)","Body Fluids",800,"Serum Albumin;g/dL;~Ascitic Fluid Albumin;g/dL;~SAAG;g/dL;","SAAG >= 1.1 g/dL indicates portal hypertension; < 1.1 g/dL suggests non-portal causes.");
+T("Synovial Fluid Analysis","Body Fluids",1800,"Colour;;Straw~Clarity;;Clear;;Clear|Turbid|Purulent~Total Cells;/uL;< 200~Neutrophils;%;< 25~Crystals;;Not Seen;;Not Seen|MSU Crystals|CPPD Crystals~Gram Stain;;No Organisms Seen","");
+T("Pleural / Ascitic Fluid Culture","Microbiology",1500,"Specimen;;Body Fluid~Culture Result;;No Growth;;No Growth|Growth Seen~Organism Isolated;;~Sensitive To;;~Resistant To;;","");
+T("Fluid Cytology (Malignant Cells)","Body Fluids",2000,"Cytology Findings;;;;Negative for Malignant Cells|Atypical Cells|Malignant Cells Seen~Impression;;","");
+T("Amniotic Fluid Analysis","Body Fluids",2500,"Colour;;~L/S Ratio;;> 2.0~Bilirubin;;~Impression;;","");
+/* ---------- CARDIAC ---------- */
+T("NT-proBNP","Cardiac",5500,"NT-proBNP;pg/mL;< 125","Values < 300 pg/mL make acute heart failure unlikely; age-adjusted cut-offs apply.");
+T("BNP","Cardiac",5000,"BNP;pg/mL;< 100","");
+T("Troponin T (hs)","Cardiac",2500,"hs-Troponin T;ng/L;< 14","A rise and/or fall of values on serial sampling is required for the diagnosis of myocardial infarction.");
+T("Troponin I (Quantitative)","Cardiac",2500,"Troponin I;ng/mL;< 0.04","");
+T("Troponin I (Rapid Card)","Cardiac",1000,"Troponin I (Qualitative);;Negative;;Negative|Positive","");
+T("Myoglobin","Cardiac",2000,"Myoglobin;ng/mL;< 72","");
+T("CK-NAC / CPK-MB Mass","Cardiac",1500,"CK-MB Mass;ng/mL;< 5.0","");
+T("Cardiac Profile (CPK, CK-MB, LDH, AST, Troponin)","Cardiac",3500,"CPK (Total);U/L;30 - 200;29 - 168~CK-MB;U/L;< 25~LDH;U/L;140 - 280~AST (SGOT);U/L;5 - 40~Troponin I;ng/mL;< 0.04","");
+T("Homocysteine (Total)","Cardiac",3000,"Homocysteine;umol/L;5 - 15","");
+T("Lipid Profile Extended (with Apo A1/B, Lp(a))","Cardiac",6500,"Total Cholesterol;mg/dL;< 200~Triglycerides;mg/dL;< 150~HDL Cholesterol;mg/dL;> 40;> 50~LDL Cholesterol;mg/dL;< 100~Apo A1;mg/dL;110 - 205~Apo B;mg/dL;55 - 140~Lipoprotein (a);mg/dL;< 30","");
+/* ---------- TUMOR MARKERS ---------- */
+T("PSA (Free) & Free/Total Ratio","Tumor Markers",2800,"Total PSA;ng/mL;< 4.0~Free PSA;ng/mL;~Free / Total PSA Ratio;%;> 25","Free/total PSA ratio < 10% increases the likelihood of prostate cancer in the 4-10 ng/mL zone.");
+T("CA 72-4","Tumor Markers",4000,"CA 72-4;U/mL;< 6.9","");
+T("CA 27.29","Tumor Markers",4000,"CA 27.29;U/mL;< 38","");
+T("NSE (Neuron Specific Enolase)","Tumor Markers",4500,"NSE;ng/mL;< 16.3","");
+T("SCC Antigen","Tumor Markers",4500,"SCC Antigen;ng/mL;< 1.5","");
+T("CYFRA 21-1","Tumor Markers",4500,"CYFRA 21-1;ng/mL;< 3.3","");
+T("HE4","Tumor Markers",5500,"HE4;pmol/L;< 70 (Premenopausal) / < 140 (Postmenopausal)","");
+T("ROMA Index (CA-125 + HE4)","Tumor Markers",8000,"CA-125;U/mL;< 35~HE4;pmol/L;< 70~ROMA Score;%;","");
+T("Chromogranin A","Tumor Markers",6000,"Chromogranin A;ng/mL;< 100","");
+T("Beta-2 Microglobulin (Tumor)","Tumor Markers",3000,"Beta-2 Microglobulin;mg/L;0.8 - 2.2","");
+T("LDH (Tumor Marker Panel)","Tumor Markers",900,"LDH;U/L;140 - 280","");
+T("Beta HCG (Tumor Marker)","Tumor Markers",1500,"Beta HCG;mIU/mL;< 5","");
+T("Tumor Markers Panel (Male)","Tumor Markers",9000,"PSA (Total);ng/mL;< 4.0~CEA;ng/mL;< 5.0~AFP;ng/mL;< 10~CA 19-9;U/mL;< 37","");
+T("Tumor Markers Panel (Female)","Tumor Markers",10000,"CA-125;U/mL;< 35~CA 15-3;U/mL;< 30~CEA;ng/mL;< 5.0~CA 19-9;U/mL;< 37~AFP;ng/mL;< 10","");
+/* ---------- DRUG LEVELS / TOXICOLOGY ---------- */
+T("Digoxin Level","Drug Levels",3000,"Digoxin;ng/mL;0.8 - 2.0","Collect at least 6 hours after the last dose.");
+T("Phenytoin Level","Drug Levels",2500,"Phenytoin;ug/mL;10 - 20","");
+T("Valproic Acid Level","Drug Levels",2500,"Valproic Acid;ug/mL;50 - 100","");
+T("Carbamazepine Level","Drug Levels",2500,"Carbamazepine;ug/mL;4 - 12","");
+T("Phenobarbitone Level","Drug Levels",2500,"Phenobarbitone;ug/mL;15 - 40","");
+T("Vancomycin Level (Trough)","Drug Levels",3500,"Vancomycin Trough;ug/mL;10 - 20","");
+T("Gentamicin / Amikacin Level","Drug Levels",3000,"Peak;ug/mL;~Trough;ug/mL;< 2","");
+T("Tacrolimus Level","Drug Levels",6000,"Tacrolimus (Trough);ng/mL;5 - 15","");
+T("Cyclosporine Level","Drug Levels",6000,"Cyclosporine (Trough);ng/mL;100 - 400","");
+T("Methotrexate Level","Drug Levels",5000,"Methotrexate;umol/L;","");
+T("Paracetamol (Acetaminophen) Level","Drug Levels",2500,"Paracetamol;ug/mL;10 - 30","Plot the 4-hour level on the Rumack-Matthew nomogram to assess hepatotoxicity risk.");
+T("Salicylate Level","Drug Levels",2500,"Salicylate;mg/dL;< 30","");
+T("Blood Alcohol (Ethanol)","Drug Levels",2500,"Ethanol;mg/dL;Nil","");
+T("Serum Theophylline","Drug Levels",2500,"Theophylline;ug/mL;5 - 15","");
+/* ---------- MICROBIOLOGY CULTURES ---------- */
+T("Ear Swab C/S","Microbiology",900,"Specimen;;Ear Swab~Culture Result;;No Growth;;No Growth|Growth Seen|Mixed Growth~Organism Isolated;;~Sensitive To;;~Resistant To;;","");
+T("Eye Swab C/S","Microbiology",900,"Specimen;;Eye Swab~Culture Result;;No Growth;;No Growth|Growth Seen|Mixed Growth~Organism Isolated;;~Sensitive To;;~Resistant To;;","");
+T("Nasal Swab C/S","Microbiology",900,"Specimen;;Nasal Swab~Culture Result;;No Growth;;No Growth|Growth Seen|Mixed Growth~Organism Isolated;;~Sensitive To;;~Resistant To;;","");
+T("Catheter Tip C/S","Microbiology",1200,"Specimen;;Catheter Tip~Culture Result;;No Growth;;No Growth|Growth Seen~Organism Isolated;;~Sensitive To;;~Resistant To;;","");
+T("Tissue / Biopsy C/S","Microbiology",1500,"Specimen;;Tissue~Culture Result;;No Growth;;No Growth|Growth Seen~Organism Isolated;;~Sensitive To;;~Resistant To;;","");
+T("Endocervical Swab C/S","Microbiology",1200,"Specimen;;Endocervical Swab~Culture Result;;No Growth;;No Growth|Growth Seen~Organism Isolated;;~Sensitive To;;~Resistant To;;","");
+T("Blood Culture (Aerobic, Automated)","Microbiology",2500,"Specimen;;Blood~Culture Result;;No Growth after 5 days;;No Growth after 5 days|Growth Seen~Organism Isolated;;~Sensitive To;;~Resistant To;;","Two sets from different sites before antibiotics improve yield.");
+T("Typhoid Culture (Salmonella)","Microbiology",2500,"Specimen;;Blood~Culture Result;;No Growth;;No Growth|Salmonella Typhi Isolated|Salmonella Paratyphi Isolated~Sensitive To;;~Resistant To;;","");
+T("Anaerobic Culture","Microbiology",2500,"Culture Result;;No Growth;;No Growth|Growth Seen~Organism Isolated;;","");
+T("MRSA Screening (Nasal Swab)","Microbiology",2000,"MRSA;;Not Isolated;;Not Isolated|Isolated","");
+T("Throat Swab (Gram Stain / Diphtheria)","Microbiology",700,"Gram Stain;;~Albert Stain;;Negative;;Negative|Positive","");
+T("Vaginal Swab for Trichomonas / Candida","Microbiology",600,"Trichomonas vaginalis;;Not Seen;;Seen|Not Seen~Candida;;Not Seen;;Seen|Not Seen~Clue Cells;;Not Seen;;Seen|Not Seen~Pus Cells;/HPF;< 5","");
+T("Stool Culture (Salmonella / Shigella / Vibrio)","Microbiology",1200,"Culture Result;;No Pathogen Isolated;;No Pathogen Isolated|Salmonella Isolated|Shigella Isolated|Vibrio cholerae Isolated|Other~Sensitive To;;~Resistant To;;","");
+T("Sputum Gram Stain","Microbiology",500,"Gram Stain;;~Pus Cells;/LPF;~Epithelial Cells;/LPF;< 10","");
+T("Sputum Cytology","Microbiology",1500,"Cytology;;;;Negative for Malignant Cells|Atypical Cells|Malignant Cells Seen","");
+T("Pap Smear (Cervical Cytology)","Histopathology",2500,"Adequacy of Smear;;;;Satisfactory|Unsatisfactory~Interpretation;;;;NILM (Negative for Intraepithelial Lesion)|ASC-US|LSIL|HSIL|Squamous Cell Carcinoma~Organisms;;;;None|Candida|Trichomonas|Bacterial Vaginosis|Actinomyces~Impression;;","");
+T("FNAC (Fine Needle Aspiration Cytology)","Histopathology",3000,"Site;;~Clinical Details;;~Gross;;~Microscopy;;~Impression;;","");
+T("Histopathology (Biopsy Report)","Histopathology",4500,"Specimen;;~Clinical Details;;~Gross Description;;~Microscopic Description;;~Diagnosis;;","");
+T("Immunohistochemistry (Per Marker)","Histopathology",5000,"Marker;;~Result;;;;Positive|Negative~Intensity / Percentage;;","");
+T("ER / PR / HER2 Receptor Status","Histopathology",15000,"Estrogen Receptor (ER);;;;Positive|Negative~Progesterone Receptor (PR);;;;Positive|Negative~HER2/neu;;;;0|1+|2+|3+~Ki-67 Index;%;","");
+/* ---------- PREGNANCY / ANTENATAL ---------- */
+T("Double Marker (First Trimester Screen)","Pregnancy",6500,"Free Beta hCG;MoM;0.5 - 2.0~PAPP-A;MoM;0.5 - 2.0~Risk for Down Syndrome;;< 1:250","Screening test only; high-risk results need confirmation by amniocentesis/NIPT.");
+T("Triple Marker (Second Trimester)","Pregnancy",6500,"AFP;MoM;0.5 - 2.0~Total hCG;MoM;0.5 - 2.0~Unconjugated Estriol;MoM;0.5 - 2.0","");
+T("Quadruple Marker","Pregnancy",8000,"AFP;MoM;0.5 - 2.0~Total hCG;MoM;0.5 - 2.0~Unconjugated Estriol;MoM;0.5 - 2.0~Inhibin A;MoM;0.5 - 2.0","");
+T("NIPT (Non-Invasive Prenatal Test)","Pregnancy",45000,"Trisomy 21;;Low Risk;;Low Risk|High Risk~Trisomy 18;;Low Risk;;Low Risk|High Risk~Trisomy 13;;Low Risk;;Low Risk|High Risk","");
+T("Antenatal Profile (Basic)","Pregnancy",2500,"Haemoglobin;g/dL;11.0 - 14.0~Blood Group;;~Rh Factor;;~HBsAg;;Non-Reactive;;Non-Reactive|Reactive~Anti-HCV;;Non-Reactive;;Non-Reactive|Reactive~HIV;;Non-Reactive;;Non-Reactive|Reactive~VDRL;;Non-Reactive;;Non-Reactive|Reactive~Fasting Blood Sugar;mg/dL;< 92~Urine R/E;;","");
+T("Preeclampsia Profile (LFT, RFT, Uric Acid, Platelets, LDH)","Pregnancy",3500,"Platelet Count;x10^3/uL;150 - 450~SGOT (AST);U/L;< 35~SGPT (ALT);U/L;< 35~LDH;U/L;< 600~Serum Creatinine;mg/dL;< 0.9~Uric Acid;mg/dL;2.5 - 5.6~24 hr Urine Protein;mg/24hr;< 300","");
+T("sFlt-1 / PlGF Ratio","Pregnancy",15000,"sFlt-1 / PlGF Ratio;;< 38","Ratio <= 38 rules out pre-eclampsia in the next week; > 85 (< 34 weeks) / > 110 (>= 34 weeks) is highly suggestive.");
+T("Fetal Fibronectin","Pregnancy",9000,"Fetal Fibronectin;;Negative;;Negative|Positive","");
+T("Rh Typing & Antibody Screening (Antenatal)","Pregnancy",1200,"Blood Group;;~Rh Factor;;~Antibody Screen;;Negative;;Negative|Positive","");
+/* ---------- MISCELLANEOUS / PROFILES ---------- */
+T("Bone Profile (Ca, PO4, ALP, Albumin)","Biochemistry",1200,"Calcium;mg/dL;8.5 - 10.5~Phosphorus;mg/dL;2.5 - 4.5~ALP;U/L;44 - 147~Albumin;g/dL;3.5 - 5.0~Vitamin D (25-OH);ng/mL;30 - 100","");
+T("Osteocalcin","Biochemistry",5000,"Osteocalcin;ng/mL;11 - 46","");
+T("CTX (Beta-CrossLaps)","Biochemistry",5000,"CTX;pg/mL;< 704","");
+T("P1NP","Biochemistry",5000,"P1NP;ng/mL;20 - 100","");
+T("Iron Deficiency Profile (Hb, MCV, Ferritin, Iron, TIBC)","Haematology",2800,"Haemoglobin;g/dL;13.0 - 17.0;12.0 - 15.5~MCV;fL;80 - 100~Serum Ferritin;ng/mL;30 - 400;13 - 150~Serum Iron;ug/dL;60 - 170;50 - 150~TIBC;ug/dL;250 - 450~Transferrin Saturation;%;20 - 50","");
+T("Anaemia Profile (CBC, Ferritin, B12, Folate)","Haematology",4500,"Haemoglobin;g/dL;13.0 - 17.0;12.0 - 15.5~MCV;fL;80 - 100~Serum Ferritin;ng/mL;30 - 400;13 - 150~Vitamin B12;pg/mL;200 - 900~Serum Folate;ng/mL;> 4.0","");
+T("Diabetic Profile (FBS, PP, HbA1c, Lipid, Creatinine)","Biochemistry",3500,"Fasting Blood Sugar;mg/dL;70 - 100~Post-Prandial Sugar;mg/dL;< 140~HbA1c;%;< 5.7~Total Cholesterol;mg/dL;< 200~Triglycerides;mg/dL;< 150~Serum Creatinine;mg/dL;0.7 - 1.3;0.6 - 1.1~Urine Albumin / Creatinine;mg/g;< 30","");
+T("Liver Profile Extended (LFT + GGT + PT)","Biochemistry",1800,"Total Bilirubin;mg/dL;0.2 - 1.2~Direct Bilirubin;mg/dL;0.0 - 0.3~SGPT (ALT);U/L;7 - 56~SGOT (AST);U/L;5 - 40~ALP;U/L;44 - 147~GGT;U/L;9 - 48;7 - 32~Total Protein;g/dL;6.0 - 8.3~Albumin;g/dL;3.5 - 5.0~PT;sec;11 - 14~INR;;0.8 - 1.2","");
+T("Kidney Profile Extended (RFT + Electrolytes + Uric Acid)","Biochemistry",1800,"Urea;mg/dL;15 - 45~Creatinine;mg/dL;0.7 - 1.3;0.6 - 1.1~Uric Acid;mg/dL;3.5 - 7.2;2.5 - 6.2~Sodium;mmol/L;135 - 145~Potassium;mmol/L;3.5 - 5.1~Chloride;mmol/L;98 - 107~Calcium;mg/dL;8.5 - 10.5~Phosphorus;mg/dL;2.5 - 4.5","");
+T("Executive Health Check Profile","Profiles",9500,"Haemoglobin;g/dL;13.0 - 17.0;12.0 - 15.5~TLC;x10^3/uL;4.0 - 11.0~Platelet Count;x10^3/uL;150 - 450~ESR;mm/hr;0 - 15;0 - 20~Fasting Blood Sugar;mg/dL;70 - 100~HbA1c;%;< 5.7~Total Cholesterol;mg/dL;< 200~Triglycerides;mg/dL;< 150~HDL Cholesterol;mg/dL;> 40;> 50~LDL Cholesterol;mg/dL;< 100~SGPT (ALT);U/L;7 - 56~Serum Creatinine;mg/dL;0.7 - 1.3;0.6 - 1.1~Uric Acid;mg/dL;3.5 - 7.2;2.5 - 6.2~TSH;uIU/mL;0.4 - 4.0~Vitamin D (25-OH);ng/mL;30 - 100~Vitamin B12;pg/mL;200 - 900~Urine R/E;;","");
+T("Pre-Operative Profile","Profiles",2800,"Haemoglobin;g/dL;13.0 - 17.0;12.0 - 15.5~TLC;x10^3/uL;4.0 - 11.0~Platelet Count;x10^3/uL;150 - 450~Blood Group;;~Bleeding Time;min;1 - 6~Clotting Time;min;4 - 10~Fasting Blood Sugar;mg/dL;70 - 100~Urea;mg/dL;15 - 45~Creatinine;mg/dL;0.7 - 1.3~HBsAg;;Non-Reactive;;Non-Reactive|Reactive~Anti-HCV;;Non-Reactive;;Non-Reactive|Reactive~HIV;;Non-Reactive;;Non-Reactive|Reactive","");
+T("Fever Profile (CBC, MP, Widal, Dengue, Urine R/E)","Profiles",2800,"TLC;x10^3/uL;4.0 - 11.0~Platelet Count;x10^3/uL;150 - 450~Malaria Parasite;;Not Seen;;Not Seen|Seen~Typhoid IgM;;Negative;;Negative|Positive~Dengue NS1;;Negative;;Negative|Positive~CRP;mg/L;< 6~Urine Pus Cells;/HPF;0 - 5","");
+T("Thyroid Complete Profile (T3, T4, TSH, Anti-TPO)","Hormones",3200,"T3 (Total);ng/dL;80 - 200~T4 (Total);ug/dL;5.1 - 14.1~TSH;uIU/mL;0.4 - 4.0~Anti-TPO;IU/mL;< 35","");
+T("Arthritis Profile (RA, CRP, ASO, Uric Acid, ESR)","Profiles",2800,"Rheumatoid Factor;IU/mL;< 14~CRP;mg/L;< 6~ASO Titre;IU/mL;< 200~Uric Acid;mg/dL;3.5 - 7.2;2.5 - 6.2~ESR;mm/hr;0 - 15;0 - 20","");
+T("Cardiac Risk Profile","Profiles",4500,"Total Cholesterol;mg/dL;< 200~LDL Cholesterol;mg/dL;< 100~HDL Cholesterol;mg/dL;> 40;> 50~Triglycerides;mg/dL;< 150~hs-CRP;mg/L;< 3.0~Homocysteine;umol/L;5 - 15~Lipoprotein (a);mg/dL;< 30","");
+T("Women Wellness Profile","Profiles",6500,"Haemoglobin;g/dL;12.0 - 15.5~Serum Ferritin;ng/mL;13 - 150~Vitamin D (25-OH);ng/mL;30 - 100~Vitamin B12;pg/mL;200 - 900~TSH;uIU/mL;0.4 - 4.0~Fasting Blood Sugar;mg/dL;70 - 100~Total Cholesterol;mg/dL;< 200~Calcium;mg/dL;8.5 - 10.5","");
+T("Pre-Marital / Marriage Screening Profile","Profiles",3500,"Blood Group;;~Rh Factor;;~Hb Electrophoresis (Thalassaemia Trait);;Normal;;Normal|Trait|Abnormal~HBsAg;;Non-Reactive;;Non-Reactive|Reactive~Anti-HCV;;Non-Reactive;;Non-Reactive|Reactive~HIV;;Non-Reactive;;Non-Reactive|Reactive~VDRL;;Non-Reactive;;Non-Reactive|Reactive","");
+T("Hepatitis Panel (HBsAg, HCV, HAV, HEV)","Profiles",3500,"HBsAg;;Non-Reactive;;Non-Reactive|Reactive~Anti-HCV;;Non-Reactive;;Non-Reactive|Reactive~Anti-HAV IgM;;Non-Reactive;;Non-Reactive|Reactive~Anti-HEV IgM;;Non-Reactive;;Non-Reactive|Reactive","");
+T("STD Profile (HIV, HBsAg, HCV, VDRL, Chlamydia)","Profiles",5500,"HIV;;Non-Reactive;;Non-Reactive|Reactive~HBsAg;;Non-Reactive;;Non-Reactive|Reactive~Anti-HCV;;Non-Reactive;;Non-Reactive|Reactive~VDRL;;Non-Reactive;;Non-Reactive|Reactive~Chlamydia;;Negative;;Negative|Positive","");
+T("Hair / Nail / Skin Fungal Study","Microbiology",800,"KOH Mount;;No Fungal Elements Seen;;Seen|Not Seen~Fungal Culture;;No Growth;;No Growth|Growth Seen","");
+T("Karyotyping (Blood)","Genetics",12000,"Karyotype;;46,XX / 46,XY~Result;;Normal;;Normal|Abnormal~Comment;;","");
+T("Factor V Leiden Mutation","Genetics",12000,"Factor V Leiden;;Not Detected;;Not Detected|Heterozygous|Homozygous","");
+T("JAK2 V617F Mutation","Genetics",12000,"JAK2 V617F;;Not Detected;;Not Detected|Detected","");
+T("BCR-ABL (Philadelphia Chromosome)","Genetics",15000,"BCR-ABL Transcript;;Not Detected;;Not Detected|Detected~Quantification (IS);%;","");
+T("Thalassaemia Mutation Analysis","Genetics",15000,"Beta-Thalassaemia Mutation;;Not Detected;;Not Detected|Detected","");
+T("Cystic Fibrosis / Sweat Chloride","Genetics",6000,"Sweat Chloride;mmol/L;< 30","");
+T("COVID + Influenza Combo (Rapid)","Serology",2500,"SARS-CoV-2 Antigen;;Negative;;Negative|Positive~Influenza A;;Negative;;Negative|Positive~Influenza B;;Negative;;Negative|Positive","");
+T("Sickle Cell Solubility / Sickling Test (Confirm)","Haematology",500,"Sickling Test;;Negative;;Negative|Positive","");
+T("G6PD (Quantitative)","Haematology",1800,"G6PD Activity;U/g Hb;4.6 - 13.5","");
+T("Serum Ferritin (Pregnancy)","Haematology",1500,"Serum Ferritin;ng/mL;15 - 150","");
+T("Heavy Metal Panel (Pb, Hg, As, Cd)","Biochemistry",9000,"Lead;ug/dL;< 5~Mercury;ug/L;< 10~Arsenic;ug/L;< 50~Cadmium;ug/L;< 5","");
+T("Sweat Test","Biochemistry",5000,"Sweat Chloride;mmol/L;< 30","");
+T("Stone Analysis (Renal Calculi)","Biochemistry",2500,"Stone Composition;;;;Calcium Oxalate|Uric Acid|Calcium Phosphate|Struvite|Cystine|Mixed","");
+T("Gastric Analysis / pH","Biochemistry",1500,"Gastric pH;;1.5 - 3.5","");
+T("Lactose Hydrogen Breath Test","Biochemistry",5000,"Peak Hydrogen Rise;ppm;< 20","");
+T("Urea Breath Test (H. Pylori)","Biochemistry",4500,"Urea Breath Test;;Negative;;Negative|Positive","");
+/* ---- install: LB_LIB (exact-name rules) + notes + price list ---- */
+(function(){
+const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+const DEFN={Serology:"Result should be interpreted in correlation with clinical findings; a single reactive/positive screening result needs confirmation and repeat testing if clinically indicated.",Immunology:"Autoantibody / immunoglobulin results should be interpreted together with clinical features; a positive result alone does not establish a diagnosis.",Microbiology:"Culture results depend on the quality and timing of the specimen; collect before antibiotics when possible. Interpret with clinical findings.",Urine:"Results depend on proper sample collection (clean-catch midstream / complete 24-hour collection). Correlate clinically.",Stool:"A fresh sample is required; repeat examination on 2-3 different days if clinically suspected.","Body Fluids":"Interpret fluid results together with simultaneous blood values and clinical findings.",Cardiac:"Interpret with ECG and clinical picture; serial sampling may be required.","Tumor Markers":"Tumor markers are not diagnostic by themselves; use for follow-up and in correlation with imaging and histopathology.","Drug Levels":"Interpret with dose, time of last dose and clinical response; therapeutic ranges are guidelines.",Hormones:"Hormone levels vary with time of day, age, sex and method; interpret with clinical findings and repeat if needed.",Haematology:"Correlate with clinical findings and peripheral blood film where indicated.",Biochemistry:"Reference ranges vary with age, sex and method; correlate clinically.",Coagulation:"Sample must be collected in citrate tube with correct blood:anticoagulant ratio; correlate with clinical bleeding history.",Histopathology:"Final diagnosis is based on microscopic examination and clinical correlation.",Genetics:"Genetic results should be interpreted with genetic counselling and family history.",Pregnancy:"Screening results are risk estimates only; confirm abnormal screening with diagnostic tests.",Profiles:"Profile results should be interpreted together; correlate clinically.","Blood Bank":"Compatibility results are valid only for the sample tested; recheck before transfusion."};
+const have=new Set(SEED_TESTS.map(t=>t[0].trim().toLowerCase()));
+LAB_MORE.slice().reverse().forEach(t=>{const re=new RegExp("^\\s*"+esc(t[0])+"\\s*$","i");
+LB_LIB.unshift([re,t[3].length?t[3]:[[t[0],"",""]]]);
+LB_NOTES.unshift([re,t[4]||DEFN[t[1]]||GEN]);});
+LAB_MORE.forEach(t=>{const k=t[0].trim().toLowerCase();if(!have.has(k)){have.add(k);LAB_EXTRA.push([t[0],t[1],t[2]]);SEED_TESTS.push([t[0],t[1],"lab",t[2]])}});
+})();
+
+})();
 function lbRaw(test){
 if(test&&Array.isArray(test.params)&&test.params.length)return test.params.map(x=>Object.assign({},x));
 const nm=String((test&&test.name)||"");
@@ -3072,7 +3536,10 @@ async function pageMedicalStore(){
     sales=all.filter(x=>x.kind==="sale");
     customers=all.filter(x=>x.kind==="customer");
     customCats=all.filter(x=>x.kind==="category");
+    {const used=customers.map(c=>parseInt(String(c.customerNo||"").replace(/\D/g,""),10)||0);let mx=Math.max(0,...used);
+     for(const c of customers.slice().sort((a,b)=>(a.createdAt||"").localeCompare(b.createdAt||""))){if(!c.customerNo){c.customerNo="C-"+String(++mx).padStart(4,"0");try{await qPut("inventory",c)}catch(e){}}}}
   };
+  const nextCustNo=()=>"C-"+String(Math.max(0,...customers.map(c=>parseInt(String(c.customerNo||"").replace(/\D/g,""),10)||0))+1).padStart(4,"0");
   const stockOf=(p)=>products.filter(x=>x.id===p.id).reduce((a)=>a,0) + num(p.stock||0);
   const expState=p=>{if(!p.expiry)return"";if(p.expiry<today())return"expired";return p.expiry<=new Date(Date.now()+90*86400000).toISOString().slice(0,10)?"soon":"ok"};
   const stockRowHTML=p=>{
@@ -3098,7 +3565,7 @@ async function pageMedicalStore(){
       '<div class="stat"><div class="ico violet-g">🧾</div><div><div class="lbl">Total Sales</div><div class="val">'+sales.length+'</div></div></div>'+
       '<div class="stat"><div class="ico amber-g">⚠️</div><div><div class="lbl">Low / Out of Stock</div><div class="val">'+products.filter(p=>num(p.stock)<=num(p.reorderLevel||5)).length+'</div></div></div></div>':'')+
       '<div class="card"><div class="card-h"><div><h2>'+sec[0]+' '+sec[1]+'</h2><div class="sub">'+sec[2]+'</div></div>'+
-      ((tab==="dashboard"||tab==="stock")?'<div class="flex gap fw"><button class="btn btn-outline sm" id="med-scan">📷 SCAN &amp; ADD</button><button class="btn btn-outline sm" id="med-bclabels">🏷 BARCODE LABELS</button><button class="btn btn-success sm" id="med-new">＋ ADD MEDICINE</button></div>':'')+'</div>'+
+      ((tab==="stock")?'<div class="flex gap fw"><button class="btn btn-outline sm" id="med-scan">📷 SCAN &amp; ADD</button><button class="btn btn-outline sm" id="med-bclabels">🏷 BARCODE LABELS</button><button class="btn btn-success sm" id="med-new">＋ ADD MEDICINE</button></div>':'')+'</div>'+
       '<div class="card-b"><div id="med-panel"></div></div></div></div>';
     if(el("med-new"))el("med-new").onclick=()=>medicineModal();
     if(el("med-scan"))el("med-scan").onclick=()=>medicineModal(null,{autoScan:true});
@@ -3115,8 +3582,7 @@ async function pageMedicalStore(){
       const low=products.filter(x=>num(x.stock)<=num(x.reorderLevel||5)).slice(0,8);
       const exp=products.filter(x=>x.expiry&&x.expiry<=lim).sort((a,b)=>a.expiry.localeCompare(b.expiry)).slice(0,8);
       const recent=sales.slice().sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).slice(0,8);
-      panel.innerHTML='<div class="flex fw g8 mb"><button class="btn btn-primary" id="d-bill">🧾 New Bill</button><button class="btn btn-success" id="d-buy">🛒 New Purchase</button><button class="btn btn-neutral" id="d-stock">📦 View Stock</button></div>'+
-      '<div class="grid g4 mb">'+
+      panel.innerHTML='<div class="grid g4 mb">'+
       '<div class="mini-stat" style="background:var(--green-bg);border-color:var(--green-bd)"><div class="lbl">Today Sales</div><div class="val">'+money(todaySales.reduce((a,x)=>a+num(x.total),0))+'</div></div>'+
       '<div class="mini-stat" style="background:var(--blue-50);border-color:var(--blue-100)"><div class="lbl">Today Bills</div><div class="val">'+todaySales.length+'</div></div>'+
       '<div class="mini-stat" style="background:var(--amber-bg);border-color:var(--amber-bd)"><div class="lbl">Total Due (Udhaar)</div><div class="val">'+money(dueAll)+'</div></div>'+
@@ -3127,8 +3593,7 @@ async function pageMedicalStore(){
       (exp.length?exp.map(x=>'<tr><td>'+esc(x.name)+'</td><td><span class="badge amber">'+esc(x.expiry)+'</span></td></tr>').join(""):'<tr class="empty-row"><td colspan="2">No near-expiry medicine</td></tr>')+'</tbody></table></div></div></div>'+
       '<h3 class="mb">Recent Bills</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Bill No.</th><th>Date</th><th>Customer</th><th>Total</th><th>Due</th><th>Print</th></tr></thead><tbody>'+
       (recent.length?recent.map(x=>'<tr><td class="mr">'+esc(x.billNo)+'</td><td>'+fmtDate(x.date)+'</td><td>'+esc(x.customerName)+'</td><td>'+money(x.total)+'</td><td>'+money(x.due)+'</td><td><button class="btn btn-neutral sm" data-med-print="'+esc(x.id)+'">🖨</button></td></tr>').join(""):'<tr class="empty-row"><td colspan="6">No bills yet</td></tr>')+'</tbody></table></div>';
-      el("d-bill").onclick=()=>go("ms_sale");el("d-buy").onclick=()=>purchaseModal();el("d-stock").onclick=()=>go("ms_stock");
-      panel.querySelectorAll("[data-med-print]").forEach(b=>b.onclick=()=>{const x=sales.find(v=>v.id===b.dataset.medPrint);if(x)printSale(x)});
+            panel.querySelectorAll("[data-med-print]").forEach(b=>b.onclick=()=>{const x=sales.find(v=>v.id===b.dataset.medPrint);if(x)printSale(x)});
     }else if(tab==="stock"){
       const cats=[...new Set(products.map(p=>p.category).filter(Boolean))].sort();
       panel.innerHTML='<div class="ms-filters"><input class="inp" id="med-search" placeholder="🔍 Search name, generic, company, batch, barcode, rack...">'+
@@ -3184,9 +3649,9 @@ async function pageMedicalStore(){
       panel.querySelectorAll("[data-sale-edit]").forEach(b=>b.onclick=()=>editSale(sales.find(s=>s.id===b.dataset.saleEdit)));
       panel.querySelectorAll("[data-sale-del]").forEach(b=>b.onclick=()=>deleteSale(b.dataset.saleDel));
     }else if(tab==="customers"){
-      panel.innerHTML='<div class="field"><input class="inp" id="med-customer-search" placeholder="Search customer by name or mobile..."></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Customer</th><th>Mobile</th><th>Address</th><th>Total Bills</th><th>Total Purchase</th><th>Outstanding</th><th>Action</th></tr></thead><tbody id="med-customer-rows">'+
-      customers.map(c=>{const cs=sales.filter(s=>s.customerId===c.id);return '<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.mobile||"—")+'</td><td>'+esc(c.address||"—")+'</td><td>'+cs.length+'</td><td>'+money(cs.reduce((a,s)=>a+num(s.total),0))+'</td><td>'+money(cs.reduce((a,s)=>a+Math.max(0,num(s.total)-num(s.paid)),0))+'</td><td><button class="btn btn-outline sm" data-cust-history="'+esc(c.id)+'">History</button> <button class="btn btn-danger sm" data-cust-del="'+esc(c.id)+'">Delete</button></td></tr>'}).join("")+
-      (customers.length?"":'<tr class="empty-row"><td colspan="7">Customer records will appear here after their first bill.</td></tr>')+'</tbody></table></div>';
+      panel.innerHTML='<div class="field"><input class="inp" id="med-customer-search" placeholder="Search customer by ID, name or mobile..."></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>ID</th><th>Customer</th><th>Mobile</th><th>Address</th><th>Total Bills</th><th>Total Purchase</th><th>Outstanding</th><th>Action</th></tr></thead><tbody id="med-customer-rows">'+
+      customers.map(c=>{const cs=sales.filter(s=>s.customerId===c.id);return '<tr><td><b style="font-family:monospace">'+esc(c.customerNo||"—")+'</b></td><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.mobile||"—")+'</td><td>'+esc(c.address||"—")+'</td><td>'+cs.length+'</td><td>'+money(cs.reduce((a,s)=>a+num(s.total),0))+'</td><td>'+money(cs.reduce((a,s)=>a+Math.max(0,num(s.total)-num(s.paid)),0))+'</td><td><button class="btn btn-outline sm" data-cust-history="'+esc(c.id)+'">History</button> <button class="btn btn-danger sm" data-cust-del="'+esc(c.id)+'">Delete</button></td></tr>'}).join("")+
+      (customers.length?"":'<tr class="empty-row"><td colspan="8">Customer records will appear here after their first bill.</td></tr>')+'</tbody></table></div>';
       panel.querySelectorAll("[data-cust-del]").forEach(b=>b.onclick=()=>deleteCustomer(b.dataset.custDel));
       panel.querySelectorAll("[data-cust-history]").forEach(b=>b.onclick=()=>customerHistory(customers.find(c=>c.id===b.dataset.custHistory)));
       el("med-customer-search").oninput=e=>{const q=e.target.value.toLowerCase();el("med-customer-rows").querySelectorAll("tr").forEach(tr=>tr.style.display=tr.innerText.toLowerCase().includes(q)?"":"none")};
@@ -3301,7 +3766,9 @@ async function pageMedicalStore(){
     {const bi=ov.querySelector("#mm-barcode");
     const chk=()=>{const v=bi.value.trim();if(!v)return;const d=products.find(x=>x.id!==p.id&&x.barcode&&bcEq(x.barcode,v));if(d)toast("⚠ Ye barcode pehle se '"+d.name+"' par lagi hai","error")};
     bi.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();chk();bi.blur()}});bi.addEventListener("change",chk);
-    ov.querySelector("#mm-bc-scan").onclick=()=>barcodeScanModal("📷 Dawai ka barcode scan karein",c=>{bi.value=c;chk();toast("Barcode mil gaya: "+c+" — SAVE MEDICINE dabayein","info")});
+    ov.querySelector("#mm-bc-scan").onclick=()=>barcodeScanModal("📷 Dawai ka barcode / 2D code scan karein",(c,info)=>{bi.value=c;chk();let ex="";
+      if(info){const b=ov.querySelector("#mm-batch"),e=ov.querySelector("#mm-expiry");if(b&&!b.value&&info.batch){b.value=info.batch;ex+=" · Batch "+info.batch}if(e&&!e.value&&info.expiry){e.value=info.expiry;ex+=" · Expiry "+info.expiry}}
+      toast("Code mil gaya: "+c+ex+" — SAVE MEDICINE dabayein","info")});
     ov.querySelector("#mm-bc-gen").onclick=()=>{bi.value=bcNextInternal(products);toast("Naya barcode ban gaya — SAVE MEDICINE dabayein, phir 🏷 se sticker print karein","info")};
     const pb=ov.querySelector("#mm-bc-print");if(pb)pb.onclick=()=>{if(bi.value.trim()!==String(p.barcode||"")){toast("Pehle SAVE MEDICINE dabayein, phir label print karein","error");return}if(!p.barcode){toast("Pehle barcode bharein / banayein aur save karein","error");return}barcodeLabelsModal(products,p.id,()=>pageMedicalStore())};}
     {const catSel=ov.querySelector("#mm-category");let lastCat=catSel.value;
@@ -3633,6 +4100,7 @@ async function pageMedicalStore(){
         '<div class="pos-grid" id="pos-grid"></div></div>'+
       '<div class="pos-right"><div class="pos-h">🛒 Current Sale</div><div id="pos-cart"></div>'+
         '<div class="pos-seg"><button type="button" data-st="walk" class="on">🚶 Walk-in</button><button type="button" data-st="credit">📒 Credit / Udhaar</button></div>'+
+        '<div class="field"><label>🔎 Purana Customer — ID / Naam / Mobile</label><input class="inp" id="ms-cid" list="ms-cid-list" autocomplete="off" placeholder="Jaise C-0003 ya naam likhein, phir Enter"><datalist id="ms-cid-list">'+customers.map(c=>'<option value="'+esc((c.customerNo||"")+" · "+c.name+(c.mobile?" · "+c.mobile:""))+'"></option>').join("")+'</datalist></div>'+
         '<div class="grid g2"><div class="field"><label>Mobile</label><input class="inp" id="ms-mobile" inputmode="tel" placeholder="03xxxxxxxxx"></div><div class="field"><label>Customer Name</label><input class="inp" id="ms-name" placeholder="Walk-in Customer"></div></div>'+
         '<div class="hint" id="ms-customer-history" style="margin:-4px 0 8px"></div>'+
         '<div class="field"><label>Address (optional)</label><input class="inp" id="ms-address"></div>'+
@@ -3703,7 +4171,7 @@ async function pageMedicalStore(){
     };
     const refreshHeldBtn=()=>{Q("#pos-held").textContent="⏸ Held ("+getHeld().length+")"};
     /* ---- unknown barcode: medicine se link karein ---- */
-    const posUnknownCode=code=>{
+    const posUnknownCode=code=>{code=gs1Code(code)||code;
       const ov=openModal("Naya Barcode — Medicine se Link karein",
         '<div class="info-tile mb"><b>Barcode: <span style="font-family:monospace">'+esc(code)+'</span></b><div class="hint">Ye barcode kisi medicine se linked nahi hai. Neeche se medicine chunein — agli dafa ye dabba scan karte hi bill mein khud aa jayega.</div></div><input class="inp mb" id="lk-q" placeholder="🔍 Medicine search…" autocomplete="off"><div id="lk-list" style="max-height:44vh;overflow:auto"></div>',
         '<button class="btn btn-neutral" data-close>Cancel</button>',true);
@@ -3756,13 +4224,24 @@ async function pageMedicalStore(){
       saleType=b.dataset.st;ov.querySelectorAll("[data-st]").forEach(x=>x.classList.toggle("on",x===b));
       Q("#ms-method").value=saleType==="credit"?"Credit / Due":"Cash";paidTouched=false;updateTotals();
     });
+    let selCust=null;
+    const showCust=c=>{const hint=Q("#ms-customer-history");selCust=c;
+        Q("#ms-name").value=c.name;Q("#ms-address").value=c.address||"";
+        const old=sales.filter(x=>x.customerId===c.id),due=old.reduce((a,x)=>a+Math.max(0,num(x.total)-num(x.paid)),0);
+        hint.innerHTML="🆔 <b>"+esc(c.customerNo||"")+"</b> — Existing customer, "+old.length+" bills"+(due>0?' · <b style="color:#b45309">Purani baqaya: '+money(due)+'</b>':'')+' <button type="button" id="ms-show-history" class="btn btn-outline sm">History</button>';
+        Q("#ms-show-history").onclick=()=>customerHistory(c)};
+    const findCust=v=>{v=String(v||"").trim();if(!v)return null;const low=v.toLowerCase();const code=(v.split("·")[0]||"").trim().toLowerCase();const dg=v.replace(/\D/g,"");
+      return customers.find(c=>c.customerNo&&(c.customerNo.toLowerCase()===code||(dg&&!/[a-z]/i.test(v.replace(/c-?/i,""))&&v.length<=6&&parseInt(c.customerNo.replace(/\D/g,""),10)===parseInt(dg,10))))||customers.find(c=>c.mobile&&dg.length>=7&&c.mobile.replace(/\D/g,"")===dg)||customers.find(c=>c.name&&c.name.toLowerCase()===low)||null};
+    const doCid=()=>{const v=Q("#ms-cid").value;if(!v.trim())return;const c=findCust(v);if(c){Q("#ms-mobile").value=c.mobile||"";showCust(c);Q("#ms-cid").value=(c.customerNo||"")+" · "+c.name}else toast("Is ID / naam ka customer nahi mila","error")};
+    Q("#ms-cid").addEventListener("change",doCid);Q("#ms-cid").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doCid()}});
     Q("#ms-mobile").oninput=()=>{
       const m=Q("#ms-mobile").value.trim(),c=customers.find(x=>m&&x.mobile===m),hint=Q("#ms-customer-history");
-      if(c){Q("#ms-name").value=c.name;Q("#ms-address").value=c.address||"";
+      if(c){showCust(c);}
+      else if(false){Q("#ms-name").value=c.name;Q("#ms-address").value=c.address||"";
         const old=sales.filter(x=>x.customerId===c.id),due=old.reduce((a,x)=>a+Math.max(0,num(x.total)-num(x.paid)),0);
         hint.innerHTML="Existing customer — "+old.length+" bills"+(due>0?' · <b style="color:#b45309">Purani baqaya: '+money(due)+'</b>':'')+' <button type="button" id="ms-show-history" class="btn btn-outline sm">History</button>';
         Q("#ms-show-history").onclick=()=>customerHistory(c);
-      }else hint.textContent="";
+      }else{hint.textContent="";if(selCust&&selCust.mobile!==m)selCust=null}
     };
     Q("#ms-discount").oninput=updateTotals;
     Q("#ms-paid").oninput=()=>{paidTouched=true;updateTotals()};
@@ -3803,7 +4282,7 @@ async function pageMedicalStore(){
       for(const x of cart){const p=prod(x.productId);if(!p||usedBase(x.productId)>num(p.stock)){toast("Stock badal gaya — dobara check karein","error");return}}
       const t=calc(),subtotal=t.sub,discount=t.disc,total=t.total,paid=Math.min(total,num(Q("#ms-paid").value)),due=Math.max(0,r2(total-paid));
       const nameRaw=Q("#ms-name").value.trim(),mobile=Q("#ms-mobile").value.trim(),address=Q("#ms-address").value.trim();
-      if((saleType==="credit"||due>0)&&(!nameRaw||!mobile)){toast("Udhaar / baqaya ke liye customer ka naam aur mobile zaroori hai","error");return}
+      if((saleType==="credit"||due>0)&&(!nameRaw||(!mobile&&!selCust))){toast("Udhaar / baqaya ke liye customer ka naam aur mobile zaroori hai","error");return}
       const doctor=Q("#ms-doctor").value.trim(),rxNo=Q("#ms-rxno").value.trim();
       if(cart.some(x=>x.rx)&&!doctor){
         if(!await confirmBox({title:"Prescription (Rx)",message:"Is bill mein Rx wali dawai hai lekin doctor ka naam nahi likha. Phir bhi save karein?",confirmText:"SAVE ANYWAY"}))return;
@@ -3812,8 +4291,8 @@ async function pageMedicalStore(){
       try{
         const name=nameRaw||"Walk-in Customer";let customer=null;
         if(nameRaw||mobile){
-          customer=customers.find(x=>mobile&&x.mobile===mobile);
-          if(!customer)customer={id:id("cust"),kind:"customer",name,mobile,address,createdAt:new Date().toISOString()};
+          customer=(selCust&&customers.find(x=>x.id===selCust.id))||customers.find(x=>mobile&&x.mobile===mobile);
+          if(!customer)customer={id:id("cust"),kind:"customer",customerNo:nextCustNo(),name,mobile,address,createdAt:new Date().toISOString()};
           else customer=Object.assign({},customer,{name,address,updatedAt:new Date().toISOString()});
         }
         const bill={id:id("sale"),kind:"sale",billNo:"MS-"+today().replace(/-/g,"")+"-"+String(sales.length+1).padStart(4,"0"),date:today(),time:timeNow(),customerId:customer?customer.id:"",customerName:name,mobile,address,method:Q("#ms-method").value,saleType,doctor,rxNo,
@@ -3935,7 +4414,18 @@ const BC_PAR=["LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG","LGGLLG","LGGGLL","LG
 const BC_128="212222,222122,222221,121223,121322,131222,122213,122312,132212,221213,221312,231212,112232,122132,122231,113222,123122,123221,223211,221132,221231,213212,223112,312131,311222,321122,321221,312212,322112,322211,212123,212321,232121,111323,131123,131321,112313,132113,132311,211313,231113,231311,112133,112331,132131,113123,113321,133121,313121,211331,231131,213113,213311,213131,311123,311321,331121,312113,312311,332111,314111,221411,431111,111224,111422,121124,121421,141122,141221,112214,112412,122114,122411,142112,142211,241211,221114,413111,241112,134111,111242,121142,121241,114212,124112,124211,411212,421112,421211,212141,214121,412121,111143,111341,131141,114113,114311,411113,411311,113141,114131,311141,411131,211412,211214,211232,2331112".split(",");
 function bcEanCheck(d){let s=0;for(let i=0;i<12;i++)s+=(+d[i])*(i%2?3:1);return (10-s%10)%10}
 function bcIsEan13(c){return /^\d{13}$/.test(c)&&bcEanCheck(c)===+c[12]}
-function bcNorm(c){return String(c==null?"":c).trim().toLowerCase()}
+/* GS1 (DataMatrix / QR on medicine boxes): (01)GTIN (17)expiry (10)batch (21)serial */
+function gs1Parse(raw){let t=String(raw==null?"":raw).replace(/^\](d2|Q3|C1|e0)/i,"").trim();
+if(/\(01\)\d{14}/.test(t)){const o={};t.replace(/\((\d{2,4})\)([^(]*)/g,(m,a,v)=>{o[a]=v.replace(/\x1d/g,"").trim();return""});return o["01"]?o:null}
+if(!/^01\d{14}/.test(t)||t.length<16)return null;
+const fx={"00":18,"01":14,"02":14,"11":6,"12":6,"13":6,"15":6,"16":6,"17":6,"20":2},vr={"10":20,"21":20,"22":20,"30":8,"37":8,"90":30,"91":30,"92":30};
+const o={};let i=0;while(i<t.length){if(t.charAt(i)==="\x1d"){i++;continue}const ai=t.substr(i,2);if(fx[ai]){o[ai]=t.substr(i+2,fx[ai]);i+=2+fx[ai];continue}
+if(vr[ai]!==undefined){let j=t.indexOf("\x1d",i+2);if(j<0)j=Math.min(t.length,i+2+vr[ai]);o[ai]=t.slice(i+2,j);i=j+(t.charAt(j)==="\x1d"?1:0);continue}break}
+return o["01"]?o:null}
+function gs1Code(raw){const o=gs1Parse(raw);if(!o)return null;const g=o["01"];return g.replace(/^0/,"")}
+function gs1Info(raw){const o=gs1Parse(raw);if(!o)return null;const x=o["17"]||o["15"]||"";let exp="";if(/^\d{6}$/.test(x)){const yy=+x.slice(0,2),mm=x.slice(2,4);let dd=x.slice(4,6);if(dd==="00"){dd=String(new Date(2000+yy,+mm,0).getDate()).padStart(2,"0")}exp=(2000+yy)+"-"+mm+"-"+dd}
+return{gtin:o["01"],batch:o["10"]||"",expiry:exp,serial:o["21"]||""}}
+function bcNorm(c){const g=gs1Code(c);if(g)return g.toLowerCase();return String(c==null?"":c).trim().toLowerCase()}
 function bcEq(a,b){a=bcNorm(a);b=bcNorm(b);if(!a||!b)return false;if(a===b)return true;if(/^\d+$/.test(a)&&/^\d+$/.test(b))return a.replace(/^0+/,"")===b.replace(/^0+/,"");return false}
 function bcBits(code){
 code=String(code);
@@ -4009,16 +4499,16 @@ _zxP=(async()=>{for(const u of urls){try{await loadScript(u);if(window.ZXing)ret
 return _zxP}
 function barcodeScanModal(title,onCode){
 const ov=openModal(title||"📷 Barcode Scan",
-'<div style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden" id="bs-wrap"><video id="bs-v" playsinline muted autoplay style="width:100%;max-height:48vh;display:block;object-fit:cover"></video><div style="position:absolute;left:8%;right:8%;top:38%;height:24%;border:3px solid rgba(255,255,255,.9);border-radius:10px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
+'<div style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden;aspect-ratio:4/3;max-height:46vh;width:100%;margin:0 auto" id="bs-wrap"><video id="bs-v" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover"></video><div style="position:absolute;left:10%;right:10%;top:18%;height:64%;border:3px solid rgba(255,255,255,.9);border-radius:10px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
 '<div id="bs-msg" class="hint" style="text-align:center;margin:8px 0">Camera shuru ho raha hai…</div>'+
 '<div class="flex g8"><input class="inp" id="bs-in" placeholder="Ya yahan click karke USB scanner se scan karein / barcode likhein, Enter" autocomplete="off" style="flex:1"><button class="btn btn-outline" id="bs-go" type="button">OK</button></div>',
 '<button class="btn btn-neutral" data-close>Close</button>',true);
 const q=s=>ov.querySelector(s),msg=q("#bs-msg"),vid=q("#bs-v");
-let stream=null,timer=null,done=false,busy=false;
+let stream=null,timer=null,done=false,busy=false,attempt=0;
 const stop=()=>{clearInterval(timer);timer=null;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}};
 const orig=ov.remove.bind(ov);ov.remove=()=>{stop();orig()};
 ov.querySelector("[data-close]").onclick=()=>ov.remove();
-const got=code=>{code=String(code||"").trim();if(!code||done)return;done=true;try{if(navigator.vibrate)navigator.vibrate(60)}catch(e){}ov.remove();onCode(code)};
+const got=code=>{code=String(code||"").trim();if(!code||done)return;done=true;try{if(navigator.vibrate)navigator.vibrate(60)}catch(e){}const info=gs1Info(code),norm=gs1Code(code);ov.remove();onCode(norm||code,info)};
 q("#bs-go").onclick=()=>got(q("#bs-in").value);
 q("#bs-in").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();got(q("#bs-in").value)}});
 (async()=>{try{
@@ -4029,16 +4519,17 @@ vid.srcObject=stream;await vid.play().catch(()=>{});
 let det=null,zx=null;
 if("BarcodeDetector" in window){try{det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128","code_39","itf","codabar","data_matrix","qr_code"]})}catch(e){det=null}}
 if(!det){msg.textContent="Scanner library load ho rahi hai…";zx=await loadZXing()}
-msg.textContent="Barcode ko laal patti ke andar rakhein…";
+msg.textContent="Barcode ya 2D (chowkor) code ko frame ke andar rakhein, thori door se…";
 const cv=document.createElement("canvas"),g=cv.getContext("2d",{willReadFrequently:true});
 let reader=null;if(zx){reader=new zx.MultiFormatReader();const h=new Map();h.set(zx.DecodeHintType.POSSIBLE_FORMATS,[zx.BarcodeFormat.EAN_13,zx.BarcodeFormat.EAN_8,zx.BarcodeFormat.UPC_A,zx.BarcodeFormat.UPC_E,zx.BarcodeFormat.CODE_128,zx.BarcodeFormat.CODE_39,zx.BarcodeFormat.ITF,zx.BarcodeFormat.DATA_MATRIX,zx.BarcodeFormat.QR_CODE]);h.set(zx.DecodeHintType.TRY_HARDER,true);reader.setHints(h)}
 timer=setInterval(async()=>{if(done||busy||!vid.videoWidth)return;busy=true;
-try{const w=Math.min(vid.videoWidth,960),hh=Math.round(vid.videoHeight*w/vid.videoWidth);cv.width=w;cv.height=hh;g.drawImage(vid,0,0,w,hh);
-if(det){const r=await det.detect(cv);if(r&&r.length)got(r[0].rawValue)}
-else if(reader){try{const lum=new zx.HTMLCanvasElementLuminanceSource(cv),bm=new zx.BinaryBitmap(new zx.HybridBinarizer(lum));const r=reader.decode(bm);if(r)got(r.getText())}catch(e){}}}catch(e){}
+try{const W=vid.videoWidth,H=vid.videoHeight;const tries=[[0,0,W,H],[W*.2,H*.2,W*.6,H*.6]];attempt++;
+for(const t of (attempt%2?tries:tries.slice().reverse())){if(done)break;const w=Math.min(Math.round(t[2]),1280),hh=Math.round(t[3]*w/t[2]);cv.width=w;cv.height=hh;g.drawImage(vid,t[0],t[1],t[2],t[3],0,0,w,hh);
+if(det){const r=await det.detect(cv);if(r&&r.length){got(r[0].rawValue);break}}
+else if(reader){try{const lum=new zx.HTMLCanvasElementLuminanceSource(cv),bm=new zx.BinaryBitmap(new zx.HybridBinarizer(lum));const r=reader.decode(bm);if(r){got(r.getText());break}}catch(e){}}}}catch(e){}
 busy=false},280);
 }catch(e){console.warn("barcode scan",e);q("#bs-wrap").style.display="none";msg.innerHTML="⚠ Camera nahi khula (permission / library). Neeche USB scanner se scan karein ya barcode likhein."}})();
-setTimeout(()=>{try{q("#bs-in").focus()}catch(e){}},300)}
+setTimeout(()=>{try{if(!(window.matchMedia&&matchMedia("(pointer:coarse)").matches))q("#bs-in").focus()}catch(e){}},300)}
 let _jsqrP=null;
 function loadJsQR(){
 if(window.jsQR)return Promise.resolve(window.jsQR);
@@ -4054,7 +4545,7 @@ const dg=k.replace(/\D/g,"");
 return app.staff.find(s=>String(s.staffId||"").toLowerCase()===k||String(s.id||"").toLowerCase()===k||(dg.length>=10&&String(s.cnic||"").replace(/\D/g,"")===dg))||null}
 function staffScanModal(onDone){
 const ov=openModal("📷 Scan Staff ID Card",
-'<div id="sc-wrap" style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden"><video id="sc-v" playsinline muted autoplay style="width:100%;max-height:50vh;display:block;object-fit:cover"></video><div style="position:absolute;inset:16% 18%;border:3px solid rgba(255,255,255,.9);border-radius:14px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
+'<div id="sc-wrap" style="position:relative;background:#0f172a;border-radius:12px;overflow:hidden;aspect-ratio:1/1;max-height:46vh;margin:0 auto"><video id="sc-v" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover"></video><div style="position:absolute;inset:16% 18%;border:3px solid rgba(255,255,255,.9);border-radius:14px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.28)"></div></div>'+
 '<div id="sc-msg" class="hint" style="text-align:center;margin:8px 0">Camera shuru ho raha hai…</div>'+
 '<div class="flex g8"><input class="inp" id="sc-in" placeholder="Ya Staff ID likhein / USB scanner se scan karein, phir Enter" autocomplete="off" style="flex:1"><button class="btn btn-outline" id="sc-go" type="button">OK</button></div>'+
 '<div id="sc-res" class="mt"></div>','<button class="btn btn-neutral" data-close>Close</button>',true);
@@ -4109,7 +4600,7 @@ console.warn("scan",e);
 q("#sc-wrap").style.display="none";
 msg.innerHTML="⚠ Camera nahi khula (permission / library). Neeche Staff ID likh kar ya USB scanner se bhi kaam ho jata hai."}
 })();
-setTimeout(()=>{try{q("#sc-in").focus()}catch(e){}},300)}
+setTimeout(()=>{try{if(!(window.matchMedia&&matchMedia("(pointer:coarse)").matches))q("#sc-in").focus()}catch(e){}},300)}
 /* ===== Staff ID card: A4 (front+back, QR) aur Thermal 58 / 80 mm ===== */
 function staffCardsHTML(list,size){
 const s=slipS(slipS(app.settings,"rep"),"idc");const E=esc;
@@ -4375,16 +4866,17 @@ const ov=openModal(u.id?"Edit User — "+u.username:"Add New User",
 '<div class="field"><label>Role</label><select class="inp" id="um-role"><option value="admin" '+(u.role==="admin"?"selected":"")+">Admin — full access</option><option value=\"reception\" "+(u.role==="reception"?"selected":"")+">Reception — counter operations</option><option value=\"doctor\" "+(u.role==="doctor"?"selected":"")+">Doctor — patient records</option><option value=\"medicalstore\" "+(u.role==="medicalstore"?"selected":"")+">Medical Store — Medical Store only</option><option value=\"lab\" "+(u.role==="lab"?"selected":"")+">Lab — Lab module only</option></select></div></div>"+
 '<div><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--slate-600);margin-bottom:8px">Module Permissions</p><div id="um-perms"></div></div>',
 '<button class="btn btn-neutral" data-close>Cancel</button><button class="btn btn-success" id="um-save">💾 SAVE USER</button>');
-let role=u.role,perms=u.permissions.slice();
+let role=u.role,perms=u.permissions.slice(),denied=(u.denied||[]).slice();
 const drawPerms=()=>{
 const box=$("#um-perms",ov);
 if(role==="medicalstore"){perms=MEDICAL_STORE_PERMS.slice();box.innerHTML='<p style="background:rgba(219,234,254,.65);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:13px;color:#1e40af">This account can access Medical Store only. All clinic modules, users and settings remain hidden.</p>';return}
 if(role==="lab"){perms=LAB_PERMS.slice();box.innerHTML='<p style="background:rgba(219,234,254,.65);border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:13px;color:#1e40af">Is account ko sirf Lab module ka access milega (Lab work list, lab reports, test list). Baaki modules, users aur settings hidden rahenge.</p>';return}
 if(role==="admin"){box.innerHTML='<p style="background:var(--violet-bg);border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:13px;color:#5b21b6">Administrators automatically have full access to every module including delete and backup.</p>';return}
 box.innerHTML='<div class="grid g2">'+ALL_PERMS.map(p=>
-'<label style="display:flex;align-items:center;gap:8px;border:1px solid var(--slate-200);border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer"><input type="checkbox" data-perm="'+p+'" '+(perms.indexOf(p)>=0?"checked":"")+' style="width:16px;height:16px"><span'+(p==="delete"?' style="font-weight:600;color:#be123c"':"")+">"+(PERM_LABELS[p]||p)+"</span></label>").join("")+"</div>";
+'<label style="display:flex;align-items:center;gap:8px;border:1px solid var(--slate-200);border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer"><input type="checkbox" data-perm="'+p+'" '+(perms.indexOf(p)>=0?"checked":"")+' style="width:16px;height:16px"><span'+(p==="delete"?' style="font-weight:600;color:#be123c"':"")+">"+(PERM_LABELS[p]||p)+"</span>"+(["delete","users"].indexOf(p)<0?'<span class="uacts" style="margin-left:auto;display:flex;gap:8px;font-size:11px;'+(perms.indexOf(p)>=0?"":"opacity:.35;pointer-events:none")+'">'+[["add","➕ Add"],["edit","✏️ Edit"],["delete","🗑 Delete"]].map(a=>'<label style="display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" data-act="'+a[0]+":"+p+'" '+(denied.indexOf(a[0]+":"+p)<0?"checked":"")+' style="width:14px;height:14px">'+a[1]+"</label>").join("")+"</span>":"")+"</label>").join("")+"</div><p style=\"font-size:11px;color:var(--slate-600);margin-top:8px\">Module ke saath ➕ Add / ✏️ Edit / 🗑 Delete alag alag de ya band kar sakte hain. Tick hataya to wo button us user ko nazar nahi aayega.</p>";
+$$("[data-act]",ov).forEach(cb=>cb.addEventListener("change",()=>{const k=cb.dataset.act;denied=denied.filter(x=>x!==k);if(!cb.checked)denied.push(k)}));
 $$("[data-perm]",ov).forEach(cb=>cb.addEventListener("change",()=>{
-const p=cb.dataset.perm;if(cb.checked){if(perms.indexOf(p)<0)perms.push(p)}else perms=perms.filter(x=>x!==p)}));
+const p=cb.dataset.perm;if(cb.checked){if(perms.indexOf(p)<0)perms.push(p)}else perms=perms.filter(x=>x!==p);const ua=cb.closest("label").querySelector(".uacts");if(ua){ua.style.opacity=cb.checked?"":".35";ua.style.pointerEvents=cb.checked?"":"none"}}));
 };
 $("#um-role",ov).addEventListener("change",e=>{role=e.target.value;
 perms=role==="admin"?ALL_PERMS.slice():role==="doctor"?DOCTOR_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():role==="lab"?LAB_PERMS.slice():RECEPTION_PERMS.slice();drawPerms()});
@@ -4397,7 +4889,7 @@ if(!un){toast("Username is required","error");return}
 if(!pw){toast("Password is required","error");return}
 if(app.users.some(x=>x.username.toLowerCase()===un.toLowerCase()&&x.id!==u.id)){toast("That username already exists","error");return}
 const obj={id:u.id||id("usr"),username:un,password:pw,fullName:$("#um-name",ov).value.trim()||un,role:role,
-permissions:role==="admin"?ALL_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():role==="lab"?LAB_PERMS.slice():perms,active:u.active!==undefined?u.active:true,createdAt:u.createdAt||new Date().toISOString()};
+denied:(role==="admin"?[]:denied.filter(k=>perms.indexOf(k.split(":")[1])>=0)),permissions:role==="admin"?ALL_PERMS.slice():role==="medicalstore"?MEDICAL_STORE_PERMS.slice():role==="lab"?LAB_PERMS.slice():perms,active:u.active!==undefined?u.active:true,createdAt:u.createdAt||new Date().toISOString()};
 await qPut("users",obj);await audit(app.user.username,u.id?"UPDATE":"CREATE","users",obj.id,un+" ("+role+")");
 await loadData();toast(u.id?"User updated":"User created");ov.remove();pageUsers();
 };
