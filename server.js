@@ -778,6 +778,12 @@ app.post("/api/seq/:key", async (req, res) => {
   try {
     const start = parseInt((req.body && req.body.start) || "1", 10) || 1;
     const k = ckey(req, req.params.key);
+    /* MANUAL SET: settings se agla token number seedha set karna (kam ya zyada, dono) -> agla number = set+1 */
+    if (req.body && req.body.set !== undefined) {
+      const setv = Math.max(0, parseInt(req.body.set, 10) || 0);
+      await pool.query("INSERT INTO counters (ckey,cval) VALUES (?,?) ON DUPLICATE KEY UPDATE cval=VALUES(cval)", [k, setv]);
+      return res.json({ value: setv });
+    }
     /* OFFLINE SYNC: device ne offline rehte hue "last" tak number diye — server counter ko kam az kam wahan tak le jao (number issue nahi hota) */
     if (req.body && req.body.last !== undefined) {
       const last = parseInt(req.body.last, 10) || 0;

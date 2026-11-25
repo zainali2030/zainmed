@@ -543,6 +543,49 @@ body:has(.modal-overlay) #zm-dock{display:none!important}
 .inp:hover:not(.login-glass *):not(:disabled):not([readonly]),.inp:focus:not(.login-glass *){border:2px solid transparent;padding:9px 11px;background:linear-gradient(rgba(255,255,255,.96),rgba(255,255,255,.96)) padding-box,linear-gradient(45deg,#ff0000,#ff7300,#fffb00,#48ff00,#00ffd5,#002bff,#7a00ff,#ff00c8,#ff0000) border-box;background-size:auto,400%;animation:glowing 20s linear infinite;box-shadow:0 0 12px rgba(56,189,248,.4)}
 @media(prefers-reduced-motion:reduce){:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after,.inp:hover,.inp:focus{animation:none}}
 @media print{:where(.card,.stat,.mini-stat,.sum-box,.info-tile,.modal,.nav-item,#zm-bnav button)::after{display:none!important}}
+
+/* ===== PASTEL GLASS v2 (soft lavender look, mobile + laptop) ===== */
+body{background:#e8ecff;background-image:radial-gradient(55% 45% at 0% 0%,rgba(147,197,253,.75),transparent 70%),radial-gradient(50% 50% at 100% 5%,rgba(196,181,253,.8),transparent 70%),radial-gradient(60% 55% at 90% 100%,rgba(253,186,160,.55),transparent 70%),radial-gradient(50% 50% at 0% 100%,rgba(165,243,252,.5),transparent 70%);background-attachment:fixed;color:#1e1b4b}
+body::before{background:none}
+.sidebar{background:linear-gradient(180deg,rgba(99,102,241,.92),rgba(124,58,237,.9));border:1px solid rgba(255,255,255,.35);box-shadow:0 18px 50px rgba(99,102,241,.35)}
+.nav-item.active{background:#fff;color:#4338ca;box-shadow:0 8px 20px rgba(30,27,75,.25)}
+.sb-clinic{color:#e0e7ff}.sb-time{color:#c7d2fe}
+.topbar{background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.9);box-shadow:0 10px 30px rgba(99,102,241,.15)}
+.topbar h1,.clock,.user-chip{color:#1e1b4b}.topbar .sub,.clock small{color:#64748b}.user-chip small{color:#6366f1}.user-chip{border-left-color:#e0e7ff}
+.icon-btn,.hamburger{background:rgba(255,255,255,.85);border-color:#e0e7ff;color:#4338ca}
+footer.app-foot{color:#6b7280}
+.card,.stat,.preview-box{background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.95);border-radius:22px;box-shadow:0 10px 30px rgba(99,102,241,.14)}
+.stat:hover,.card:hover{box-shadow:0 16px 38px rgba(99,102,241,.22)}
+.card-h{background:rgba(238,242,255,.6);border-bottom:1px solid #e0e7ff}
+.tbl thead tr{background:linear-gradient(90deg,#6366f1,#8b5cf6)}
+.tbl-wrap{background:rgba(255,255,255,.6);border-color:#e0e7ff}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6)}.btn-primary:hover{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+.modal-h{background:linear-gradient(90deg,#6366f1,#8b5cf6)}
+.inp:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.28)}
+/* dashboard */
+.hero{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;margin-bottom:14px;border-radius:24px;background:linear-gradient(120deg,rgba(255,255,255,.85),rgba(224,231,255,.75));border:1px solid #fff;box-shadow:0 10px 30px rgba(99,102,241,.14)}
+.hero h2{font-size:20px;font-weight:800;color:#312e81}.hero p{font-size:12.5px;color:#6366f1;margin-top:2px}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.kpi{display:block;padding:14px 16px;position:relative;overflow:hidden}
+.kpi-top{display:flex;align-items:center;gap:10px}
+.kpi .ico{width:38px;height:38px;border-radius:13px;font-size:17px;background:var(--c);box-shadow:0 8px 16px color-mix(in srgb,var(--c) 40%,transparent)}
+.kpi .lbl{font-size:11px;font-weight:700;color:#64748b;text-transform:none;letter-spacing:0}
+.kpi .val{font-size:23px;font-weight:800;color:#1e1b4b;margin:10px 0 4px}
+.kpi-bot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;min-height:30px}
+.kpi .sub{font-size:11px;color:#94a3b8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spk{width:84px;height:30px;flex:none}
+.dash-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px}
+.dash-split{display:grid;grid-template-columns:3fr 1.2fr;gap:12px;align-items:start}
+.area{width:100%;height:auto;display:block}
+.donut-b{display:flex;flex-direction:column;align-items:center;gap:12px}.donut{width:150px;height:150px}
+.legend{width:100%;display:grid;gap:7px}.lg{display:flex;align-items:center;gap:8px;font-size:12px;color:#475569}.lg i{width:10px;height:10px;border-radius:50%}.lg b{margin-left:auto;color:#1e1b4b}
+.rec{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:rgba(238,242,255,.7);margin-bottom:8px}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:none;color:#fff;font-weight:800;background:linear-gradient(135deg,#6366f1,#ec4899)}
+.rn{font-size:13px;color:#1e1b4b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rt{font-size:12px;color:#4338ca;white-space:nowrap}.rs{font-size:11px;color:#64748b;margin-top:2px}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-row,.dash-split{grid-template-columns:1fr}}
+@media(max-width:520px){.kpi-grid{gap:8px}.kpi{padding:12px}.kpi .val{font-size:18px}.spk{width:60px}.hero{padding:14px}.hero h2{font-size:17px}.hero .btn{flex:1}
+.dash-split .grid.g4.mb{grid-template-columns:1fr 1fr!important}.dash-split #d-q{grid-column:1/-1}}
+
 </style>
 </head>
 <body>
@@ -616,7 +659,7 @@ const NAV=[
 {key:"settings",label:"Settings",icon:"⚙️",perm:"settings"},
 {key:"staff",label:"Staff & Roster",icon:"🧑‍💼",perm:"staff"},
 {key:"backup",label:"Backup & Restore",icon:"💾",perm:"backup"}];
-const DEFAULT_SETTINGS={key:"app",clinicName:"ZainMed Clinic",tagline:"General Practice • Laboratory • Ultrasound",
+const DEFAULT_SETTINGS={key:"app",tokenMode:"continuous",clinicName:"ZainMed Clinic",tagline:"General Practice • Laboratory • Ultrasound",
 address:"",phone:"",phone2:"",email:"",
 timing:"Open 24/7",logoDataUrl:"",slipTitle:"",footerText:"Thank you for visiting us.",
 printSize:"80",usThermalSize:"80",currency:"Rs.",defaultOpdFee:500,patientIdPrefix:"",slipFontSize:13,showMrOnSlip:true,
@@ -628,7 +671,7 @@ msName:"",msAddress:"",msPhone:"",msFooter:"",
 devFooter:"Software developed by ZainMed\n03702906075 / 03192061690\nzainaliofficial343@gmail.com"};
 function devFooterHTML(s){const t=(s&&s.devFooter!==undefined&&s.devFooter!==null)?s.devFooter:DEFAULT_SETTINGS.devFooter;return String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(esc).join("<br>")}
 /* ================= v4: per-slip logo, PDF, WhatsApp, dock, mobile bar ================= */
-const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports (A4 tables)"],["sal","💰 Salary Slip"],["idc","🪪 Staff ID Card"],["store","🏪 Medical Store Bill"]];
+const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports (A4 tables)"],["sal","💰 Salary Slip"],["idc","🪪 Staff ID Card"],["dlv","🤰 Delivery Bill Slip"],["store","🏪 Medical Store Bill"]];
 function slipS(s,kind){const o=((s&&s.slipLogos)||{})[kind];if(!o)return s;const r=Object.assign({},s);if(o.none)r.logoDataUrl="";else if(o.url)r.logoDataUrl=o.url;if(o.size)r.logoSize=o.size;SL_TXT.forEach(f=>{if(o[f[0]]!==undefined&&String(o[f[0]]).trim()!=="")r[f[2]]=o[f[0]]});return r}
 function storeLogoHTML(){const s=slipS(app.settings,"store");return s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="height:'+Math.max(20,Number(s.logoSize)||56)+'px;width:auto;max-width:100%;object-fit:contain;margin-bottom:3px"></div>':""}
 let LAST_PRINT=null,_pdfLibs=null,_docbarT=null;
@@ -956,6 +999,9 @@ async function nextSeq(key,start){
 if(netOK()){try{await flushOutbox();const j=await api("POST","/api/seq/"+encodeURIComponent(key),{start:start});metaSet("next:"+key,j.value+1);return j.value}catch(e){if(!e.net)throw e}}
 let nx=await metaGet("next:"+key);if(nx===null||nx===undefined)nx=start||1;
 await metaSet("next:"+key,nx+1);await obAdd({op:"seq",store:"counters",key:key,last:nx});flushSoon();return nx}
+async function setSeq(key,nextVal){
+if(!netOK())throw new Error("Token number set karne ke liye internet / server zaroori hai");
+await flushOutbox();await api("POST","/api/seq/"+encodeURIComponent(key),{start:1,set:nextVal-1});metaSet("next:"+key,nextVal);return nextVal}
 async function peekSeq(key,start){
 if(netOK()){try{await flushOutbox();const j=await api("GET","/api/seq/"+encodeURIComponent(key)+"?start="+start);metaSet("next:"+key,j.value);return j.value}catch(e){if(!e.net)throw e}}
 const nx=await metaGet("next:"+key);return (nx===null||nx===undefined)?(start||1):nx}
@@ -1265,7 +1311,7 @@ mount('<div class="login-wrap"><div class="login-card">'+
 '<div class="login-left"><div><div class="shield">'+shieldSVG(56,"#1d4ed8")+"</div>"+
 "<div class=\"brand-tag\">ZAINMED</div><h1 class=\"lg-cname\">"+esc(cname)+"</h1><p class=\"lg-caddr\" style=\"margin-top:8px;font-size:13px;color:#bfdbfe\">"+esc(caddr)+"</p>"+
 '<p style="font-size:13px;font-weight:600;color:#dbeafe">'+esc(hasC?s.timing:"")+"</p></div>"+
-"<ul><li>✔ Server-based — clinic ke sab computers par same data</li><li>✔ Patient records permanently MySQL database mein saved</li><li>✔ Automatic MR Number & daily Token numbers</li><li>✔ Thermal (58mm / 80mm) & A4 slip printing</li><li>✔ Backup & restore of the complete database</li></ul></div>"+
+"<ul><li>✔ Server-based — clinic ke sab computers par same data</li><li>✔ Patient records permanently MySQL database mein saved</li><li>✔ Automatic MR Number & continuous Token numbers</li><li>✔ Thermal (58mm / 80mm) & A4 slip printing</li><li>✔ Backup & restore of the complete database</li></ul></div>"+
 '<div class="login-right"><div style="margin-bottom:20px" class="mob-brand"><h1 class="lg-cname" style="font-size:20px;font-weight:800">'+esc(cname)+"</h1>"+
 '<p class="lg-caddr" style="font-size:11px;color:var(--slate-500)">'+esc(caddr)+"</p></div>"+
 '<h2 style="font-size:24px;font-weight:800">'+loginTitle+'</h2><p style="font-size:13px;color:var(--slate-500);margin:6px 0 20px">Sign in with your username and password.</p>'+
@@ -1378,27 +1424,46 @@ function pageDashboard(){
 const C=app.settings.currency;
 const st=calcPeriod(app.visits,app.expenses,app.payments,today(),today());
 const activeDocs=app.doctors.filter(d=>d.active);
+const dayStr=o=>{const d=new Date();d.setDate(d.getDate()-o);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const days=[];for(let o=6;o>=0;o--){const ds=dayStr(o);days.push({d:ds,s:calcPeriod(app.visits,app.expenses,app.payments,ds,ds)})}
+const spark=(arr,col)=>{const mx=Math.max.apply(null,arr.concat([1])),w=84,h=30,p=arr.map((v,i)=>[i*(w/(arr.length-1)),h-3-(v/mx)*(h-8)]);
+const d=p.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" ");
+return '<svg class="spk" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><path d="'+d+' L'+w+' '+h+' L0 '+h+'Z" fill="'+col+'" opacity=".16"/><path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'};
 const stats=[
-["Today's Patients",String(st.count),"blue-g","👥","Total registered: "+app.patients.length],
-["Today's OPD Collection",C+" "+fmtMoney(st.opd),"green-g","💵",""],
-["Today's Lab Collection",C+" "+fmtMoney(st.lab),"violet-g","🧪",""],
-["Today's Ultrasound",C+" "+fmtMoney(st.ultra),"cyan-g","📡",""],
-["Today's Expenses",C+" "+fmtMoney(st.expenses),"rose-g","💸",""],
-["Today's Net Collection",C+" "+fmtMoney(st.net),"slate-g","📈","Received − Expenses"],
-["Outstanding Dues",C+" "+fmtMoney(st.due),"amber-g","🧾",""],
-["Active Doctors",String(activeDocs.length),"blue-g","⚕️",activeDocs.slice(0,2).map(d=>d.name).join(", ")]];
-const statHTML=stats.map(x=>'<div class="stat"><div class="ico '+x[2]+'">'+x[3]+'</div><div style="min-width:0"><div class="lbl">'+x[0]+'</div><div class="val">'+x[1]+'</div>'+(x[4]?'<div class="sub">'+esc(x[4])+"</div>":"")+"</div></div>").join("");
+["Today's Patients",String(st.count),"#6366f1","👥","Registered: "+app.patients.length,days.map(x=>x.s.count)],
+["OPD Collection",C+" "+fmtMoney(st.opd),"#10b981","💵","",days.map(x=>x.s.opd)],
+["Lab Collection",C+" "+fmtMoney(st.lab),"#8b5cf6","🧪","",days.map(x=>x.s.lab)],
+["Ultrasound",C+" "+fmtMoney(st.ultra),"#06b6d4","📡","",days.map(x=>x.s.ultra)],
+["Expenses",C+" "+fmtMoney(st.expenses),"#f43f5e","💸","",days.map(x=>x.s.expenses)],
+["Net Collection",C+" "+fmtMoney(st.net),"#3b82f6","📈","Received − Expenses",days.map(x=>x.s.net)],
+["Outstanding Dues",C+" "+fmtMoney(st.due),"#f59e0b","🧾","",days.map(x=>x.s.due)],
+["Active Doctors",String(activeDocs.length),"#ec4899","⚕️",activeDocs.slice(0,2).map(d=>d.name).join(", "),null]];
+const statHTML=stats.map(x=>'<div class="stat kpi" style="--c:'+x[2]+'"><div class="kpi-top"><div class="ico">'+x[3]+'</div><div class="lbl">'+x[0]+'</div></div><div class="val">'+x[1]+'</div><div class="kpi-bot"><div class="sub">'+esc(x[4])+'</div>'+(x[5]?spark(x[5],x[2]):"")+'</div></div>').join("");
+/* 7-day area chart */
+const vals=days.map(x=>x.s.received),mx=Math.max.apply(null,vals.concat([1])),W=560,H=190,pl=8,pr=8,pt=14,pb=26;
+const pts=vals.map((v,i)=>[pl+i*((W-pl-pr)/6),pt+(H-pt-pb)*(1-v/mx)]);
+const smooth=pts.map((p,i)=>{if(!i)return"M"+p[0]+" "+p[1];const q=pts[i-1],cx=(q[0]+p[0])/2;return"C"+cx+" "+q[1]+" "+cx+" "+p[1]+" "+p[0]+" "+p[1]}).join(" ");
+const dn=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const chart='<svg class="area" viewBox="0 0 '+W+' '+H+'"><defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b5cf6" stop-opacity=".45"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient></defs>'+
+[0,1,2,3].map(i=>'<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+(pt+i*(H-pt-pb)/3)+'" y2="'+(pt+i*(H-pt-pb)/3)+'" stroke="#c7d2fe" stroke-dasharray="3 5" opacity=".7"/>').join("")+
+'<path d="'+smooth+' L'+pts[6][0]+' '+(H-pb)+' L'+pts[0][0]+' '+(H-pb)+'Z" fill="url(#gA)"/><path d="'+smooth+'" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>'+
+pts.map((p,i)=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="4" fill="#fff" stroke="#7c3aed" stroke-width="2.5"/><text x="'+p[0]+'" y="'+(H-8)+'" text-anchor="middle" font-size="11" fill="#64748b">'+dn[new Date(days[i].d+"T00:00:00").getDay()]+'</text>').join("")+'</svg>';
+const wk=days.reduce((t,x)=>t+x.s.received,0),wkP=days.reduce((t,x)=>t+x.s.count,0);
+/* donut: week split */
+const sp=[["OPD",days.reduce((t,x)=>t+x.s.opd,0),"#6366f1"],["Lab",days.reduce((t,x)=>t+x.s.lab,0),"#10b981"],["Ultrasound",days.reduce((t,x)=>t+x.s.ultra,0),"#06b6d4"],["Other",days.reduce((t,x)=>t+x.s.other,0),"#f59e0b"]];
+const spT=sp.reduce((t,x)=>t+x[1],0),R=52,CIR=2*Math.PI*R;let off=0;
+const donut='<svg class="donut" viewBox="0 0 140 140"><circle cx="70" cy="70" r="'+R+'" fill="none" stroke="#e0e7ff" stroke-width="18"/>'+(spT?sp.map(x=>{const l=x[1]/spT*CIR,o='<circle cx="70" cy="70" r="'+R+'" fill="none" stroke="'+x[2]+'" stroke-width="18" stroke-dasharray="'+l+' '+(CIR-l)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 70 70)"/>';off+=l;return o}).join(""):"")+
+'<text x="70" y="66" text-anchor="middle" font-size="12" fill="#64748b">7 days</text><text x="70" y="86" text-anchor="middle" font-size="17" font-weight="800" fill="#1e1b4b">'+wkP+'</text></svg>';
+const legend=sp.map(x=>'<div class="lg"><i style="background:'+x[2]+'"></i><span>'+x[0]+'</span><b>'+C+" "+fmtMoney(x[1])+'</b></div>').join("");
 const recent=app.visits.slice(0,6).map(v=>
-'<div style="border:1px solid var(--slate-200);border-radius:8px;padding:12px;margin-bottom:8px">'+
-'<div class="flex jb aic g8"><b style="font-size:13px">'+esc(v.patientName)+'</b><span class="mr">'+esc(padMr(v.patientId))+"</span></div>"+
-'<div class="flex jb" style="font-size:11px;color:var(--slate-500);margin-top:4px"><span>'+fmtDate(v.date)+" • "+fmtTime(v.time)+"</span><b style=\"color:var(--slate-700)\">"+C+" "+fmtMoney(v.total)+"</b></div>"+
-'<div style="font-size:11px;color:var(--slate-500);margin-top:3px">'+esc(v.doctorName||"")+"</div></div>").join("");
+'<div class="rec"><div class="av">'+esc((v.patientName||"?").trim().charAt(0).toUpperCase())+'</div><div style="min-width:0;flex:1"><div class="flex jb aic g8"><b class="rn">'+esc(v.patientName)+'</b><b class="rt">'+C+" "+fmtMoney(v.total)+'</b></div><div class="rs">'+esc(padMr(v.patientId))+" • "+fmtDate(v.date)+" • "+fmtTime(v.time)+(v.doctorName?" • "+esc(v.doctorName):"")+'</div></div></div>').join("");
 $("#page").innerHTML=
-'<div class="card"><div class="card-b" style="background:var(--blue-50);border-radius:12px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px">'+
-'<div><h2 style="font-size:16px;font-weight:800;color:#1e3a8a">Welcome to the OPD Counter</h2><p style="font-size:12px;color:var(--blue-700)">Register a patient, generate an automatic token and print the slip in seconds.</p></div>'+
-'<div class="flex g8 fw"><button class="btn btn-primary lg" data-nav2="newvisit">🩺 NEW PATIENT / VISIT</button><button class="btn btn-outline lg" data-nav2="patients">🔍 SEARCH PATIENT</button></div></div></div>'+
-'<div class="grid g4" style="margin-bottom:16px">'+statHTML+"</div>"+
-'<div class="grid" style="grid-template-columns:3fr 1fr">'+
+'<div class="hero"><div><h2>Welcome back 👋</h2><p>Register a patient, auto token & slip print — sab kuch ek jagah.</p></div>'+
+'<div class="flex g8 fw"><button class="btn btn-primary lg" data-nav2="newvisit">🩺 NEW PATIENT / VISIT</button><button class="btn btn-outline lg" data-nav2="patients">🔍 SEARCH PATIENT</button></div></div>'+
+'<div class="kpi-grid">'+statHTML+"</div>"+
+'<div class="dash-row"><div class="card"><div class="card-h"><div><h2>Collection — last 7 days</h2><div class="sub">Received: '+C+" "+fmtMoney(wk)+" • "+wkP+' patients</div></div></div><div class="card-b">'+chart+'</div></div>'+
+'<div class="card"><div class="card-h"><div><h2>Income split</h2><div class="sub">Last 7 days</div></div></div><div class="card-b donut-b">'+donut+'<div class="legend">'+legend+'</div></div></div></div>'+
+'<div class="dash-split">'+
 '<div class="card"><div class="card-h"><div><h2>Patient Visits</h2><div class="sub">Search by MR number, name, mobile, token or date</div></div>'+
 '<div class="flex g8"><button class="btn btn-outline sm" id="d-csv">⬇ CSV</button><button class="btn btn-dark sm" id="d-print">🖨 PRINT REPORT</button></div></div>'+
 '<div class="card-b"><div class="grid g4 mb" style="grid-template-columns:2fr 1fr 1fr 1fr">'+
@@ -1563,7 +1628,7 @@ if(!d||a<=0){toast("Enter description and amount for additional charge","error")
 nv.items.push({id:id("chg"),description:d,category:"other",rate:a,qty:1,amount:a});
 $("#nv-chg-desc").value="";$("#nv-chg-amt").value="";updBill();
 };
-const tokKey=()=>"tokenSeq_"+today()+"_"+($("#nv-doc").value||"all");
+const tokKey=()=>app.settings.tokenMode==="daily"?"tokenSeq_"+today()+"_"+($("#nv-doc").value||"all"):"tokenSeq_all";
 const refreshTok=async()=>{if(editVisit)return;try{$("#nv-token").value=await peekSeq(tokKey(),1);updBill()}catch(e){}};
 $("#nv-doc").addEventListener("change",refreshTok);refreshTok();
 $("#nv-full").onclick=()=>{$("#nv-recv").value=totals().total;updBill()};
@@ -1907,7 +1972,7 @@ ov.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>ov.remove());
 ov.querySelector("#dp-80").onclick=()=>{ov.remove();printHTML(dlvBillHTML(c,"80"),"80")};
 ov.querySelector("#dp-a4").onclick=()=>{ov.remove();printHTML(dlvBillHTML(c,"A4"),"A4")}}
 function dlvBillHTML(c,size){
-const s=app.settings,C=s.currency,A4=size==="A4",k=dlvCalc(c);
+const s=slipS(app.settings,"dlv"),dlvT=((app.settings.slipLogos||{}).dlv||{}).title,C=s.currency,A4=size==="A4",k=dlvCalc(c);
 const fs=A4?"12px":"10.5px",sm=A4?"11px":"9.5px";
 const logo=s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="height:'+Math.max(20,Number(s.logoSize)||56)+'px;max-width:100%;object-fit:contain;margin-bottom:2px"/></div>':"";
 const td="padding:"+(A4?"4px 6px":"2px 0")+";font-size:"+fs+";";
@@ -1926,7 +1991,7 @@ const th='style="'+td+'font-weight:900;border-bottom:1px solid #000;text-align:l
 return '<div style="width:'+(A4?"100%":size==="58"?"56mm":"76mm")+';margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#000;font-weight:600">'+(A4?'<div style="border:2px solid #000;padding:14px">':"")+
 logo+'<div style="text-align:center;font-weight:900;font-size:'+(A4?"22px":"16px")+'">'+esc(s.clinicName)+'</div>'+(s.tagline?'<div style="text-align:center;font-size:'+sm+'">'+esc(s.tagline)+'</div>':"")+
 '<div style="text-align:center;font-size:'+sm+'">'+esc(s.address)+'</div><div style="text-align:center;font-size:'+sm+';font-weight:800">Cell: '+esc(s.phone)+(s.phone2?" / "+esc(s.phone2):"")+'</div>'+
-'<div style="background:#000;color:#fff;text-align:center;font-weight:900;letter-spacing:2px;margin:6px 0;padding:4px 0;font-size:'+(A4?"14px":"11px")+';-webkit-print-color-adjust:exact;print-color-adjust:exact">'+(c.deliveryType&&/C-Sec/i.test(c.deliveryType)?"C-SECTION / ":"DELIVERY ")+(A4?"DELIVERY ":"")+'BILL</div>'+
+'<div style="background:#000;color:#fff;text-align:center;font-weight:900;letter-spacing:2px;margin:6px 0;padding:4px 0;font-size:'+(A4?"14px":"11px")+';-webkit-print-color-adjust:exact;print-color-adjust:exact">'+(dlvT?esc(dlvT):(c.deliveryType&&/C-Sec/i.test(c.deliveryType)?"C-SECTION / ":"DELIVERY ")+(A4?"DELIVERY ":"")+'BILL')+'</div>'+
 '<table style="width:100%;border-collapse:collapse">'+rows2(info)+'</table>'+hr+
 (babies?'<div style="font-weight:900;font-size:'+fs+'">Baby Details</div><table style="width:100%;border-collapse:collapse"><tr><th '+th+'>Baby</th><th '+th+'>Gender</th><th '+th+'>Weight</th><th '+th+'>Birth Time</th><th '+th+'>Status</th></tr>'+babies+'</table>'+hr:"")+
 '<table style="width:100%;border-collapse:collapse"><tr><th '+th+'>Description</th><th '+th+' >Qty</th><th '+th+'>Rate</th><th '+th+'>Amount</th></tr>'+(items||'<tr><td colspan="4" style="'+td+'text-align:center">No charges</td></tr>')+'</table>'+hr+
@@ -5125,12 +5190,18 @@ slipLogoCardHTML(s)+bgCardHTML(s)+'<div class="card" style="grid-column:span 2">
 '<div class="field"><label>Store Phone</label><input class="inp" id="st-msphone" value="'+esc(s.msPhone||"")+'" placeholder="Khali = Clinic ka phone"></div>'+
 '<div class="field"><label>Store Footer Text</label><input class="inp" id="st-msfoot" value="'+esc(s.msFooter||"")+'" placeholder="Khali = Clinic ka footer"></div></div></div></div>'+
 '<div class="card" style="grid-column:span 2"><div class="card-h"><h2>🧾 Developer Footer (dono slips ke neeche)</h2><div class="sub">Clinic slip aur Medical Store slip dono ke aakhir mein ye likha aata hai</div></div><div class="card-b"><div class="field"><label>Footer lines (har line alag)</label><textarea class="inp" id="st-dev" rows="3">'+esc(s.devFooter!==undefined&&s.devFooter!==null?s.devFooter:DEFAULT_SETTINGS.devFooter)+'</textarea><p class="hint">Khali chhor denge to ye footer print nahi hoga.</p></div></div></div>'+
+'<div class="card" style="grid-column:span 2"><div class="card-h"><div><h2>🎟 Token Number Settings</h2><div class="sub">Token kisi ka bhi same nahi hota aur roz 1 se shuru nahi hota — lagatar chalta rehta hai. Chahein to yahan se manual set karein.</div></div></div><div class="card-b"><div class="grid g2">'+
+'<div class="field"><label>Token Mode</label><select class="inp" id="st-tokmode"><option value="continuous" '+(s.tokenMode!=="daily"?"selected":"")+'>Continuous — lagatar (sab doctors, roz reset nahi)</option><option value="daily" '+(s.tokenMode==="daily"?"selected":"")+'>Daily — roz 1 se, har doctor ka alag (purana tareeqa)</option></select></div>'+
+'<div class="field"><label>Agla Token Number (manual set)</label><div class="flex g8"><input class="inp" id="st-toknext" inputmode="numeric" placeholder="loading…"><button class="btn btn-primary" id="st-toknext-set" type="button">SET</button></div><p class="hint">Sirf Continuous mode mein. Yahan jo number likhein, agli visit ka token wohi hoga, phir aage barhta rahega. SET dabate hi server par save ho jata hai.</p></div></div></div></div>'+
 '<div class="card"><div class="card-h"><h2>Counter Lists</h2><div class="sub">One value per line — used in dropdowns at the OPD counter</div></div><div class="card-b"><div class="grid g3">'+
 '<div class="field"><label>Shifts</label><textarea class="inp" id="st-shifts">'+esc(s.shifts.join("\n"))+'</textarea><p class="hint">e.g. Morning / Evening / Night</p></div>'+
 '<div class="field"><label>Payment Methods</label><textarea class="inp" id="st-pays">'+esc(s.paymentMethods.join("\n"))+'</textarea><p class="hint">e.g. Cash, Card, Easypaisa…</p></div>'+
 '<div class="field"><label>Expense Categories</label><textarea class="inp" id="st-excats">'+esc(s.expenseCategories.join("\n"))+"</textarea><p class=\"hint\">Used in the Expenses module</p></div></div></div></div>"+
 '<div style="display:flex;justify-content:flex-end;position:sticky;bottom:16px"><button class="btn btn-success lg" id="st-save" style="box-shadow:0 10px 25px rgba(0,0,0,.2)">💾 SAVE SETTINGS</button></div>';
 $("#st-font").addEventListener("input",e=>$("#st-fontv").textContent=e.target.value+"px");$("#st-rfont").addEventListener("input",e=>$("#st-rfontv").textContent=e.target.value+"px");$("#st-logosize").addEventListener("input",e=>$("#st-logosizev").textContent=e.target.value+"px");
+peekSeq("tokenSeq_all",1).then(v=>{const e=$("#st-toknext");if(e)e.value=v}).catch(()=>{const e=$("#st-toknext");if(e)e.placeholder="offline"});
+$("#st-toknext-set").onclick=async()=>{const v=Math.trunc(num($("#st-toknext").value));if(!(v>=1))return toast("Sahi number likhein (1 ya zyada)","error");
+try{await setSeq("tokenSeq_all",v);toast("Agla token ab "+v+" hoga ✔","success")}catch(e){toast(e.message,"error")}};
 let showMr=s.showMrOnSlip!==false,logo=s.logoDataUrl;
 $("#st-mr").onclick=()=>{showMr=!showMr;
 $("#st-mr").style.borderColor=showMr?"var(--blue-600)":"var(--slate-300)";
@@ -5180,7 +5251,7 @@ phone:$("#st-phone").value,phone2:$("#st-phone2").value,email:$("#st-email").val
 slipTitle:$("#st-slip").value,currency:$("#st-cur").value||"Rs.",footerText:$("#st-foot").value,msName:$("#st-msname").value.trim(),msAddress:$("#st-msaddr").value.trim(),msPhone:$("#st-msphone").value.trim(),msFooter:$("#st-msfoot").value.trim(),devFooter:$("#st-dev").value,slipLogos:slipLogos,
 bgImage:bgImg,bgDim:bgDim,sbImage:sbImg,sbDim:sbDim,logoDataUrl:logo,printSize:$("#st-size").value,defaultOpdFee:num($("#st-opd").value),patientIdPrefix:$("#st-prefix").value,
 slipFontSize:parseFloat($("#st-font").value),reportFontSize:parseFloat($("#st-rfont").value),logoSize:parseInt($("#st-logosize").value,10),usThermalSize:$("#st-usth").value,dutyStaffName:$("#st-duty").value,showMrOnSlip:showMr,
-backupReminderDays:num($("#st-bk").value),shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
+tokenMode:$("#st-tokmode").value,backupReminderDays:num($("#st-bk").value),shifts:lines($("#st-shifts").value),paymentMethods:lines($("#st-pays").value),expenseCategories:lines($("#st-excats").value)});
 await saveSettingsObj(obj);
 await audit(app.user.username,"UPDATE","settings","app","Clinic settings updated");
 toast("Settings saved to the server database");
