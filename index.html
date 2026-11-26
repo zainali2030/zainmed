@@ -1940,7 +1940,7 @@ H("⚖️ Opinion")+'<div class="grid g2">'+S("Nature of weapon (opinion)","weap
 const ov=openModal(c0?"Edit MLC — "+m.mlcNo:"New Medico-Legal Certificate",body,'<button class="btn btn-outline" data-close>Cancel</button><button class="btn btn-neutral" id="ml-saveprint">💾 SAVE + 🖨 A4</button><button class="btn btn-dark" id="ml-savethermal">💾 SAVE + 🧾 THERMAL</button><button class="btn btn-primary" id="ml-save">💾 SAVE</button>',true);
 ov.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>ov.remove());
 const q$=x=>ov.querySelector(x);
-let pick=-1;
+let pick=-1,layer="skin";
 const drawInj=()=>{q$("#ml-inj").innerHTML=m.injuries.map((j,i)=>'<div style="border:1px solid #e0e7ff;border-radius:14px;padding:10px;margin-bottom:8px;background:rgba(238,242,255,.5)" data-ii="'+i+'"><div class="flex jb aic" style="margin-bottom:6px"><b>Injury #'+(i+1)+'</b><button type="button" class="btn btn-danger sm" data-rm="'+i+'">✕</button></div><div class="grid g2">'+
 '<div class="field"><label>Site / Location</label><input class="inp" data-f="site" value="'+esc(j.site||"")+'" placeholder="e.g. Left forearm, lower third"></div>'+
 '<div class="field"><label>Type</label><select class="inp" data-f="type">'+opt(MLC_TYPES,j.type||MLC_TYPES[0])+'</select></div>'+
@@ -1950,8 +1950,9 @@ const drawInj=()=>{q$("#ml-inj").innerHTML=m.injuries.map((j,i)=>'<div style="bo
 '<div class="field"><label>Section / Kind of hurt (MLO opinion)</label><select class="inp" data-f="section">'+opt([""].concat(MLC_SECTIONS),j.section||"")+'</select></div>'+
 '<div class="field" style="grid-column:span 2"><label>Notes (bleeding, tenderness, swelling…)</label><input class="inp" data-f="note" value="'+esc(j.note||"")+'"></div></div>'+
 '<button type="button" class="btn sm '+(pick===i?"btn-primary":"btn-outline")+'" data-pick="'+i+'">📍 '+(pick===i?"Neeche body par tap karein":j.pos?"Nishan badlein":"Body par nishan lagayein")+'</button>'+(j.pos?' <span style="font-size:12px">✔ '+(j.pos.v==="f"?"Front":"Back")+'</span>':"")+'</div>').join("")||'<p style="font-size:12px;color:var(--slate-500)">Abhi koi injury nahi — "＋ ADD INJURY" dabayein.</p>';
-q$("#ml-body").innerHTML=mlcDiagram(m,false,"48%");
-q$("#ml-body").querySelectorAll("svg").forEach(sv=>{sv.style.cursor="crosshair";sv.onclick=e=>{if(pick<0||!m.injuries[pick])return toast("Pehle injury ka 📍 button dabayein","info");const r=sv.getBoundingClientRect();m.injuries[pick].pos={v:sv.dataset.view,x:Math.round((e.clientX-r.left)/r.width*220),y:Math.round((e.clientY-r.top)/r.height*410)};pick=-1;drawInj()}});
+q$("#ml-body").innerHTML='<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:6px">'+[["skin","🧍 Jism"],["muscle","💪 Muscles"],["bone","🦴 Haddiyan"]].map(x=>'<button type="button" class="btn sm '+(layer===x[0]?"btn-primary":"btn-outline")+'" data-layer="'+x[0]+'">'+x[1]+'</button>').join("")+'</div><div style="font-size:12px;text-align:center;margin-bottom:4px">Body par tap karein — naya nishan (3, 4, 5…) lag jayega</div>'+mlcDiagram(m,false,"48%",layer);
+q$("#ml-body").querySelectorAll("[data-layer]").forEach(b=>b.onclick=()=>{layer=b.dataset.layer;drawInj()});
+q$("#ml-body").querySelectorAll("svg").forEach(sv=>{sv.style.cursor="crosshair";sv.onclick=e=>{let k=pick;if(k<0||!m.injuries[k]){const z=m.injuries[m.injuries.length-1];if(z&&!z.pos&&!z.site)k=m.injuries.length-1;else k=m.injuries.push({site:"",type:MLC_TYPES[0],size:"",shape:"",weapon:"",section:"",note:""})-1}const r=sv.getBoundingClientRect();m.injuries[k].pos={v:sv.dataset.view,x:Math.round((e.clientX-r.left)/r.width*220),y:Math.round((e.clientY-r.top)/r.height*410)};pick=-1;drawInj();toast("Nishan #"+(k+1)+" lag gaya — upar us ki detail likhein","success")}});
 q$("#ml-inj").querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{pick=+b.dataset.pick;drawInj();q$("#ml-body").scrollIntoView({behavior:"smooth",block:"center"})});
 q$("#ml-inj").querySelectorAll("[data-f]").forEach(el=>{const i=+el.closest("[data-ii]").dataset.ii;const h=()=>{m.injuries[i][el.dataset.f]=el.value};el.addEventListener("input",h);el.addEventListener("change",h)});
 q$("#ml-inj").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{m.injuries.splice(+b.dataset.rm,1);pick=-1;drawInj()})};
@@ -1971,7 +1972,29 @@ q$("#ml-save").onclick=e=>save(e.currentTarget,false);q$("#ml-saveprint").onclic
 /* ---- MLC body diagram (3D shading) + report ---- */
 let MLC_UID=0;
 const MLC_VIEWS=[["f","FRONT"],["b","BACK"]];
-function mlcBodySVG(c,v,flat,w){
+function mlcAnat(v,layer,g){
+const both=h=>h+'<g transform="translate(220 0) scale(-1 1)">'+h+'</g>';
+if(layer==="muscle"){
+const m=d=>'<path d="'+d+'" fill="url(#'+g+'m)" stroke="#6e1712" stroke-width=".8"/>';
+const f=d=>'<path d="'+d+'" fill="none" stroke="#f6c9bd" stroke-width=".7" opacity=".75"/>';
+const arm=m("M66 78C52 80 46 94 47 108C56 106 65 94 72 80Z")+m("M47 108C40 124 38 142 37 156C48 154 58 128 60 106Z")+m("M35 164C27 180 23 198 24 210L32 212C42 196 50 178 52 168C48 158 40 156 35 164Z")+f("M62 83Q54 92 50 106M53 112Q45 132 41 152M45 166Q34 186 28 208");
+const leg=m("M76 208C70 232 74 262 82 284L90 282C88 258 86 230 88 212Z")+m("M91 213C90 238 92 262 94 284L102 280C108 254 108 228 106 214Z")+m("M78 298C72 316 78 342 86 358C92 340 90 316 88 300Z")+m("M92 298C94 318 92 342 90 366C100 348 104 318 98 298Z")+f("M82 214Q78 248 86 278M100 220Q102 250 97 276M82 306Q80 326 86 350M96 306Q98 324 93 350");
+const trunk=v==="f"?m("M108 80C96 78 80 78 74 88C76 106 92 116 108 108Z")+f("M104 86L80 90M105 96L80 94M105 104L86 104")+[0,1,2,3].map(i=>m("M97 "+(116+i*18)+"q6-3 11 0v15q-6 3-11 0Z")).join("")+m("M76 116C78 140 84 170 94 188L95 120C88 118 82 116 76 116Z")+m("M97 58L108 76L104 77L97 66Z"):
+m("M109 58L98 68L70 78L108 138Z")+m("M72 90C72 118 84 142 106 160L106 178C90 172 76 152 72 90Z")+m("M108 142L103 192L109 196Z")+m("M108 196C88 190 74 202 76 216C86 232 106 228 108 214Z")+f("M104 74L78 80M105 96L86 98M106 118L96 112M78 106Q86 136 104 154M80 210Q94 202 104 208");
+return both(arm+leg+trunk)}
+const bone=(d,w)=>'<path d="'+d+'" fill="none" stroke="#6b5d3f" stroke-width="'+(w+1.4)+'" stroke-linecap="round"/><path d="'+d+'" fill="none" stroke="#f3ead2" stroke-width="'+w+'" stroke-linecap="round"/>';
+const joint=(x,y,r)=>'<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#f3ead2" stroke="#6b5d3f" stroke-width=".7"/>';
+let side=bone("M107 79Q92 72 68 83",3)+bone("M63 90L48 156",5.5)+joint(64,88,5)+joint(48,157,4)+bone("M45 163L29 218",2.4)+bone("M51 164L37 218",2.4)+
+[0,1,2,3].map(i=>bone("M"+(29+i*3)+" 224L"+(22+i*4.5)+" 244",1.3)).join("")+
+[0,1,2,3,4,5,6,7].map(i=>{const y=88+i*9,w=22+(i<4?i*3:(7-i)*3+3);return bone("M106 "+y+"Q"+(106-w)+" "+(y-2)+" "+(108-w)+" "+(y+9)+(v==="f"&&i<6?"Q"+(104-w/2)+" "+(y+14)+" 106 "+(y+11):""),1.8)}).join("")+
+'<path d="M107 184C98 172 76 172 76 186C78 200 92 210 108 211L108 202C100 200 94 194 96 188L108 192Z" fill="#f3ead2" stroke="#6b5d3f" stroke-width="1"/>'+
+joint(86,203,6)+bone("M86 205L90 286",7)+joint(89,288,5)+bone("M89 297L87 378",5)+bone("M80 300L81 376",2)+joint(86,383,4)+bone("M86 388L78 398M87 388L86 399M88 388L94 398",1.8);
+if(v==="b")side+='<path d="M99 90L74 88L90 122Z" fill="#f3ead2" stroke="#6b5d3f" stroke-width="1"/>'+bone("M97 98L72 87",2);
+let spine="";for(let i=0;i<19;i++)spine+='<rect x="105" y="'+(60+i*7)+'" width="10" height="5.4" rx="2" fill="#f3ead2" stroke="#6b5d3f" stroke-width=".7"/>';
+const skull='<path d="M110 11C96 11 91 23 93 35C94 43 99 45 100 50L103 58H117L120 50C121 45 126 43 127 35C129 23 124 11 110 11Z" fill="#f3ead2" stroke="#6b5d3f" stroke-width="1"/>'+(v==="f"?'<ellipse cx="102" cy="35" rx="5" ry="4.5" fill="#3b3326"/><ellipse cx="118" cy="35" rx="5" ry="4.5" fill="#3b3326"/><path d="M110 40l-3 7h6Z" fill="#3b3326"/><path d="M102 52H118M106 49v7M110 49v7M114 49v7" stroke="#6b5d3f" stroke-width=".8"/>':'<path d="M110 13V44M97 40Q110 30 123 40" fill="none" stroke="#6b5d3f" stroke-width=".8"/>');
+return both(side)+spine+(v==="f"?bone("M110 84V142",5):"")+skull}
+function mlcBodySVG(c,v,flat,w,layer){
+layer=flat?"skin":layer||"skin";
 const g="mlg"+(++MLC_UID),fill=flat?"#fff":"url(#"+g+")",st=' fill="'+fill+'" stroke="#222" stroke-width="'+(flat?2:1.2)+'" stroke-linejoin="round"';
 const limb='<path d="M70 72C52 76 44 90 42 112L34 160L24 212C20 222 15 236 18 246C23 254 32 248 34 238L40 216L55 168L62 132L68 112Z"'+st+'/>'+
 '<path d="M72 190C68 224 71 258 78 292C74 318 76 346 82 378L78 394C72 404 92 406 97 396L97 378C103 342 104 318 99 292C104 258 108 226 108 204Z"'+st+'/>';
@@ -1979,13 +2002,13 @@ const torso='<path d="M98 56L97 68C88 72 76 70 66 76C62 92 66 108 72 122C78 142 
 const line=d=>'<path d="'+d+'" fill="none" stroke="#555" stroke-width=".8" opacity=".55"/>';
 const detail=v==="f"?line("M80 82Q95 90 107 82M113 82Q125 90 140 82M78 112Q93 124 108 112M112 112Q127 124 142 112M110 88V160M74 190Q92 200 110 212Q128 200 146 190M80 292q9 5 17 0M123 292q9 5 17 0")+'<circle cx="110" cy="166" r="2" fill="#555"/>':
 line("M110 70V196M82 88Q104 96 96 126M138 88Q116 96 124 126M110 196Q108 218 78 212M110 196Q112 218 142 212M80 296q9-5 17 0M123 296q9-5 17 0");
-const marks=(c.injuries||[]).map((j,i)=>j.pos&&j.pos.v===v?'<g><circle cx="'+(+j.pos.x)+'" cy="'+(+j.pos.y)+'" r="9" fill="'+(flat?"#000":"#d00000")+'" stroke="#fff" stroke-width="2"/><text x="'+(+j.pos.x)+'" y="'+(+j.pos.y+3.8)+'" text-anchor="middle" font-size="11" font-weight="900" font-family="Arial" fill="#fff">'+(i+1)+'</text></g>':"").join("");
+const marks=(c.injuries||[]).map((j,i)=>j.pos&&j.pos.v===v?'<g><circle cx="'+(+j.pos.x)+'" cy="'+(+j.pos.y)+'" r="17" fill="'+(flat?"none":"rgba(255,0,0,.18)")+'" stroke="'+(flat?"#000":"#e00000")+'" stroke-width="2.5"/><circle cx="'+(+j.pos.x)+'" cy="'+(+j.pos.y)+'" r="9" fill="'+(flat?"#000":"#d00000")+'" stroke="#fff" stroke-width="2"/><text x="'+(+j.pos.x)+'" y="'+(+j.pos.y+3.8)+'" text-anchor="middle" font-size="11" font-weight="900" font-family="Arial" fill="#fff">'+(i+1)+'</text></g>':"").join("");
 const side=(x,t)=>'<text x="'+x+'" y="20" text-anchor="middle" font-size="15" font-weight="900" font-family="Arial" fill="#000">'+t+'</text>';
 return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 410" data-view="'+v+'" style="width:'+w+';height:auto;display:block;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+
-(flat?"":'<defs><radialGradient id="'+g+'" cx="42%" cy="32%" r="70%"><stop offset="0" stop-color="#fff1e6"/><stop offset=".6" stop-color="#e8b996"/><stop offset="1" stop-color="#a9714f"/></radialGradient></defs>')+
-limb+'<g transform="translate(220 0) scale(-1 1)">'+limb+'</g>'+torso+'<ellipse cx="110" cy="35" rx="21" ry="26"'+st+'/>'+detail+
+(flat?"":'<defs><radialGradient id="'+g+'" cx="42%" cy="32%" r="70%"><stop offset="0" stop-color="'+(layer==="bone"?"#8ba3c4":layer==="muscle"?"#d9968a":"#fff1e6")+'"/><stop offset=".6" stop-color="'+(layer==="bone"?"#4c6385":layer==="muscle"?"#b4564a":"#e8b996")+'"/><stop offset="1" stop-color="'+(layer==="bone"?"#26374f":layer==="muscle"?"#7d241c":"#a9714f")+'"/></radialGradient><radialGradient id="'+g+'m" cx="40%" cy="35%" r="75%"><stop offset="0" stop-color="#e8786a"/><stop offset="1" stop-color="#8e2018"/></radialGradient></defs>')+
+limb+'<g transform="translate(220 0) scale(-1 1)">'+limb+'</g>'+torso+'<ellipse cx="110" cy="35" rx="21" ry="26"'+st+'/>'+(layer==="skin"?detail:mlcAnat(v,layer,g))+
 side(30,v==="f"?"R":"L")+side(190,v==="f"?"L":"R")+marks+'</svg>'}
-function mlcDiagram(c,flat,w){return '<div style="display:flex;justify-content:center;gap:6px">'+MLC_VIEWS.map(x=>'<div style="width:'+w+';text-align:center;font-size:10px;font-weight:900">'+mlcBodySVG(c,x[0],flat,"100%")+x[1]+'</div>').join("")+'</div>'}
+function mlcDiagram(c,flat,w,layer){return '<div style="display:flex;justify-content:center;gap:6px">'+MLC_VIEWS.map(x=>'<div style="width:'+w+';text-align:center;font-size:10px;font-weight:900">'+mlcBodySVG(c,x[0],flat,"100%",layer)+x[1]+(layer==="bone"?" — BONES":layer==="muscle"?" — MUSCLES":"")+'</div>').join("")+'</div>'}
 function mlcPrint(c,kind){const size=kind==="T"?usThermalSize():"A4";printHTML(mlcHTML(c,size),size)}
 function mlcMsgText(c){return "Assalam o Alaikum.\n"+((app.settings&&app.settings.clinicName)||"Clinic")+"\nAap ke record "+(c.mlcNo||"")+" ke baare mein raabta karein."+(app.settings&&app.settings.phone?"\nCell: "+app.settings.phone:"")}
 function mlcSend(c,kind){
@@ -2050,7 +2073,7 @@ return ref+'<div style="width:100%;font-family:Arial,Helvetica,sans-serif;color:
 '<div style="display:flex;align-items:center;gap:10px;border-bottom:3px solid '+navy+';padding-bottom:6px"><div style="width:110px;text-align:center">'+logo+'</div><div style="flex:1;text-align:center"><div style="font-size:21px;font-weight:900;color:'+navy+'">'+E(s.clinicName)+'</div>'+(s.tagline?'<div style="font-size:10.5px">'+E(s.tagline)+'</div>':"")+'<div style="font-size:10.5px">'+E(s.address)+'</div><div style="font-size:10.5px;font-weight:800">Cell: '+E(s.phone)+(s.phone2?" / "+E(s.phone2):"")+'</div></div><div style="width:110px;text-align:center;border:2px solid '+navy+';padding:5px 2px;font-size:10px;font-weight:800">'+E(c.mlcNo||"-")+'<div style="font-size:13px;font-weight:900;margin-top:3px">'+(final?"FINAL":"PROVISIONAL")+'</div></div></div>'+
 '<div style="text-align:center;font-size:15px;font-weight:900;letter-spacing:2px;margin-top:6px">'+E(title)+'</div>'+
 sec("POLICE REFERRAL")+rows(g1)+sec("PATIENT / INJURED")+rows(g2)+sec("INCIDENT & HISTORY")+rows(g3)+text("History",c.history)+sec("GENERAL EXAMINATION")+rows(g4)+
-'<div style="break-inside:avoid">'+sec("BODY DIAGRAM — SITE OF INJURIES")+'<div style="'+bd+'display:flex;gap:8px;padding:5px;align-items:center"><div style="width:50%">'+mlcDiagram(c,false,"46%")+'</div><div style="flex:1;font-size:10.5px">'+(injs.map((j,i)=>'<div style="padding:3px 0;border-bottom:1px dotted #8a94a6"><b>'+(i+1)+'.</b> '+E(j.site||"-")+' ('+E(j.type)+')'+(j.pos?"":" <i>— not marked on diagram</i>")+'</div>').join("")||"No visible injury noted")+'<div style="margin-top:6px;font-size:9px">R = patient’s right, L = patient’s left. Diagram is for location only.</div></div></div></div>'+
+'<div style="break-inside:avoid">'+sec("BODY DIAGRAM — SITE OF INJURIES")+'<div style="'+bd+'padding:5px"><div style="display:flex;justify-content:space-around">'+["muscle","bone"].map(l=>'<div style="width:49%">'+mlcDiagram(c,false,"49%",l)+'</div>').join("")+'</div><div style="font-size:10px;margin-top:4px">'+(injs.map((j,i)=>'<span style="display:inline-block;margin-right:14px"><b>'+(i+1)+'.</b> '+E(j.site||"-")+' ('+E(j.type)+')'+(j.pos?"":" <i>— not marked</i>")+'</span>').join("")||"No visible injury noted")+'</div><div style="font-size:9px">R = patient’s right, L = patient’s left. Schematic diagram, for location only (does not show fracture or depth).</div></div></div>'+
 sec("DETAIL OF INJURIES")+tbl('<tr>'+th("#")+th("Site / Type")+th("Size / Description")+th("Weapon")+th("Section / Kind")+'</tr>'+inj)+
 (hasInv?sec("INVESTIGATIONS")+rows(g5):"")+
 sec("OPINION OF MEDICO-LEGAL OFFICER")+rows(g6)+text("Opinion",c.opinionText)+(c.remarks?text("Remarks",c.remarks):"")+
