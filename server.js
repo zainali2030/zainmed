@@ -40,8 +40,8 @@ const TZ          = pick("CLINIC_TZ", "timezone", "Asia/Karachi");
 const DEV_CONTACT = "Zain Ali — 03702906075";
 
 const STORES = ["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters",
-                "appointments","leads","inventory","staff","usreports","labreports","attendance"];
-const ALL_PERMS = ["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports",
+                "appointments","leads","inventory","staff","usreports","labreports","attendance","diststores","distorders","distledger"];
+const ALL_PERMS = ["distributor","dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports",
                    "appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const DEFAULT_CLINIC = "abraj";
 const ADMIN_ID = "usr_faheem_admin";
@@ -180,7 +180,7 @@ app.use((req, res, next) => {
 app.use((req, res, next) => { res.setHeader("Permissions-Policy", "camera=(self), microphone=()"); next(); });
 app.use(express.json({ limit: "25mb" }));
 /* SECURITY: sirf ye files browser ko milengi (config.json, server.js waghera kabhi nahi) */
-const PUBLIC_FILES = new Set(["index.html","master.html","login-bg.jpg","manifest.json","sw.js","icon-192.png","icon-512.png"]);
+const PUBLIC_FILES = new Set(["index.html","master.html","login-bg.jpg","manifest.json","sw.js","distributor.js","icon-192.png","icon-512.png"]);
 /* HTML / JS / JSON files gzip ho kar jati hain (index.html ~600KB se ~120KB) */
 const gzCache = new Map();
 function sendPublic(name, req, res) {

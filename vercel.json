@@ -5,7 +5,7 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["index.html", "master.html", "login-bg.jpg", "manifest.json", "sw.js", "icon-192.png", "icon-512.png"]
+        "includeFiles": ["index.html", "master.html", "login-bg.jpg", "manifest.json", "sw.js", "distributor.js", "icon-192.png", "icon-512.png"]
       }
     }
   ],

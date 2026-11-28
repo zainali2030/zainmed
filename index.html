@@ -627,10 +627,10 @@ fetch() API calls ke zariye. Saara design/features wohi hain.
 ============================================================ */
 "use strict";
 /* ================= CONSTANTS ================= */
-const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff","usreports","labreports","attendance"];
+const STORES=["patients","visits","doctors","tests","payments","expenses","users","settings","audit","counters","appointments","leads","inventory","staff","usreports","labreports","attendance","diststores","distorders","distledger"];
 let CLINIC=(function(){try{return localStorage.getItem("mcms_clinic")||""}catch(e){return ""}})();let CLINIC_INFO=null;
-const ADMIN_ID="usr_faheem_admin",ADMIN_USER="Faheem",ADMIN_PASS="Faheem786";
-const ALL_PERMS=["dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
+const ADMIN_ID="usr_faheem_admin",ADMIN_USER="Faheem";
+const ALL_PERMS=["distributor","dashboard","newvisit","patients","emr","doctors","lab","ultrasound","injection","billing","expenses","reports","appointments","leads","inventory","staff","agent","users","settings","backup","delete"];
 const MEDICAL_STORE_PERMS=["inventory"];
 const LAB_PERMS=["lab"];
 const RECEPTION_PERMS=["dashboard","newvisit","patients","emr","billing","lab","ultrasound","injection"];
@@ -647,6 +647,7 @@ const NAV=[
 {key:"billing",label:"Billing / Charges",icon:"🧾",perm:"billing"},
 {key:"delivery",label:"Delivery / Maternity",icon:"🤰",perm:"billing"},
 {key:"mlc",label:"MLC / Medico-Legal",icon:"⚖️",perm:"emr"},
+{key:"distributor",label:"Distributor Portal",icon:"🚚",perm:"distributor"},
 {key:"ms_dashboard",label:"Dashboard",icon:"🏪",perm:"inventory",grp:"ms"},
 {key:"ms_stock",label:"Stock",icon:"📦",perm:"inventory",grp:"ms"},
 {key:"ms_purchase",label:"Purchase",icon:"🛒",perm:"inventory",grp:"ms"},
@@ -1420,7 +1421,7 @@ renderShell();
 const t=NAV.find(n=>n.key===route);
 $("#page-title").textContent=t?(t.grp==="ms"?"Medical Store • "+t.label:t.label):"Dashboard";
 const PAGES={dashboard:pageDashboard,newvisit:pageNewVisit,patients:pagePatients,emr:pageEMR,doctors:pageDoctors,
-lab:()=>pageTestModule("lab"),ultrasound:()=>pageTestModule("ultrasound"),injection:()=>pageTestModule("injection"),billing:pageBilling,delivery:pageDelivery,mlc:pageMLC,ms_dashboard:()=>{app.msTab="dashboard";pageMedicalStore()},ms_stock:()=>{app.msTab="stock";pageMedicalStore()},ms_purchase:()=>{app.msTab="purchase";pageMedicalStore()},ms_sale:()=>{app.msTab="sale";pageMedicalStore()},ms_customers:()=>{app.msTab="customers";pageMedicalStore()},ms_reports:()=>{app.msTab="reports";pageMedicalStore()},expenses:pageExpenses,
+lab:()=>pageTestModule("lab"),ultrasound:()=>pageTestModule("ultrasound"),injection:()=>pageTestModule("injection"),billing:pageBilling,delivery:pageDelivery,mlc:pageMLC,distributor:()=>pageDistributor(),ms_dashboard:()=>{app.msTab="dashboard";pageMedicalStore()},ms_stock:()=>{app.msTab="stock";pageMedicalStore()},ms_purchase:()=>{app.msTab="purchase";pageMedicalStore()},ms_sale:()=>{app.msTab="sale";pageMedicalStore()},ms_customers:()=>{app.msTab="customers";pageMedicalStore()},ms_reports:()=>{app.msTab="reports";pageMedicalStore()},expenses:pageExpenses,
 reports:pageReports,agent:pageAgent,staff:pageStaff,users:pageUsers,settings:pageSettings,backup:pageBackup};
 (PAGES[route]||pageDashboard)();
 showBanner();
@@ -5307,7 +5308,7 @@ await loadData();toast(st.id?"Staff updated":"Staff added — ID "+staffId);ov.r
 USERS
 ============================================================ */
 function pageUsers(){
-const PERM_LABELS={dashboard:"Dashboard",newvisit:"New Visit",patients:"Patients",emr:"EMR",doctors:"Doctors",lab:"Lab",ultrasound:"Ultrasound",injection:"Injections / Drips",billing:"Billing",expenses:"Expenses",reports:"Reports",agent:"AI Agent",appointments:"Appointments",leads:"WhatsApp Leads",inventory:"Inventory",staff:"Staff & Payroll",users:"Users",settings:"Settings",backup:"Backup",delete:"Delete Records (dangerous)"};
+const PERM_LABELS={distributor:"Distributor Portal",dashboard:"Dashboard",newvisit:"New Visit",patients:"Patients",emr:"EMR",doctors:"Doctors",lab:"Lab",ultrasound:"Ultrasound",injection:"Injections / Drips",billing:"Billing",expenses:"Expenses",reports:"Reports",agent:"AI Agent",appointments:"Appointments",leads:"WhatsApp Leads",inventory:"Inventory",staff:"Staff & Payroll",users:"Users",settings:"Settings",backup:"Backup",delete:"Delete Records (dangerous)"};
 const draw=()=>{
 $("#us-rows").innerHTML=app.users.map(u=>
 '<tr><td style="font-family:ui-monospace,monospace;font-weight:700;color:var(--blue-800)">'+esc(u.username)+'</td><td style="font-weight:600">'+esc(u.fullName)+"</td>"+
@@ -5656,6 +5657,7 @@ boot();
   if(ios)set(true);
   b.onclick=api.click;
 })();</script>
+<script src="distributor.js"></script>
 <script>if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("/sw.js").catch(function(){});</script>
 <script>
 /* Lamp login enhancement — visual only; login logic untouched */
