@@ -1,5 +1,5 @@
 /* ZainMed Service Worker — app internet ke baghair bhi khulti hai (offline shell) */
-const V = "zainmed-shell-v20";
+const V = "zainmed-shell-v21";
 const SHELL = ["/", "/index.html", "/distributor.js", "/master.html", "/manifest.json", "/icon-192.png", "/icon-512.png", "/login-bg.jpg", "/login-bg.jpg.jpeg"];
 
 self.addEventListener("install", e => {

@@ -2211,7 +2211,7 @@ const ln=(l,v,b,big)=>'<tr><td style="'+td+'text-align:right;font-weight:'+(b?90
 const pays=(c.payments||[]).map(p=>ln("Paid "+fmtDate(p.date)+" ("+esc(p.method||"")+(p.note?" - "+esc(p.note):"")+")",C+" "+fmtMoney(Number(p.amount)||0))).join("");
 const hr='<div style="border-top:1px dashed #000;margin:5px 0"></div>';
 const th='style="'+td+'font-weight:900;border-bottom:1px solid #000;text-align:left"';
-return '<div style="width:'+(A4?"100%":size==="58"?"56mm":"76mm")+';margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#000;font-weight:600">'+(A4?'<div style="border:2px solid #000;padding:14px">':"")+
+return '<div style="width:'+(A4?"100%":size==="58"?"54mm":"74mm")+';margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#000;font-weight:600">'+(A4?'<div style="border:2px solid #000;padding:14px">':"")+
 logo+'<div style="text-align:center;font-weight:900;font-size:'+(A4?"22px":"16px")+'">'+esc(s.clinicName)+'</div>'+(s.tagline?'<div style="text-align:center;font-size:'+sm+'">'+esc(s.tagline)+'</div>':"")+
 '<div style="text-align:center;font-size:'+sm+'">'+esc(s.address)+'</div><div style="text-align:center;font-size:'+sm+';font-weight:800">Cell: '+esc(s.phone)+(s.phone2?" / "+esc(s.phone2):"")+'</div>'+
 '<div style="background:#000;color:#fff;text-align:center;font-weight:900;letter-spacing:2px;margin:6px 0;padding:4px 0;font-size:'+(A4?"14px":"11px")+';-webkit-print-color-adjust:exact;print-color-adjust:exact">'+(dlvT?esc(dlvT):(c.deliveryType&&/C-Sec/i.test(c.deliveryType)?"C-SECTION / ":"DELIVERY ")+(A4?"DELIVERY ":"")+'BILL')+'</div>'+
