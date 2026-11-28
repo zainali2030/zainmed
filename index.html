@@ -673,7 +673,7 @@ msName:"",msAddress:"",msPhone:"",msFooter:"",
 devFooter:"Software developed by ZainMed\n03702906075 / 03192061690\nzainaliofficial343@gmail.com"};
 function devFooterHTML(s){const t=(s&&s.devFooter!==undefined&&s.devFooter!==null)?s.devFooter:DEFAULT_SETTINGS.devFooter;return String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(esc).join("<br>")}
 /* ================= v4: per-slip logo, PDF, WhatsApp, dock, mobile bar ================= */
-const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports (A4 tables)"],["sal","💰 Salary Slip"],["idc","🪪 Staff ID Card"],["dlv","🤰 Delivery Bill Slip"],["mlc","⚖️ MLC / Medico-Legal Certificate"],["store","🏪 Medical Store Bill"]];
+const SLIP_KINDS=[["opd","🧾 OPD / Visit Slip"],["lab","🧪 Lab Bill Slip"],["us","📡 Ultrasound Report"],["lb","🔬 Lab Report"],["rep","📈 Reports (A4 tables)"],["sal","💰 Salary Slip"],["idc","🪪 Staff ID Card"],["dlv","🤰 Delivery Bill Slip"],["mlc","⚖️ MLC / Medico-Legal Certificate"],["store","🏪 Medical Store Bill"],["dist","🚚 Distributor Order Slip"]];
 function slipS(s,kind){const o=((s&&s.slipLogos)||{})[kind];if(!o)return s;const r=Object.assign({},s);if(o.none)r.logoDataUrl="";else if(o.url)r.logoDataUrl=o.url;if(o.size)r.logoSize=o.size;SL_TXT.forEach(f=>{if(o[f[0]]!==undefined&&String(o[f[0]]).trim()!=="")r[f[2]]=o[f[0]]});return r}
 function storeLogoHTML(){const s=slipS(app.settings,"store");return s.logoDataUrl?'<div style="text-align:center;line-height:0"><img src="'+s.logoDataUrl+'" style="height:'+Math.max(20,Number(s.logoSize)||56)+'px;width:auto;max-width:100%;object-fit:contain;margin-bottom:3px"></div>':""}
 let LAST_PRINT=null,_pdfLibs=null,_docbarT=null;
